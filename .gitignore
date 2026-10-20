@@ -43,3 +43,7 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Edge App Profile
+edge_profile/
+backend/data/edge_profile/

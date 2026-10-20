@@ -3,7 +3,36 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue'
 import WorkspaceView from '@/views/WorkspaceView.vue'
+
+let heartbeatTimer: any = null
+
+onMounted(() => {
+  // Initial heartbeat
+  fetch('/api/heartbeat', { method: 'POST' }).catch(() => {})
+
+  // Heartbeat ping every 4s
+  heartbeatTimer = setInterval(() => {
+    fetch('/api/heartbeat', { method: 'POST' }).catch(() => {})
+  }, 4000)
+
+  // Listen for window close
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onUnmounted(() => {
+  if (heartbeatTimer) clearInterval(heartbeatTimer)
+  window.removeEventListener('beforeunload', handleBeforeUnload)
+})
+
+function handleBeforeUnload() {
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon('/api/shutdown')
+  } else {
+    fetch('/api/shutdown', { method: 'POST', keepalive: true }).catch(() => {})
+  }
+}
 </script>
 
 <style>
