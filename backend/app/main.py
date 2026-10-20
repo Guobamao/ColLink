@@ -32,8 +32,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="DataField Mapper API",
-    description="数据字段血缘与映射可视化工具后端服务",
+    title="ColLink API",
+    description="ColLink - 数据字段血缘与可视化映射平台后端服务",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -52,7 +52,7 @@ app.include_router(api_router, prefix="/api")
 
 @app.get("/")
 def health_check():
-    return {"status": "ok", "app": "DataField Mapper API", "version": "1.0.0"}
+    return {"status": "ok", "app": "ColLink API", "version": "1.0.0"}
 
 
 if __name__ == "__main__":

@@ -1,17 +1,17 @@
 @echo off
-title DataField Mapper Launcher
+title ColLink Launcher
 cls
 echo ===================================================
-echo   Starting DataField Mapper (Dev Server)
+echo   Starting ColLink (Field Lineage & Mapper)
 echo ===================================================
 
 cd /d "%~dp0backend"
-start "DataField-Backend" cmd /k "title DataField Backend (Port 8000) && .venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
+start "ColLink-Backend" cmd /k "title ColLink Backend (Port 8000) && .venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload"
 
 ping 127.0.0.1 -n 3 >nul
 
 cd /d "%~dp0frontend"
-start "DataField-Frontend" cmd /k "title DataField Frontend (Port 5173) && npm run dev"
+start "ColLink-Frontend" cmd /k "title ColLink Frontend (Port 5173) && npm run dev"
 
 echo.
 echo ===================================================

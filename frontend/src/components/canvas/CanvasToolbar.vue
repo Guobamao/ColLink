@@ -4,7 +4,7 @@
     <div class="toolbar-section left-section">
       <div class="app-brand">
         <span class="logo">⚡</span>
-        <span class="brand-title">DataField Mapper</span>
+        <span class="brand-title">ColLink</span>
       </div>
 
       <div class="divider"></div>

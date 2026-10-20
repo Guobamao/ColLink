@@ -1,7 +1,7 @@
-﻿# DataField Mapper 一键启动脚本 (PowerShell)
+﻿# ColLink 一键启动脚本 (PowerShell)
 
 Write-Host "=================================================" -ForegroundColor Cyan
-Write-Host "  启动 DataField Mapper 服务" -ForegroundColor Cyan
+Write-Host "  启动 ColLink (数据字段血缘与可视化映射平台)" -ForegroundColor Cyan
 Write-Host "=================================================" -ForegroundColor Cyan
 
 $CurrentDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -21,7 +21,7 @@ $FrontendProcess = Start-Process -FilePath "cmd.exe" `
     -WorkingDirectory "$CurrentDir\frontend" `
     -PassThru
 
-Write-Host "`n服务启动完成！" -ForegroundColor Green
+Write-Host "`nColLink 服务启动完成！" -ForegroundColor Green
 Write-Host "前端界面访问地址: http://localhost:5173" -ForegroundColor Green
 Write-Host "后端 API 文档地址: http://127.0.0.1:8000/docs" -ForegroundColor Green
 Write-Host "`n按 Ctrl+C 或关闭本窗口以停止服务..." -ForegroundColor Gray
