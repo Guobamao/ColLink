@@ -3,13 +3,13 @@ title ColLink (Debug Mode)
 cd /d "%~dp0"
 
 if not exist "%~dp0backend\.venv\Scripts\python.exe" (
-    echo [ColLink] Python 虚拟环境未在 backend\.venv 找到，请先配置环境。
+    echo [ColLink] Python venv not found in backend\.venv
     pause
     exit /b 1
 )
 
 echo ============================================================
-echo   ColLink - 数据字段血缘与可视化映射平台 (调试控制台模式)
+echo   ColLink - Desktop Studio (Debug Mode)
 echo ============================================================
 echo.
 "%~dp0backend\.venv\Scripts\python.exe" "%~dp0desktop.py"
