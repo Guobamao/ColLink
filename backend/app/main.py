@@ -47,12 +47,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import os
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
 app.include_router(api_router, prefix="/api")
 
+# Static files & SPA frontend serving
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DIST_DIR = os.path.join(BASE_DIR, "frontend", "dist")
 
-@app.get("/")
-def health_check():
-    return {"status": "ok", "app": "ColLink API", "version": "1.0.0"}
+if os.path.exists(DIST_DIR):
+    assets_dir = os.path.join(DIST_DIR, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        target_file = os.path.join(DIST_DIR, full_path)
+        if full_path and os.path.isfile(target_file):
+            return FileResponse(target_file)
+        return FileResponse(os.path.join(DIST_DIR, "index.html"))
+else:
+    @app.get("/")
+    def health_check():
+        return {"status": "ok", "app": "ColLink API", "version": "1.0.0"}
 
 
 if __name__ == "__main__":

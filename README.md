@@ -85,21 +85,32 @@ flowchart TD
 
 ## 🚀 快速启动指南
 
-### 方式一：一键双击启动（Windows 推荐）
+### 方式一：🖥️ 原生桌面客户端启动（日常推荐，极简零繁琐）
 
-直接双击运行根目录下的 **`run_dev.bat`**，或在 PowerShell 中执行：
+直接双击项目根目录下的 **`ColLink.bat`** 即可：
+
+- ✨ **一键即开**：基于 Windows Edge WebView2 原生驱动，无需手动开浏览器，无需分别启动前端和后端两个命令行；
+- 🔇 **无黑窗口打扰**：采用静默模式后台加载，界面启动后提供原生桌面应用体验；
+- 🔌 **智能避让端口**：自动检测可用网络端口，防止 8000 端口冲突；
+- 🛠️ **调试模式**：如需查看 SQL 导入解析与后端日志，可双击 **`ColLink_Debug.bat`**。
+
+---
+
+### 方式二：💻 开发者双端热更联调模式
+
+若需要对前端或后端代码进行二次开发与热更新调试，双击运行根目录下的 **`run_dev.bat`**，或在 PowerShell 中执行：
 
 ```powershell
 .\run_dev.ps1
 ```
 
 启动完成后，系统将自动弹出两个终端服务：
-- 🌐 **前端交互界面**：[http://localhost:5173](http://localhost:5173)
+- 🌐 **前端交互界面 (Vite)**：[http://localhost:5173](http://localhost:5173)
 - 📚 **后端 API 文档 (Swagger)**：[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 ---
 
-### 方式二：手动分步启动
+### 方式三：手动分步启动
 
 #### 1. 后端服务启动
 ```powershell
@@ -144,8 +155,11 @@ ColLink/
 │   │   └── types/               # TypeScript 类型定义
 │   ├── package.json
 │   └── vite.config.ts
-├── run_dev.bat                  # Windows 批处理一键启动脚本
-├── run_dev.ps1                  # PowerShell 一键启动脚本
+├── ColLink.bat                  # Windows 极简静默一键启动桌面客户端
+├── ColLink_Debug.bat            # Windows 调试模式启动（带控制台日志）
+├── desktop.py                   # PyWebView 原生桌面客户端入口
+├── run_dev.bat                  # Windows 批处理一键热更联调脚本
+├── run_dev.ps1                  # PowerShell 一键热更联调脚本
 ├── .gitignore                   # Git 忽略配置
 └── README.md                    # 项目说明文档
 ```

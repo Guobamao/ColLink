@@ -9,3 +9,8 @@ api_router.include_router(mappings.router, prefix="/mappings", tags=["mappings"]
 api_router.include_router(ddl.router, prefix="/ddl", tags=["ddl"])
 api_router.include_router(connections.router, prefix="/connections", tags=["connections"])
 api_router.include_router(export.router, prefix="/export", tags=["export"])
+
+
+@api_router.get("/health")
+def health():
+    return {"status": "ok", "app": "ColLink API", "version": "1.0.0"}
