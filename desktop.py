@@ -19,6 +19,13 @@ if sys.stdout is None:
 if sys.stderr is None:
     sys.stderr = NullWriter()
 
+# Force unique AppUserModelID so Windows taskbar loads fresh ColLink icon
+try:
+    import ctypes
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("ColLink.Studio.Desktop.v2")
+except Exception:
+    pass
+
 import time
 import socket
 import logging
@@ -129,16 +136,80 @@ def get_browser_executable() -> str | None:
     return None
 
 
+def apply_window_icon():
+    """Find the launched ColLink window and inject WM_SETICON with native .ico."""
+    icon_path = os.path.join(ROOT_DIR, "app_icon.ico")
+    if not os.path.exists(icon_path):
+        return
+    try:
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+
+        WM_SETICON = 0x0080
+        ICON_SMALL = 0
+        ICON_BIG = 1
+        IMAGE_ICON = 1
+        LR_LOADFROMFILE = 0x00000010
+
+        hicon_small = user32.LoadImageW(None, icon_path, IMAGE_ICON, 16, 16, LR_LOADFROMFILE)
+        hicon_big = user32.LoadImageW(None, icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE)
+
+        if not hicon_small and not hicon_big:
+            return
+
+        # Poll for window appearance
+        for _ in range(30):
+            time.sleep(0.4)
+            found_hwnds = []
+
+            def enum_cb(hwnd, extra):
+                if user32.IsWindowVisible(hwnd):
+                    length = user32.GetWindowTextLengthW(hwnd)
+                    if length > 0:
+                        buf = ctypes.create_unicode_buffer(length + 1)
+                        user32.GetWindowTextW(hwnd, buf, length + 1)
+                        if "ColLink" in buf.value:
+                            found_hwnds.append(hwnd)
+                return True
+
+            WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+            user32.EnumWindows(WNDENUMPROC(enum_cb), 0)
+
+            for hwnd in found_hwnds:
+                if hicon_small:
+                    user32.SendMessageW(hwnd, WM_SETICON, ICON_SMALL, hicon_small)
+                if hicon_big:
+                    user32.SendMessageW(hwnd, WM_SETICON, ICON_BIG, hicon_big)
+
+            if found_hwnds:
+                logging.info(f"WM_SETICON successfully applied to {len(found_hwnds)} ColLink window(s).")
+                break
+    except Exception as e:
+        logging.warning(f"Could not apply WM_SETICON: {e}")
+
+
 def launch_browser(url: str) -> None:
     """Launch application in Edge/Chrome standalone app mode, fallback to default browser."""
     browser_exe = get_browser_executable()
     logging.info(f"Detected browser: {browser_exe}")
 
     if browser_exe:
-        profile_dir = os.path.join(os.environ.get("LOCALAPPDATA", ROOT_DIR), "ColLink", "edge_profile")
+        # Use ColLink_v2 profile to discard old stale Vite favicons
+        profile_dir = os.path.join(os.environ.get("LOCALAPPDATA", ROOT_DIR), "ColLink_v2", "edge_profile")
         os.makedirs(profile_dir, exist_ok=True)
 
-        # Clean stale browser disk cache so UI updates take effect immediately
+        # Clean stale favicon databases and browser cache
+        default_dir = os.path.join(profile_dir, "Default")
+        if os.path.exists(default_dir):
+            for stale_file in ["Favicons", "Favicons-journal", "Shortcuts", "Shortcuts-journal", "Web Data", "Web Data-journal"]:
+                stale_path = os.path.join(default_dir, stale_file)
+                if os.path.exists(stale_path):
+                    try:
+                        os.remove(stale_path)
+                    except Exception:
+                        pass
+
         for cache_name in ["Cache", "Code Cache", "GPUCache"]:
             cache_path = os.path.join(profile_dir, "Default", cache_name)
             if os.path.exists(cache_path):
@@ -161,6 +232,8 @@ def launch_browser(url: str) -> None:
         try:
             subprocess.Popen(cmd)
             logging.info("Browser subprocess launched successfully.")
+            # Trigger native window icon injection in background
+            threading.Thread(target=apply_window_icon, daemon=True).start()
             return
         except Exception as e:
             logging.error(f"Failed to launch {browser_exe}: {e}", exc_info=True)
