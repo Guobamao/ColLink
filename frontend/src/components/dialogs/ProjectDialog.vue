@@ -110,10 +110,7 @@ const handleCreate = async () => {
     newProjectName.value = ''
     newProjectDesc.value = ''
     if (projectStore.currentProject) {
-      canvasStore.syncFromProject(
-        projectStore.currentProject.tables,
-        projectStore.currentProject.mappings
-      )
+      await canvasStore.fetchCanvases(projectStore.currentProject.id)
     }
   } finally {
     creating.value = false
@@ -123,10 +120,7 @@ const handleCreate = async () => {
 const handleSelect = async (id: string) => {
   await projectStore.selectProject(id)
   if (projectStore.currentProject) {
-    canvasStore.syncFromProject(
-      projectStore.currentProject.tables,
-      projectStore.currentProject.mappings
-    )
+    await canvasStore.fetchCanvases(projectStore.currentProject.id)
   }
   visible.value = false
   ElMessage.success('已切换项目')

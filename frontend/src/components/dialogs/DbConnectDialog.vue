@@ -438,16 +438,23 @@ const handleImportTables = async () => {
   importing.value = true
   try {
     const tableNames = newTables.map(t => t.table_name)
-    await api.importDbTables(projectStore.currentProject.id, form.value, tableNames)
+    await api.importDbTables(
+      projectStore.currentProject.id,
+      form.value,
+      tableNames,
+      canvasStore.currentCanvasId || undefined
+    )
     ElMessage.success(`已成功增量导入 ${tableNames.length} 张新表到画布`)
     visible.value = false
 
     await projectStore.selectProject(projectStore.currentProject.id)
     if (projectStore.currentProject) {
-      canvasStore.syncFromProject(
-        projectStore.currentProject.tables,
-        projectStore.currentProject.mappings
-      )
+      if (canvasStore.currentCanvasId) {
+        await canvasStore.switchCanvas(canvasStore.currentCanvasId)
+        await canvasStore.fetchCanvases(projectStore.currentProject.id, false)
+      } else {
+        await canvasStore.fetchCanvases(projectStore.currentProject.id)
+      }
     }
   } catch (err: any) {
     ElMessage.error(err.response?.data?.detail || err.message || '导入失败')

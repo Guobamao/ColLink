@@ -4,17 +4,19 @@
     :class="{
       'is-dimmed': isDimmed,
       'is-highlighted': isHighlighted,
+      'is-focused': isFocused,
     }"
+    :style="{ borderTopColor: currentTheme.primary }"
     @wheel.stop
   >
     <!-- Card Header with Top Brand Accent -->
     <div class="card-header">
       <div class="header-left">
-        <div class="db-icon-badge">
+        <div class="db-icon-badge" :style="{ backgroundColor: currentTheme.lightBg }">
           <svg class="table-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="4" width="18" height="16" rx="2" stroke="#3b82f6" stroke-width="2"/>
-            <path d="M3 9H21" stroke="#3b82f6" stroke-width="2"/>
-            <path d="M9 20V9" stroke="#3b82f6" stroke-width="2"/>
+            <rect x="3" y="4" width="18" height="16" rx="2" :stroke="currentTheme.primary" stroke-width="2"/>
+            <path d="M3 9H21" :stroke="currentTheme.primary" stroke-width="2"/>
+            <path d="M9 20V9" :stroke="currentTheme.primary" stroke-width="2"/>
           </svg>
         </div>
         <div class="title-wrap">
@@ -42,9 +44,36 @@
                 <el-icon><Edit /></el-icon>
                 <span>编辑表信息</span>
               </el-dropdown-item>
-              <el-dropdown-item command="delete" divided style="color: #ef4444;">
+
+              <!-- Color Tagging Options -->
+              <el-dropdown-item divided disabled>
+                <span class="dropdown-section-title">分层颜色标记</span>
+              </el-dropdown-item>
+              <el-dropdown-item command="color-blue">
+                <span class="color-dot dot-blue"></span>
+                <span>科技蓝 (源表 / ODS)</span>
+              </el-dropdown-item>
+              <el-dropdown-item command="color-green">
+                <span class="color-dot dot-green"></span>
+                <span>翡翠绿 (目标表 / DWD)</span>
+              </el-dropdown-item>
+              <el-dropdown-item command="color-orange">
+                <span class="color-dot dot-orange"></span>
+                <span>琥珀橙 (汇总表 / DWS)</span>
+              </el-dropdown-item>
+              <el-dropdown-item command="color-purple">
+                <span class="color-dot dot-purple"></span>
+                <span>罗兰紫 (维表 / DIM)</span>
+              </el-dropdown-item>
+
+              <!-- Canvas / Project separation -->
+              <el-dropdown-item command="remove-canvas" divided>
+                <el-icon><Remove /></el-icon>
+                <span>从当前画布移出</span>
+              </el-dropdown-item>
+              <el-dropdown-item command="delete" style="color: #ef4444;">
                 <el-icon><Delete /></el-icon>
-                <span>删除此表</span>
+                <span>从项目中彻底删除</span>
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -52,7 +81,7 @@
       </div>
     </div>
 
-    <!-- Column Search Bar -->
+    <!-- Column Search Bar with Filter Toggle -->
     <div class="search-bar">
       <div class="search-input-wrap">
         <el-icon class="search-icon"><Search /></el-icon>
@@ -65,6 +94,25 @@
         />
         <el-icon v-if="searchKeyword" class="clear-icon" @click="searchKeyword = ''"><CircleClose /></el-icon>
       </div>
+
+      <!-- Filter Toggle: Only Show Mapped Fields -->
+      <el-tooltip
+        :content="onlyMapped ? '当前已折叠未连线字段，点击显示全部' : '仅显示已连线映射字段 (折叠无连线字段)'"
+        placement="top"
+      >
+        <button
+          class="btn-filter-mapped"
+          :class="{ 'is-active': onlyMapped }"
+          @click.stop="onlyMapped = !onlyMapped"
+        >
+          <el-icon><Filter /></el-icon>
+        </button>
+      </el-tooltip>
+    </div>
+
+    <!-- Folded Hint Banner -->
+    <div v-if="onlyMapped && hiddenCount > 0" class="filter-folded-banner">
+      已折叠 {{ hiddenCount }} 个未映射字段
     </div>
 
     <!-- Column List (nowheel + @wheel.stop prevents canvas zooming) -->
@@ -161,7 +209,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useProjectStore } from '@/stores/projectStore'
 import { api } from '@/api'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Search, Edit, Delete, CircleClose, Link, Right, MoreFilled } from '@element-plus/icons-vue'
+import { Search, Edit, Delete, CircleClose, Link, Right, MoreFilled, Filter, Remove } from '@element-plus/icons-vue'
 import type { ColumnMeta } from '@/types'
 
 const props = defineProps<{
@@ -171,6 +219,7 @@ const props = defineProps<{
     tableName: string
     tableComment?: string
     columns: ColumnMeta[]
+    colorTag?: string
   }
 }>()
 
@@ -178,6 +227,7 @@ const canvasStore = useCanvasStore()
 const projectStore = useProjectStore()
 
 const searchKeyword = ref('')
+const onlyMapped = ref(false)
 const editDialogVisible = ref(false)
 const saving = ref(false)
 const editForm = ref({
@@ -185,7 +235,7 @@ const editForm = ref({
   tableComment: '',
 })
 
-// Highlight / Dim logic for table level
+// Highlight / Dim / Focus logic for table level
 const isHighlighted = computed(() => {
   return canvasStore.highlightedNodeIds.has(props.id)
 })
@@ -193,6 +243,23 @@ const isHighlighted = computed(() => {
 const isDimmed = computed(() => {
   if (canvasStore.highlightedNodeIds.size === 0) return false
   return !canvasStore.highlightedNodeIds.has(props.id)
+})
+
+const isFocused = computed(() => {
+  return canvasStore.focusedTableId === props.data.tableId
+})
+
+// Color Theme Map for Data Layering
+const COLOR_THEMES: Record<string, { primary: string; lightBg: string; name: string }> = {
+  blue: { primary: '#3B82F6', lightBg: '#EFF6FF', name: '科技蓝 (源表 / ODS)' },
+  green: { primary: '#10B981', lightBg: '#ECFDF5', name: '翡翠绿 (目标表 / DWD)' },
+  orange: { primary: '#F59E0B', lightBg: '#FFFBEB', name: '琥珀橙 (汇总表 / DWS)' },
+  purple: { primary: '#8B5CF6', lightBg: '#F5F3FF', name: '罗兰紫 (维表 / DIM)' },
+}
+
+const currentTheme = computed(() => {
+  const tag = props.data.colorTag || 'blue'
+  return COLOR_THEMES[tag] || COLOR_THEMES.blue
 })
 
 // Column level active & breathing logic
@@ -213,15 +280,23 @@ const handleFieldClick = (colId: string) => {
   canvasStore.selectColumn(colId)
 }
 
-// Filter columns
+// Filter columns with onlyMapped and searchKeyword
 const filteredColumns = computed(() => {
-  const list = props.data.columns || []
+  let list = props.data.columns || []
+  if (onlyMapped.value) {
+    list = list.filter(c => hasMapping(c.id))
+  }
   if (!searchKeyword.value.trim()) return list
   const kw = searchKeyword.value.trim().toLowerCase()
   return list.filter(c =>
     c.column_name.toLowerCase().includes(kw) ||
     (c.column_comment && c.column_comment.toLowerCase().includes(kw))
   )
+})
+
+const hiddenCount = computed(() => {
+  if (!onlyMapped.value) return 0
+  return (props.data.columns || []).length - filteredColumns.value.length
 })
 
 const getTypeClass = (typeStr: string = '') => {
@@ -245,6 +320,12 @@ const handleCommand = (cmd: string) => {
       tableComment: props.data.tableComment || '',
     }
     editDialogVisible.value = true
+  } else if (cmd.startsWith('color-')) {
+    const colorTag = cmd.replace('color-', '')
+    props.data.colorTag = colorTag
+    canvasStore.updateTableColor(props.data.tableId, colorTag)
+  } else if (cmd === 'remove-canvas') {
+    canvasStore.removeTableFromCurrentCanvas(props.data.tableId)
   } else if (cmd === 'delete') {
     confirmDelete()
   }
@@ -329,6 +410,27 @@ const confirmDelete = () => {
   border-color: #3b82f6;
   border-top-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), 0 12px 28px rgba(59, 130, 246, 0.2);
+}
+
+@keyframes focus-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7), 0 4px 12px rgba(15, 23, 42, 0.1);
+    border-color: #3b82f6;
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.4), 0 16px 36px rgba(59, 130, 246, 0.35);
+    border-color: #2563eb;
+    transform: scale(1.02);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7), 0 4px 12px rgba(15, 23, 42, 0.1);
+    border-color: #3b82f6;
+  }
+}
+
+.table-card-node.is-focused {
+  animation: focus-pulse 1.2s ease-in-out infinite;
+  z-index: 100 !important;
 }
 
 .card-header {
@@ -432,12 +534,54 @@ const confirmDelete = () => {
   padding: 6px 10px;
   background: #ffffff;
   border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .search-input-wrap {
   position: relative;
   display: flex;
   align-items: center;
+  flex: 1;
+}
+
+.btn-filter-mapped {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.btn-filter-mapped:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
+.btn-filter-mapped.is-active {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #93c5fd;
+}
+
+.filter-folded-banner {
+  font-size: 11px;
+  color: #3b82f6;
+  background: #eff6ff;
+  border-bottom: 1px solid #dbeafe;
+  padding: 4px 10px;
+  text-align: center;
+  font-weight: 500;
 }
 
 .search-icon {
@@ -724,4 +868,24 @@ const confirmDelete = () => {
   font-size: 13px;
   padding: 8px 14px;
 }
+
+:deep(.dropdown-section-title) {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+:deep(.color-dot) {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+:deep(.dot-blue) { background-color: #3b82f6; }
+:deep(.dot-green) { background-color: #10b981; }
+:deep(.dot-orange) { background-color: #f59e0b; }
+:deep(.dot-purple) { background-color: #8b5cf6; }
 </style>

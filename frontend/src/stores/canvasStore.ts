@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { Node, Edge, Connection } from '@vue-flow/core'
 import dagre from 'dagre'
 import { api } from '@/api'
-import type { TableMeta, FieldMapping } from '@/types'
+import type { TableMeta, FieldMapping, CanvasView, CanvasTableMeta } from '@/types'
 import { ElMessage } from 'element-plus'
 
 export const useCanvasStore = defineStore('canvas', () => {
@@ -12,6 +12,16 @@ export const useCanvasStore = defineStore('canvas', () => {
   const selectedEdgeId = ref<string | null>(null)
   const highlightedNodeIds = ref<Set<string>>(new Set())
   const highlightedEdgeIds = ref<Set<string>>(new Set())
+
+  // Multi-canvas / Subject View State
+  const canvases = ref<CanvasView[]>([])
+  const currentCanvasId = ref<string | null>(null)
+  const currentCanvas = computed(() => canvases.value.find(c => c.id === currentCanvasId.value) || null)
+  const loadingCanvas = ref(false)
+
+  // Focused Table state for quick search
+  const focusedTableId = ref<string | null>(null)
+  let focusTimer: any = null
 
   // Active field and its counterpart columns for breathing animation & line visibility
   const activeColumnId = ref<string | null>(null)
@@ -60,6 +70,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         tableName: t.table_name,
         tableComment: t.table_comment || '',
         columns: t.columns || [],
+        colorTag: (t as any).color_tag || 'blue',
       },
     }))
 
@@ -128,7 +139,11 @@ export const useCanvasStore = defineStore('canvas', () => {
       }))
       if (updates.length > 0) {
         try {
-          await api.updateTablePositions(updates)
+          if (currentCanvasId.value) {
+            await api.updateCanvasPositions(currentCanvasId.value, updates)
+          } else {
+            await api.updateTablePositions(updates)
+          }
         } catch (e) {
           console.error('保存节点坐标失败', e)
         }
@@ -391,6 +406,114 @@ export const useCanvasStore = defineStore('canvas', () => {
     highlightedEdgeIds.value.clear()
   }
 
+  // Focus table for quick search
+  const focusTable = (tableId: string) => {
+    focusedTableId.value = tableId
+    if (focusTimer) clearTimeout(focusTimer)
+    focusTimer = setTimeout(() => {
+      focusedTableId.value = null
+    }, 2500)
+  }
+
+  // Multi-canvas operations
+  const fetchCanvases = async (projectId: string, autoSelectFirst = true) => {
+    try {
+      const list = await api.getCanvases(projectId)
+      canvases.value = list
+      if (list.length > 0 && (autoSelectFirst || !currentCanvasId.value || !list.some(c => c.id === currentCanvasId.value))) {
+        await switchCanvas(list[0].id)
+      }
+    } catch (e) {
+      console.error('加载画布列表失败', e)
+    }
+  }
+
+  const switchCanvas = async (canvasId: string) => {
+    loadingCanvas.value = true
+    currentCanvasId.value = canvasId
+    try {
+      const detail = await api.getCanvasDetail(canvasId)
+      syncFromProject(detail.tables, detail.mappings)
+    } catch (e) {
+      console.error('加载画布详情失败', e)
+    } finally {
+      loadingCanvas.value = false
+    }
+  }
+
+  const createCanvas = async (projectId: string, name: string) => {
+    try {
+      const created = await api.createCanvas(projectId, { name })
+      ElMessage.success('新建业务视图成功')
+      await fetchCanvases(projectId, false)
+      await switchCanvas(created.id)
+      return created
+    } catch (e: any) {
+      ElMessage.error('新建画布失败: ' + (e.message || '网络错误'))
+      throw e
+    }
+  }
+
+  const updateCanvasName = async (canvasId: string, name: string) => {
+    try {
+      const updated = await api.updateCanvas(canvasId, { name })
+      const item = canvases.value.find(c => c.id === canvasId)
+      if (item) item.name = updated.name
+      ElMessage.success('画布已重命名')
+    } catch (e: any) {
+      ElMessage.error('重命名画布失败: ' + (e.message || '网络错误'))
+    }
+  }
+
+  const deleteCanvas = async (canvasId: string, projectId: string) => {
+    try {
+      await api.deleteCanvas(canvasId)
+      ElMessage.success('画布已删除')
+      currentCanvasId.value = null
+      await fetchCanvases(projectId, true)
+    } catch (e: any) {
+      ElMessage.error('删除画布失败: ' + (e.message || '网络错误'))
+    }
+  }
+
+  const addTablesToCurrentCanvas = async (tableIds: string[]) => {
+    if (!currentCanvasId.value) return
+    try {
+      await api.addTablesToCanvas(currentCanvasId.value, tableIds)
+      await switchCanvas(currentCanvasId.value)
+      ElMessage.success(`成功引入 ${tableIds.length} 张表到当前画布`)
+    } catch (e: any) {
+      ElMessage.error('引入表失败: ' + (e.message || '网络错误'))
+    }
+  }
+
+  const removeTableFromCurrentCanvas = async (tableId: string) => {
+    if (!currentCanvasId.value) return
+    try {
+      await api.removeTableFromCanvas(currentCanvasId.value, tableId)
+      nodes.value = nodes.value.filter(n => n.data.tableId !== tableId)
+      edges.value = edges.value.filter(e => e.data.sourceTableId !== tableId && e.data.targetTableId !== tableId)
+      updateEdgeHandles()
+      ElMessage.success('已从当前画布移出')
+    } catch (e: any) {
+      ElMessage.error('移出表失败: ' + (e.message || '网络错误'))
+    }
+  }
+
+  const updateTableColor = async (tableId: string, colorTag: string) => {
+    const node = nodes.value.find(n => n.data.tableId === tableId)
+    if (node) {
+      node.data.colorTag = colorTag
+    }
+    if (currentCanvasId.value) {
+      try {
+        await api.updateCanvasTableColor(currentCanvasId.value, tableId, colorTag)
+      } catch (e) {
+        console.error('更新表分层颜色失败', e)
+      }
+    }
+  }
+
   return {
     nodes,
     edges,
@@ -399,6 +522,20 @@ export const useCanvasStore = defineStore('canvas', () => {
     highlightedEdgeIds,
     activeColumnId,
     associatedColumnIds,
+    canvases,
+    currentCanvasId,
+    currentCanvas,
+    loadingCanvas,
+    focusedTableId,
+    focusTable,
+    fetchCanvases,
+    switchCanvas,
+    createCanvas,
+    updateCanvasName,
+    deleteCanvas,
+    addTablesToCurrentCanvas,
+    removeTableFromCurrentCanvas,
+    updateTableColor,
     selectColumn,
     updateEdgeHandles,
     syncFromProject,

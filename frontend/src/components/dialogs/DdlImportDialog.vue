@@ -407,17 +407,19 @@ const handleImportSelected = async () => {
 
   importing.value = true
   try {
-    await api.importDdlTables(projectStore.currentProject.id, newTables)
+    await api.importDdlTables(projectStore.currentProject.id, newTables, canvasStore.currentCanvasId || undefined)
     ElMessage.success(`已成功增量导入 ${newTables.length} 张新表到画布`)
     visible.value = false
 
     // Refresh project details & canvas
     await projectStore.selectProject(projectStore.currentProject.id)
     if (projectStore.currentProject) {
-      canvasStore.syncFromProject(
-        projectStore.currentProject.tables,
-        projectStore.currentProject.mappings
-      )
+      if (canvasStore.currentCanvasId) {
+        await canvasStore.switchCanvas(canvasStore.currentCanvasId)
+        await canvasStore.fetchCanvases(projectStore.currentProject.id, false)
+      } else {
+        await canvasStore.fetchCanvases(projectStore.currentProject.id)
+      }
     }
   } catch (err: any) {
     ElMessage.error('导入失败: ' + (err.message || '网络错误'))

@@ -23,3 +23,4 @@ class DdlParseRequest(BaseModel):
 class DdlImportRequest(BaseModel):
     project_id: str
     tables: List[ParsedTable]
+    canvas_id: Optional[str] = None

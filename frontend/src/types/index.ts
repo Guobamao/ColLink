@@ -67,3 +67,21 @@ export interface DbTableSummary {
   table_comment?: string
   column_count?: number
 }
+
+export interface CanvasTableMeta extends TableMeta {
+  color_tag?: string
+}
+
+export interface CanvasView {
+  id: string
+  project_id: string
+  name: string
+  sort_order: number
+  created_at: string
+  table_count?: number
+}
+
+export interface CanvasDetail extends CanvasView {
+  tables: CanvasTableMeta[]
+  mappings: FieldMapping[]
+}

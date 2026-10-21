@@ -23,3 +23,4 @@ class DbMetadataImportRequest(BaseModel):
     project_id: str
     connection: DbConnectionRequest
     selected_tables: Optional[List[str]] = None  # None or empty = all tables
+    canvas_id: Optional[str] = None

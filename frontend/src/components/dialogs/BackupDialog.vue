@@ -90,10 +90,7 @@ const handleRestoreFile = async (file: any) => {
     await projectStore.fetchProjects()
     await projectStore.selectProject(newProj.id)
     if (projectStore.currentProject) {
-      canvasStore.syncFromProject(
-        projectStore.currentProject.tables,
-        projectStore.currentProject.mappings
-      )
+      await canvasStore.fetchCanvases(projectStore.currentProject.id)
     }
   } catch (err: any) {
     ElMessage.error(err.response?.data?.detail || err.message || '恢复项目失败')

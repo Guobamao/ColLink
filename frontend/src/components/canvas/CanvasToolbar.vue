@@ -37,6 +37,43 @@
 
     <!-- Center: Main Actions & Canvas Controls (Compact) -->
     <div class="toolbar-section center-section">
+      <!-- Quick Table / Column Search (Ctrl+K) -->
+      <div class="search-box">
+        <el-autocomplete
+          ref="searchRef"
+          v-model="searchQuery"
+          :fetch-suggestions="querySearch"
+          placeholder="快速找表/字段 (Ctrl+K)..."
+          clearable
+          size="default"
+          class="global-search-input"
+          :trigger-on-focus="true"
+          @select="handleSearchSelect"
+        >
+          <template #prefix>
+            <el-icon class="search-prefix-icon"><Search /></el-icon>
+          </template>
+          <template #suffix>
+            <span class="search-shortcut-badge">Ctrl K</span>
+          </template>
+          <template #default="{ item }">
+            <div class="search-result-item">
+              <div class="item-main">
+                <span class="item-tbl-name">[{{ item.tableName }}]</span>
+                <span v-if="item.tableComment" class="item-tbl-comment">{{ item.tableComment }}</span>
+                <span class="item-col-count">({{ item.columnCount }}列)</span>
+              </div>
+              <div v-if="item.matchedColumn" class="item-sub-col">
+                匹配字段: <span class="highlight-matched">{{ item.matchedColumn.column_name }}</span>
+                <span v-if="item.matchedColumn.column_comment"> ({{ item.matchedColumn.column_comment }})</span>
+              </div>
+            </div>
+          </template>
+        </el-autocomplete>
+      </div>
+
+      <div class="divider"></div>
+
       <!-- 1. 导入数据源 (下拉菜单聚合) -->
       <el-dropdown trigger="click" @command="handleImportCommand">
         <el-button type="primary" class="btn-primary-action">
@@ -126,6 +163,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { api } from '@/api'
@@ -144,6 +182,7 @@ import {
   Picture,
   TakeawayBox,
   CircleClose,
+  Search,
 } from '@element-plus/icons-vue'
 
 const emit = defineEmits([
@@ -154,18 +193,96 @@ const emit = defineEmits([
   'open-mapping-drawer',
   'fit-view',
   'export-image',
+  'focus-table',
 ])
 
 const projectStore = useProjectStore()
 const canvasStore = useCanvasStore()
 
+const searchQuery = ref('')
+const searchRef = ref<any>(null)
+
+interface SearchSuggestion {
+  value: string
+  tableId: string
+  nodeId: string
+  tableName: string
+  tableComment?: string
+  columnCount: number
+  matchedColumn?: {
+    column_name: string
+    column_comment?: string
+    id: string
+  }
+}
+
+const querySearch = (queryString: string, cb: (results: SearchSuggestion[]) => void) => {
+  const query = (queryString || '').trim().toLowerCase()
+  const results: SearchSuggestion[] = []
+
+  for (const node of canvasStore.nodes) {
+    const data = node.data
+    if (!data) continue
+
+    const tName = data.tableName || ''
+    const tComment = data.tableComment || ''
+    const cols = data.columns || []
+
+    const nameMatches = tName.toLowerCase().includes(query)
+    const commentMatches = tComment.toLowerCase().includes(query)
+
+    let matchedCol: any = null
+    if (query) {
+      matchedCol = cols.find((c: any) =>
+        c.column_name.toLowerCase().includes(query) ||
+        (c.column_comment && c.column_comment.toLowerCase().includes(query))
+      )
+    }
+
+    if (!query || nameMatches || commentMatches || matchedCol) {
+      results.push({
+        value: tName,
+        tableId: data.tableId,
+        nodeId: node.id,
+        tableName: tName,
+        tableComment: tComment,
+        columnCount: cols.length,
+        matchedColumn: matchedCol,
+      })
+    }
+  }
+
+  cb(results)
+}
+
+const handleSearchSelect = (item: any) => {
+  if (!item) return
+  emit('focus-table', {
+    tableId: item.tableId,
+    nodeId: item.nodeId,
+    columnId: item.matchedColumn?.id,
+  })
+}
+
+const onGlobalKeyDown = (e: KeyboardEvent) => {
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault()
+    searchRef.value?.focus()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onGlobalKeyDown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onGlobalKeyDown)
+})
+
 const onProjectChange = async (projectId: string) => {
   await projectStore.selectProject(projectId)
   if (projectStore.currentProject) {
-    canvasStore.syncFromProject(
-      projectStore.currentProject.tables,
-      projectStore.currentProject.mappings
-    )
+    await canvasStore.fetchCanvases(projectStore.currentProject.id)
     emit('fit-view')
   }
 }
@@ -409,6 +526,87 @@ const handleExportCommand = (cmd: string) => {
 .badge-item :deep(.el-badge__content) {
   top: 3px;
   right: 5px;
+}
+
+/* Quick Search Box */
+.search-box {
+  width: 220px;
+}
+
+:deep(.global-search-input .el-input__wrapper) {
+  border-radius: 6px;
+  background-color: #f8fafc;
+  box-shadow: 0 0 0 1px #e2e8f0 inset;
+  transition: all 0.2s ease;
+  padding: 0 8px;
+  height: 32px;
+}
+
+:deep(.global-search-input .el-input__wrapper:hover) {
+  box-shadow: 0 0 0 1px #cbd5e1 inset;
+  background-color: #ffffff;
+}
+
+:deep(.global-search-input .el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1.5px #3b82f6 inset;
+  background-color: #ffffff;
+}
+
+.search-prefix-icon {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.search-shortcut-badge {
+  font-size: 10px;
+  color: #94a3b8;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 3px;
+  padding: 1px 4px;
+  line-height: 1.2;
+}
+
+.search-result-item {
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.item-tbl-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.item-tbl-comment {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.item-col-count {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.item-sub-col {
+  font-size: 11px;
+  color: #64748b;
+  padding-left: 8px;
+  border-left: 2px solid #3b82f6;
+  margin-top: 2px;
+}
+
+.highlight-matched {
+  color: #2563eb;
+  font-weight: 600;
 }
 </style>
 

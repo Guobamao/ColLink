@@ -17,3 +17,4 @@ class TableMeta(Base):
     # Relationships
     project = relationship("Project", back_populates="tables")
     columns = relationship("ColumnMeta", back_populates="table", cascade="all, delete-orphan", order_by="ColumnMeta.sort_order")
+    node_layouts = relationship("CanvasNodeLayout", back_populates="table", cascade="all, delete-orphan")

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.table import TableMeta
 from app.models.column import ColumnMeta
+from app.models.canvas import CanvasView, CanvasNodeLayout
 from app.schemas.ddl import DdlParseRequest, DdlImportRequest, ParsedTable
 from app.schemas.table import TableWithColumnsOut, ColumnOut
 from app.services.ddl_parser import DdlParser
@@ -91,6 +92,23 @@ def import_ddl_tables(req: DdlImportRequest, db: Session = Depends(get_db)):
             pos_y=table.pos_y,
             columns=cols_out
         ))
+
+        # Also add to canvas view
+        target_canvas_id = req.canvas_id
+        if not target_canvas_id:
+            first_canvas = db.query(CanvasView).filter(CanvasView.project_id == req.project_id).order_by(CanvasView.sort_order.asc()).first()
+            if first_canvas:
+                target_canvas_id = first_canvas.id
+
+        if target_canvas_id:
+            layout = CanvasNodeLayout(
+                canvas_id=target_canvas_id,
+                table_id=table.id,
+                position_x=table.pos_x,
+                position_y=table.pos_y,
+                color_tag="blue"
+            )
+            db.add(layout)
 
     db.commit()
     return created_tables

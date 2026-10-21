@@ -9,7 +9,11 @@
       @open-mapping-drawer="openMappingDrawer"
       @fit-view="handleFitView"
       @export-image="handleExportImage"
+      @focus-table="handleFocusTable"
     />
+
+    <!-- Multi-Canvas / Subject View Tabs -->
+    <CanvasTabs />
 
     <!-- Vue Flow Infinite Canvas Area -->
     <div ref="canvasWrapperRef" class="canvas-wrapper">
@@ -85,6 +89,7 @@ import '@vue-flow/controls/dist/style.css'
 
 import TableNode from '@/components/canvas/TableNode.vue'
 import CanvasToolbar from '@/components/canvas/CanvasToolbar.vue'
+import CanvasTabs from '@/components/canvas/CanvasTabs.vue'
 import DdlImportDialog from '@/components/dialogs/DdlImportDialog.vue'
 import DbConnectDialog from '@/components/dialogs/DbConnectDialog.vue'
 import ProjectDialog from '@/components/dialogs/ProjectDialog.vue'
@@ -114,10 +119,7 @@ const nodeTypes = {
 onMounted(async () => {
   await projectStore.fetchProjects()
   if (projectStore.currentProject) {
-    canvasStore.syncFromProject(
-      projectStore.currentProject.tables,
-      projectStore.currentProject.mappings
-    )
+    await canvasStore.fetchCanvases(projectStore.currentProject.id)
     setTimeout(() => {
       handleFitView()
     }, 200)
@@ -126,6 +128,20 @@ onMounted(async () => {
 
 const handleFitView = () => {
   fitView({ padding: 0.2, duration: 400 })
+}
+
+const handleFocusTable = ({ tableId, nodeId, columnId }: { tableId: string; nodeId: string; columnId?: string }) => {
+  canvasStore.focusTable(tableId)
+  fitView({ nodes: [nodeId], duration: 600, maxZoom: 1.1, padding: 0.4 })
+  if (columnId) {
+    canvasStore.selectColumn(columnId)
+    setTimeout(() => {
+      const el = document.getElementById(`col_item_${columnId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+    }, 100)
+  }
 }
 
 const handleConnect = (params: any) => {
@@ -227,7 +243,7 @@ const handleExportImage = async () => {
 .canvas-wrapper {
   flex: 1;
   width: 100%;
-  height: calc(100vh - 56px);
+  height: calc(100vh - 56px - 38px);
   position: relative;
 }
 

@@ -17,3 +17,4 @@ class Project(Base):
     # Relationships
     tables = relationship("TableMeta", back_populates="project", cascade="all, delete-orphan")
     mappings = relationship("FieldMapping", back_populates="project", cascade="all, delete-orphan")
+    canvases = relationship("CanvasView", back_populates="project", cascade="all, delete-orphan", order_by="CanvasView.sort_order")
