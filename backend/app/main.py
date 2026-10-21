@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="ColLink API",
-    description="ColLink - 数据字段血缘与可视化映射平台后端服务",
+    description="ColLink 后端服务",
     version="1.0.0",
     lifespan=lifespan
 )

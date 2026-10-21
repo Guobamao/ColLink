@@ -6,17 +6,16 @@
       'is-highlighted': isHighlighted,
       'is-focused': isFocused,
     }"
-    :style="{ borderTopColor: currentTheme.primary }"
     @wheel.stop
   >
     <!-- Card Header with Top Brand Accent -->
     <div class="card-header">
       <div class="header-left">
-        <div class="db-icon-badge" :style="{ backgroundColor: currentTheme.lightBg }">
+        <div class="db-icon-badge">
           <svg class="table-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="4" width="18" height="16" rx="2" :stroke="currentTheme.primary" stroke-width="2"/>
-            <path d="M3 9H21" :stroke="currentTheme.primary" stroke-width="2"/>
-            <path d="M9 20V9" :stroke="currentTheme.primary" stroke-width="2"/>
+            <rect x="3" y="4" width="18" height="16" rx="2" stroke="#3B82F6" stroke-width="2"/>
+            <path d="M3 9H21" stroke="#3B82F6" stroke-width="2"/>
+            <path d="M9 20V9" stroke="#3B82F6" stroke-width="2"/>
           </svg>
         </div>
         <div class="title-wrap">
@@ -43,27 +42,6 @@
               <el-dropdown-item command="edit">
                 <el-icon><Edit /></el-icon>
                 <span>编辑表信息</span>
-              </el-dropdown-item>
-
-              <!-- Color Tagging Options -->
-              <el-dropdown-item divided disabled>
-                <span class="dropdown-section-title">分层颜色标记</span>
-              </el-dropdown-item>
-              <el-dropdown-item command="color-blue">
-                <span class="color-dot dot-blue"></span>
-                <span>科技蓝 (源表 / ODS)</span>
-              </el-dropdown-item>
-              <el-dropdown-item command="color-green">
-                <span class="color-dot dot-green"></span>
-                <span>翡翠绿 (目标表 / DWD)</span>
-              </el-dropdown-item>
-              <el-dropdown-item command="color-orange">
-                <span class="color-dot dot-orange"></span>
-                <span>琥珀橙 (汇总表 / DWS)</span>
-              </el-dropdown-item>
-              <el-dropdown-item command="color-purple">
-                <span class="color-dot dot-purple"></span>
-                <span>罗兰紫 (维表 / DIM)</span>
               </el-dropdown-item>
 
               <!-- Canvas / Project separation -->
@@ -249,18 +227,6 @@ const isFocused = computed(() => {
   return canvasStore.focusedTableId === props.data.tableId
 })
 
-// Color Theme Map for Data Layering
-const COLOR_THEMES: Record<string, { primary: string; lightBg: string; name: string }> = {
-  blue: { primary: '#3B82F6', lightBg: '#EFF6FF', name: '科技蓝 (源表 / ODS)' },
-  green: { primary: '#10B981', lightBg: '#ECFDF5', name: '翡翠绿 (目标表 / DWD)' },
-  orange: { primary: '#F59E0B', lightBg: '#FFFBEB', name: '琥珀橙 (汇总表 / DWS)' },
-  purple: { primary: '#8B5CF6', lightBg: '#F5F3FF', name: '罗兰紫 (维表 / DIM)' },
-}
-
-const currentTheme = computed(() => {
-  const tag = props.data.colorTag || 'blue'
-  return COLOR_THEMES[tag] || COLOR_THEMES.blue
-})
 
 // Column level active & breathing logic
 const isColumnActive = (colId: string) => {
@@ -320,10 +286,6 @@ const handleCommand = (cmd: string) => {
       tableComment: props.data.tableComment || '',
     }
     editDialogVisible.value = true
-  } else if (cmd.startsWith('color-')) {
-    const colorTag = cmd.replace('color-', '')
-    props.data.colorTag = colorTag
-    canvasStore.updateTableColor(props.data.tableId, colorTag)
   } else if (cmd === 'remove-canvas') {
     canvasStore.removeTableFromCurrentCanvas(props.data.tableId)
   } else if (cmd === 'delete') {
@@ -869,23 +831,5 @@ const confirmDelete = () => {
   padding: 8px 14px;
 }
 
-:deep(.dropdown-section-title) {
-  font-size: 11px;
-  color: #94a3b8;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
 
-:deep(.color-dot) {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: inline-block;
-}
-
-:deep(.dot-blue) { background-color: #3b82f6; }
-:deep(.dot-green) { background-color: #10b981; }
-:deep(.dot-orange) { background-color: #f59e0b; }
-:deep(.dot-purple) { background-color: #8b5cf6; }
 </style>

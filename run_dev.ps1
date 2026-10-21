@@ -1,7 +1,7 @@
 ﻿# ColLink 一键启动脚本 (PowerShell)
 
 Write-Host "=================================================" -ForegroundColor Cyan
-Write-Host "  启动 ColLink (数据字段血缘与可视化映射平台)" -ForegroundColor Cyan
+Write-Host "  启动 ColLink " -ForegroundColor Cyan
 Write-Host "=================================================" -ForegroundColor Cyan
 
 $CurrentDir = Split-Path -Parent $MyInvocation.MyCommand.Path

@@ -58,3 +58,17 @@ class TableWithColumnsOut(TableOut):
 
     class Config:
         from_attributes = True
+
+
+class SyncSummary(BaseModel):
+    tables_created: int = 0
+    tables_updated: int = 0
+    columns_added: int = 0
+    columns_updated: int = 0
+    mappings_preserved: int = 0
+    message: str = ""
+
+
+class ImportResultResponse(BaseModel):
+    tables: List[TableWithColumnsOut] = []
+    summary: SyncSummary

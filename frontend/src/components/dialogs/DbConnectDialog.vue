@@ -8,7 +8,7 @@
     <template #header>
       <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: #1e293b;">
         <el-icon color="#3b82f6"><Connection /></el-icon>
-        <span>{{ step === 'config' ? '在线数据库逆向拉取 - 数据库配置' : '在线数据库逆向拉取 - 选择导入数据表' }}</span>
+        <span>{{ step === 'config' ? '连接数据库导入 - 数据库配置' : '连接数据库导入 - 选择导入数据表' }}</span>
       </div>
     </template>
     <div class="dialog-body">
@@ -145,7 +145,7 @@
               :disabled="selectedTables.length === 0"
               @click="handleImportTables"
             >
-              {{ newTablesCount > 0 ? `确认增量导入新表 (${newTablesCount})` : '确认完成' }}
+              {{ newTablesCount > 0 ? `确认导入新表 (${newTablesCount})` : `确认增量同步 (${selectedTables.length})` }}
             </el-button>
           </div>
         </div>
@@ -159,7 +159,7 @@ import { ref, computed, nextTick } from 'vue'
 import { api } from '@/api'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { Connection, Right, Back } from '@element-plus/icons-vue'
 import type { DbTableSummary } from '@/types'
 
@@ -424,27 +424,25 @@ const handleImportTables = async () => {
     return
   }
 
-  // Filter only tables that are NOT yet on canvas
-  const newTables = selectedTables.value.filter(
-    t => !isTableInCanvas(t.table_name)
-  )
-
-  if (newTables.length === 0) {
-    ElMessage.info('所选数据表均已在画布中，无需重复导入')
-    visible.value = false
-    return
-  }
-
   importing.value = true
   try {
-    const tableNames = newTables.map(t => t.table_name)
-    await api.importDbTables(
+    const tableNames = selectedTables.value.map(t => t.table_name)
+    const res = await api.importDbTables(
       projectStore.currentProject.id,
       form.value,
       tableNames,
       canvasStore.currentCanvasId || undefined
     )
-    ElMessage.success(`已成功增量导入 ${tableNames.length} 张新表到画布`)
+
+    if (res.summary?.message) {
+      ElNotification.success({
+        title: '数据库表结构同步完成',
+        message: res.summary.message,
+        duration: 6000,
+      })
+    } else {
+      ElMessage.success('导入完成')
+    }
     visible.value = false
 
     await projectStore.selectProject(projectStore.currentProject.id)

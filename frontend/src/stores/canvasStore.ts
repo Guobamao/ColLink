@@ -6,12 +6,65 @@ import { api } from '@/api'
 import type { TableMeta, FieldMapping, CanvasView, CanvasTableMeta } from '@/types'
 import { ElMessage } from 'element-plus'
 
+export type HistoryAction =
+  | {
+      type: 'ADD_MAPPINGS'
+      projectId: string
+      mappings: Array<{
+        id: string
+        sourceTableId: string
+        sourceColumnId: string
+        targetTableId: string
+        targetColumnId: string
+        edge: Edge
+      }>
+    }
+  | {
+      type: 'REMOVE_MAPPINGS'
+      projectId: string
+      mappings: Array<{
+        id: string
+        sourceTableId: string
+        sourceColumnId: string
+        targetTableId: string
+        targetColumnId: string
+        edge: Edge
+      }>
+    }
+  | {
+      type: 'MOVE_NODE'
+      nodeId: string
+      tableId: string
+      prevPos: { x: number; y: number }
+      newPos: { x: number; y: number }
+    }
+  | {
+      type: 'LAYOUT_NODES'
+      prevPositions: Array<{ id: string; nodeId: string; pos: { x: number; y: number } }>
+      newPositions: Array<{ id: string; nodeId: string; pos: { x: number; y: number } }>
+    }
+
 export const useCanvasStore = defineStore('canvas', () => {
   const nodes = ref<Node[]>([])
   const edges = ref<Edge[]>([])
   const selectedEdgeId = ref<string | null>(null)
   const highlightedNodeIds = ref<Set<string>>(new Set())
   const highlightedEdgeIds = ref<Set<string>>(new Set())
+
+  // Undo / Redo History Stack (max 30 steps)
+  const historyStack = ref<HistoryAction[]>([])
+  const redoStack = ref<HistoryAction[]>([])
+  const canUndo = computed(() => historyStack.value.length > 0)
+  const canRedo = computed(() => redoStack.value.length > 0)
+  const dragStartPosMap = new Map<string, { x: number; y: number }>()
+
+  const pushHistory = (action: HistoryAction) => {
+    redoStack.value = []
+    historyStack.value.push(action)
+    if (historyStack.value.length > 30) {
+      historyStack.value.shift()
+    }
+  }
 
   // Multi-canvas / Subject View State
   const canvases = ref<CanvasView[]>([])
@@ -28,6 +81,19 @@ export const useCanvasStore = defineStore('canvas', () => {
   const associatedColumnIds = ref<Set<string>>(new Set())
 
   let savePositionTimer: any = null
+
+  const persistPositions = async (updates: Array<{ id: string; pos_x: number; pos_y: number }>) => {
+    if (updates.length === 0) return
+    try {
+      if (currentCanvasId.value) {
+        await api.updateCanvasPositions(currentCanvasId.value, updates)
+      } else {
+        await api.updateTablePositions(updates)
+      }
+    } catch (e) {
+      console.error('保存节点坐标失败', e)
+    }
+  }
 
   // Dynamically adapt edge handles: always connect via the closest handles
   const updateEdgeHandles = () => {
@@ -120,13 +186,37 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   // Handle node dragging: dynamically update handles in real-time
+  const onNodeDragStart = (e: any) => {
+    if (e?.node) {
+      dragStartPosMap.set(e.node.id, { x: e.node.position.x, y: e.node.position.y })
+    }
+  }
+
   const onNodeDrag = () => {
     updateEdgeHandles()
   }
 
   // Handle node drag end - debounce position saving to backend
-  const onNodeDragStop = () => {
+  const onNodeDragStop = (e?: any) => {
     updateEdgeHandles()
+
+    if (e?.node) {
+      const startPos = dragStartPosMap.get(e.node.id)
+      if (startPos) {
+        const dx = Math.abs(startPos.x - e.node.position.x)
+        const dy = Math.abs(startPos.y - e.node.position.y)
+        if (dx > 2 || dy > 2) {
+          pushHistory({
+            type: 'MOVE_NODE',
+            nodeId: e.node.id,
+            tableId: e.node.data.tableId,
+            prevPos: { ...startPos },
+            newPos: { x: Math.round(e.node.position.x), y: Math.round(e.node.position.y) },
+          })
+        }
+        dragStartPosMap.delete(e.node.id)
+      }
+    }
 
     if (savePositionTimer) {
       clearTimeout(savePositionTimer)
@@ -138,15 +228,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         pos_y: Math.round(n.position.y),
       }))
       if (updates.length > 0) {
-        try {
-          if (currentCanvasId.value) {
-            await api.updateCanvasPositions(currentCanvasId.value, updates)
-          } else {
-            await api.updateTablePositions(updates)
-          }
-        } catch (e) {
-          console.error('保存节点坐标失败', e)
-        }
+        await persistPositions(updates)
       }
     }, 400)
   }
@@ -249,7 +331,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         return
       }
 
-      edges.value.push({
+      const newEdge: Edge = {
         id: edgeId,
         source: params.source,
         sourceHandle: params.sourceHandle,
@@ -269,18 +351,102 @@ export const useCanvasStore = defineStore('canvas', () => {
           stroke: '#2563eb',
           strokeWidth: 3,
         },
-      })
+      }
 
+      edges.value.push(newEdge)
       updateEdgeHandles()
       selectColumn(sourceColumnId)
+
+      pushHistory({
+        type: 'ADD_MAPPINGS',
+        projectId,
+        mappings: [{
+          id: created.id,
+          sourceTableId,
+          sourceColumnId,
+          targetTableId,
+          targetColumnId,
+          edge: newEdge,
+        }],
+      })
+
       ElMessage.success('建立字段映射成功')
     } catch (err: any) {
       ElMessage.error('创建映射失败: ' + (err.message || '网络错误'))
     }
   }
 
+  // Batch auto mapping
+  const createBatchMappings = async (
+    projectId: string,
+    pairs: Array<{ sourceTableId: string; sourceColumnId: string; targetTableId: string; targetColumnId: string }>
+  ) => {
+    if (pairs.length === 0) return 0
+    try {
+      const created = await api.batchCreateMappings(projectId, pairs.map(p => ({
+        source_table_id: p.sourceTableId,
+        source_column_id: p.sourceColumnId,
+        target_table_id: p.targetTableId,
+        target_column_id: p.targetColumnId,
+      })))
+
+      const historyMappings: any[] = []
+
+      for (const m of created) {
+        const edgeId = `edge_${m.id}`
+        if (edges.value.some(e => e.id === edgeId)) continue
+
+        const edge: Edge = {
+          id: edgeId,
+          source: `table_${m.source_table_id}`,
+          sourceHandle: `source_${m.source_column_id}`,
+          target: `table_${m.target_table_id}`,
+          targetHandle: `target_${m.target_column_id}`,
+          type: 'smoothstep',
+          animated: true,
+          hidden: false,
+          data: {
+            mappingId: m.id,
+            sourceTableId: m.source_table_id,
+            sourceColumnId: m.source_column_id,
+            targetTableId: m.target_table_id,
+            targetColumnId: m.target_column_id,
+          },
+          style: {
+            stroke: '#2563eb',
+            strokeWidth: 3,
+          },
+        }
+        edges.value.push(edge)
+        historyMappings.push({
+          id: m.id,
+          sourceTableId: m.source_table_id,
+          sourceColumnId: m.source_column_id,
+          targetTableId: m.target_table_id,
+          targetColumnId: m.target_column_id,
+          edge,
+        })
+      }
+
+      updateEdgeHandles()
+
+      if (historyMappings.length > 0) {
+        pushHistory({
+          type: 'ADD_MAPPINGS',
+          projectId,
+          mappings: historyMappings,
+        })
+      }
+
+      return created.length
+    } catch (e: any) {
+      ElMessage.error('批量创建映射失败: ' + (e.message || '网络错误'))
+      return 0
+    }
+  }
+
   // Delete edge
-  const removeEdge = async (edgeId: string) => {
+  const removeEdge = async (edgeId: string, projectId?: string) => {
     const edge = edges.value.find(e => e.id === edgeId)
     if (!edge || !edge.data?.mappingId) {
       edges.value = edges.value.filter(e => e.id !== edgeId)
@@ -290,6 +456,20 @@ export const useCanvasStore = defineStore('canvas', () => {
     try {
       await api.deleteMapping(edge.data.mappingId)
       edges.value = edges.value.filter(e => e.id !== edgeId)
+
+      pushHistory({
+        type: 'REMOVE_MAPPINGS',
+        projectId: projectId || '',
+        mappings: [{
+          id: edge.data.mappingId,
+          sourceTableId: edge.data.sourceTableId,
+          sourceColumnId: edge.data.sourceColumnId,
+          targetTableId: edge.data.targetTableId,
+          targetColumnId: edge.data.targetColumnId,
+          edge: { ...edge },
+        }],
+      })
+
       // If deleted edge was active, re-evaluate selection
       if (activeColumnId.value) {
         selectColumn(activeColumnId.value)
@@ -303,6 +483,12 @@ export const useCanvasStore = defineStore('canvas', () => {
   // Dagre auto layout
   const applyAutoLayout = async (direction: 'LR' | 'TB' = 'LR') => {
     if (nodes.value.length === 0) return
+
+    const prevPositions = nodes.value.map(n => ({
+      id: n.data.tableId,
+      nodeId: n.id,
+      pos: { ...n.position },
+    }))
 
     const dagreGraph = new dagre.graphlib.Graph()
     dagreGraph.setDefaultEdgeLabel(() => ({}))
@@ -345,14 +531,155 @@ export const useCanvasStore = defineStore('canvas', () => {
       }
     })
 
+    const newPositions = nodes.value.map(n => ({
+      id: n.data.tableId,
+      nodeId: n.id,
+      pos: { ...n.position },
+    }))
+
+    pushHistory({
+      type: 'LAYOUT_NODES',
+      prevPositions,
+      newPositions,
+    })
+
     updateEdgeHandles()
 
     // Batch persist to backend
     try {
-      await api.updateTablePositions(updates)
+      await persistPositions(updates)
       ElMessage.success('智能排版布局完成')
     } catch (e) {
       console.error('保存自动排版坐标失败', e)
+    }
+  }
+
+  // Undo & Redo execution
+  const undo = async () => {
+    if (historyStack.value.length === 0) return
+    const action = historyStack.value.pop()!
+
+    try {
+      if (action.type === 'ADD_MAPPINGS') {
+        const ids = action.mappings.map(m => m.id)
+        await api.batchDeleteMappings(ids)
+        edges.value = edges.value.filter(e => !ids.includes(e.data?.mappingId))
+        updateEdgeHandles()
+        redoStack.value.push(action)
+        ElMessage.info('已撤销新建连线')
+      } else if (action.type === 'REMOVE_MAPPINGS') {
+        const created = await api.batchCreateMappings(
+          action.projectId,
+          action.mappings.map(m => ({
+            source_table_id: m.sourceTableId,
+            source_column_id: m.sourceColumnId,
+            target_table_id: m.targetTableId,
+            target_column_id: m.targetColumnId,
+          }))
+        )
+        for (let i = 0; i < created.length; i++) {
+          const c = created[i]
+          const orig = action.mappings[i]
+          orig.id = c.id
+          edges.value.push({
+            ...orig.edge,
+            id: `edge_${c.id}`,
+            data: {
+              ...orig.edge.data,
+              mappingId: c.id,
+            },
+          })
+        }
+        updateEdgeHandles()
+        redoStack.value.push(action)
+        ElMessage.info('已撤销删除连线')
+      } else if (action.type === 'MOVE_NODE') {
+        const node = nodes.value.find(n => n.id === action.nodeId)
+        if (node) {
+          node.position = { ...action.prevPos }
+          await persistPositions([{ id: action.tableId, pos_x: action.prevPos.x, pos_y: action.prevPos.y }])
+          updateEdgeHandles()
+        }
+        redoStack.value.push(action)
+        ElMessage.info('已撤销卡片移动')
+      } else if (action.type === 'LAYOUT_NODES') {
+        for (const item of action.prevPositions) {
+          const node = nodes.value.find(n => n.id === item.nodeId)
+          if (node) {
+            node.position = { ...item.pos }
+          }
+        }
+        await persistPositions(action.prevPositions.map(p => ({ id: p.id, pos_x: p.pos.x, pos_y: p.pos.y })))
+        updateEdgeHandles()
+        redoStack.value.push(action)
+        ElMessage.info('已撤销自动排版')
+      }
+    } catch (e: any) {
+      ElMessage.error('撤销失败: ' + (e.message || '网络错误'))
+    }
+  }
+
+  const redo = async () => {
+    if (redoStack.value.length === 0) return
+    const action = redoStack.value.pop()!
+
+    try {
+      if (action.type === 'ADD_MAPPINGS') {
+        const created = await api.batchCreateMappings(
+          action.projectId,
+          action.mappings.map(m => ({
+            source_table_id: m.sourceTableId,
+            source_column_id: m.sourceColumnId,
+            target_table_id: m.targetTableId,
+            target_column_id: m.targetColumnId,
+          }))
+        )
+        for (let i = 0; i < created.length; i++) {
+          const c = created[i]
+          const orig = action.mappings[i]
+          orig.id = c.id
+          edges.value.push({
+            ...orig.edge,
+            id: `edge_${c.id}`,
+            data: {
+              ...orig.edge.data,
+              mappingId: c.id,
+            },
+          })
+        }
+        updateEdgeHandles()
+        historyStack.value.push(action)
+        ElMessage.info('已重做新建连线')
+      } else if (action.type === 'REMOVE_MAPPINGS') {
+        const ids = action.mappings.map(m => m.id)
+        await api.batchDeleteMappings(ids)
+        edges.value = edges.value.filter(e => !ids.includes(e.data?.mappingId))
+        updateEdgeHandles()
+        historyStack.value.push(action)
+        ElMessage.info('已重做删除连线')
+      } else if (action.type === 'MOVE_NODE') {
+        const node = nodes.value.find(n => n.id === action.nodeId)
+        if (node) {
+          node.position = { ...action.newPos }
+          await persistPositions([{ id: action.tableId, pos_x: action.newPos.x, pos_y: action.newPos.y }])
+          updateEdgeHandles()
+        }
+        historyStack.value.push(action)
+        ElMessage.info('已重做卡片移动')
+      } else if (action.type === 'LAYOUT_NODES') {
+        for (const item of action.newPositions) {
+          const node = nodes.value.find(n => n.id === item.nodeId)
+          if (node) {
+            node.position = { ...item.pos }
+          }
+        }
+        await persistPositions(action.newPositions.map(p => ({ id: p.id, pos_x: p.pos.x, pos_y: p.pos.y })))
+        updateEdgeHandles()
+        historyStack.value.push(action)
+        ElMessage.info('已重做自动排版')
+      }
+    } catch (e: any) {
+      ElMessage.error('重做失败: ' + (e.message || '网络错误'))
     }
   }
 
@@ -539,6 +866,14 @@ export const useCanvasStore = defineStore('canvas', () => {
     selectColumn,
     updateEdgeHandles,
     syncFromProject,
+    historyStack,
+    redoStack,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    onNodeDragStart,
+    createBatchMappings,
     onNodeDrag,
     onNodeDragStop,
     onConnect,

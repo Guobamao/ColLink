@@ -90,7 +90,7 @@ COMMENT ON COLUMN &quot;SYS_USER&quot;.&quot;USER_ID&quot; IS '用户ID';"
             :loading="importing"
             @click="handleImportSelected"
           >
-            {{ newTablesCount > 0 ? `确认增量导入新表 (${newTablesCount})` : '确认完成' }}
+            {{ newTablesCount > 0 ? `确认导入新表 (${newTablesCount})` : `确认增量同步 (${selectedTables.length})` }}
           </el-button>
         </div>
 
@@ -143,7 +143,7 @@ import { ref, computed, nextTick } from 'vue'
 import { api } from '@/api'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { DocumentAdd, UploadFilled } from '@element-plus/icons-vue'
 import type { ParsedTable } from '@/types'
 
@@ -394,21 +394,23 @@ const handleImportSelected = async () => {
     return
   }
 
-  // Filter only tables that are NOT yet on canvas
-  const newTables = selectedTables.value.filter(
-    t => !isTableInCanvas(t.table_name)
-  )
-
-  if (newTables.length === 0) {
-    ElMessage.info('所选数据表均已在画布中，无需重复导入')
-    visible.value = false
-    return
-  }
-
   importing.value = true
   try {
-    await api.importDdlTables(projectStore.currentProject.id, newTables, canvasStore.currentCanvasId || undefined)
-    ElMessage.success(`已成功增量导入 ${newTables.length} 张新表到画布`)
+    const res = await api.importDdlTables(
+      projectStore.currentProject.id,
+      selectedTables.value,
+      canvasStore.currentCanvasId || undefined
+    )
+
+    if (res.summary?.message) {
+      ElNotification.success({
+        title: '表结构同步完成',
+        message: res.summary.message,
+        duration: 6000,
+      })
+    } else {
+      ElMessage.success('导入完成')
+    }
     visible.value = false
 
     // Refresh project details & canvas

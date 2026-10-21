@@ -5,7 +5,7 @@ from app.core.database import get_db
 from app.models.mapping import FieldMapping
 from app.models.table import TableMeta
 from app.models.column import ColumnMeta
-from app.schemas.mapping import MappingCreate, MappingOut, MappingDetailOut
+from app.schemas.mapping import MappingCreate, MappingOut, MappingDetailOut, BatchMappingCreate, BatchDeleteRequest
 
 router = APIRouter()
 
@@ -79,3 +79,42 @@ def delete_mapping(mapping_id: str, db: Session = Depends(get_db)):
     db.delete(mapping)
     db.commit()
     return {"message": "Mapping deleted successfully"}
+
+
+@router.post("/batch", response_model=List[MappingOut])
+def batch_create_mappings(project_id: str, data: BatchMappingCreate, db: Session = Depends(get_db)):
+    created: List[FieldMapping] = []
+    for item in data.mappings:
+        existing = db.query(FieldMapping).filter(
+            FieldMapping.project_id == project_id,
+            FieldMapping.source_table_id == item.source_table_id,
+            FieldMapping.source_column_id == item.source_column_id,
+            FieldMapping.target_table_id == item.target_table_id,
+            FieldMapping.target_column_id == item.target_column_id,
+        ).first()
+        if not existing:
+            mapping = FieldMapping(
+                project_id=project_id,
+                source_table_id=item.source_table_id,
+                source_column_id=item.source_column_id,
+                target_table_id=item.target_table_id,
+                target_column_id=item.target_column_id
+            )
+            db.add(mapping)
+            created.append(mapping)
+        else:
+            created.append(existing)
+    db.commit()
+    for m in created:
+        db.refresh(m)
+    return created
+
+
+@router.post("/batch-delete")
+def batch_delete_mappings(data: BatchDeleteRequest, db: Session = Depends(get_db)):
+    if not data.ids:
+        return {"deleted_count": 0}
+    deleted = db.query(FieldMapping).filter(FieldMapping.id.in_(data.ids)).delete(synchronize_session=False)
+    db.commit()
+    return {"deleted_count": deleted}
+

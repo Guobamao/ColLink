@@ -35,14 +35,17 @@ export const api = {
   getMappings: (projectId: string) => apiClient.get<FieldMapping[]>(`/mappings?project_id=${projectId}`).then(res => res.data),
   createMapping: (projectId: string, data: { source_table_id: string; source_column_id: string; target_table_id: string; target_column_id: string }) =>
     apiClient.post<FieldMapping>(`/mappings?project_id=${projectId}`, data).then(res => res.data),
+  batchCreateMappings: (projectId: string, mappings: Array<{ source_table_id: string; source_column_id: string; target_table_id: string; target_column_id: string }>) =>
+    apiClient.post<FieldMapping[]>(`/mappings/batch?project_id=${projectId}`, { mappings }).then(res => res.data),
   deleteMapping: (id: string) => apiClient.delete(`/mappings/${id}`).then(res => res.data),
+  batchDeleteMappings: (ids: string[]) => apiClient.post<{ deleted_count: number }>('/mappings/batch-delete', { ids }).then(res => res.data),
 
   // DDL
   parseDdlText: (data: { sql_text: string; dialect?: string }) => apiClient.post<ParsedTable[]>('/ddl/parse', data).then(res => res.data),
   parseDdlFile: (formData: FormData) => apiClient.post<ParsedTable[]>('/ddl/parse-file', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }).then(res => res.data),
-  importDdlTables: (projectId: string, tables: ParsedTable[], canvasId?: string) => apiClient.post<TableMeta[]>('/ddl/import', {
+  importDdlTables: (projectId: string, tables: ParsedTable[], canvasId?: string) => apiClient.post<{ tables: TableMeta[]; summary: { tables_created: number; tables_updated: number; columns_added: number; columns_updated: number; mappings_preserved: number; message: string } }>('/ddl/import', {
     project_id: projectId,
     tables,
     canvas_id: canvasId
@@ -51,7 +54,7 @@ export const api = {
   // DB Connection
   testDbConnection: (data: any) => apiClient.post<{ success: boolean; message: string }>('/connections/test', data).then(res => res.data),
   listDbTables: (data: any) => apiClient.post<DbTableSummary[]>('/connections/tables', data).then(res => res.data),
-  importDbTables: (projectId: string, connection: any, selectedTables?: string[], canvasId?: string) => apiClient.post<TableMeta[]>('/connections/import', {
+  importDbTables: (projectId: string, connection: any, selectedTables?: string[], canvasId?: string) => apiClient.post<{ tables: TableMeta[]; summary: { tables_created: number; tables_updated: number; columns_added: number; columns_updated: number; mappings_preserved: number; message: string } }>('/connections/import', {
     project_id: projectId,
     connection,
     selected_tables: selectedTables,

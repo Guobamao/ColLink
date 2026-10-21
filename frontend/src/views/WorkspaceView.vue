@@ -7,6 +7,7 @@
       @open-project-dialog="openProjectDialog"
       @open-backup-dialog="openBackupDialog"
       @open-mapping-drawer="openMappingDrawer"
+      @open-auto-mapping="openAutoMappingDialog"
       @fit-view="handleFitView"
       @export-image="handleExportImage"
       @focus-table="handleFocusTable"
@@ -29,6 +30,7 @@
         :connection-mode="ConnectionMode.Loose"
         :connection-line-style="{ stroke: '#2563eb', strokeWidth: 2.5 }"
         :connection-line-type="'smoothstep'"
+        @node-drag-start="canvasStore.onNodeDragStart"
         @node-drag="canvasStore.onNodeDrag"
         @node-drag-stop="canvasStore.onNodeDragStop"
         @pane-click="canvasStore.selectColumn(null)"
@@ -40,6 +42,27 @@
 
         <!-- Controls: Zoom In/Out, Fit View, Lock -->
         <Controls position="bottom-right" />
+
+        <!-- MiniMap Component -->
+        <MiniMap
+          v-if="showMiniMap"
+          :node-stroke-color="() => '#3b82f6'"
+          :node-color="() => '#dbeafe'"
+          :node-border-radius="3"
+          mask-color="rgba(241, 245, 249, 0.6)"
+          class="canvas-minimap"
+        />
+
+        <!-- MiniMap Fold/Unfold Toggle Button -->
+        <div
+          class="minimap-toggle-btn"
+          :class="{ 'is-active': showMiniMap }"
+          :title="showMiniMap ? '收起鹰眼缩略图' : '展开鹰眼缩略图'"
+          @click="showMiniMap = !showMiniMap"
+        >
+          <el-icon><View v-if="showMiniMap" /><Hide v-else /></el-icon>
+          <span>{{ showMiniMap ? '收起鹰眼' : '展开鹰眼' }}</span>
+        </div>
 
         <!-- Floating Operational Tip Pill -->
         <div class="canvas-floating-tip">
@@ -54,10 +77,10 @@
               <el-icon class="empty-icon" color="#3b82f6"><DataAnalysis /></el-icon>
             </div>
             <h3>当前项目画布暂无数据表</h3>
-            <p>请通过 <strong>DDL 脚本导入</strong> 或 <strong>在线数据库逆向拉取</strong> 快速载入数据表模型。</p>
+            <p>请通过 <strong>DDL 脚本导入</strong> 或 <strong>连接数据库导入</strong> 快速载入数据表模型。</p>
             <div class="empty-actions">
               <el-button type="primary" :icon="DocumentAdd" @click="openDdlDialog">DDL 解析导入 (推荐)</el-button>
-              <el-button plain :icon="Connection" @click="openDbDialog">在线数据库拉取</el-button>
+              <el-button plain :icon="Connection" @click="openDbDialog">连接数据库导入</el-button>
             </div>
           </div>
         </div>
@@ -67,6 +90,7 @@
     <!-- Dialogs and Drawers -->
     <DdlImportDialog ref="ddlDialogRef" />
     <DbConnectDialog ref="dbDialogRef" />
+    <AutoMappingDialog ref="autoMappingDialogRef" />
     <ProjectDialog ref="projectDialogRef" />
     <BackupDialog ref="backupDialogRef" />
     <MappingDrawer ref="mappingDrawerRef" />
@@ -78,20 +102,23 @@ import { ref, onMounted, markRaw } from 'vue'
 import { VueFlow, useVueFlow, ConnectionMode } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
-import html2canvas from 'html2canvas'
+import { MiniMap } from '@vue-flow/minimap'
+import { toPng } from 'html-to-image'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { InfoFilled, DataAnalysis, DocumentAdd, Connection } from '@element-plus/icons-vue'
+import { InfoFilled, DataAnalysis, DocumentAdd, Connection, View, Hide } from '@element-plus/icons-vue'
 
 // Styles for Vue Flow
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/controls/dist/style.css'
+import '@vue-flow/minimap/dist/style.css'
 
 import TableNode from '@/components/canvas/TableNode.vue'
 import CanvasToolbar from '@/components/canvas/CanvasToolbar.vue'
 import CanvasTabs from '@/components/canvas/CanvasTabs.vue'
 import DdlImportDialog from '@/components/dialogs/DdlImportDialog.vue'
 import DbConnectDialog from '@/components/dialogs/DbConnectDialog.vue'
+import AutoMappingDialog from '@/components/canvas/AutoMappingDialog.vue'
 import ProjectDialog from '@/components/dialogs/ProjectDialog.vue'
 import BackupDialog from '@/components/dialogs/BackupDialog.vue'
 import MappingDrawer from '@/components/canvas/MappingDrawer.vue'
@@ -105,8 +132,10 @@ const projectStore = useProjectStore()
 const canvasStore = useCanvasStore()
 
 const canvasWrapperRef = ref<HTMLElement | null>(null)
+const showMiniMap = ref(true)
 const ddlDialogRef = ref<InstanceType<typeof DdlImportDialog> | null>(null)
 const dbDialogRef = ref<InstanceType<typeof DbConnectDialog> | null>(null)
+const autoMappingDialogRef = ref<InstanceType<typeof AutoMappingDialog> | null>(null)
 const projectDialogRef = ref<InstanceType<typeof ProjectDialog> | null>(null)
 const backupDialogRef = ref<InstanceType<typeof BackupDialog> | null>(null)
 const mappingDrawerRef = ref<InstanceType<typeof MappingDrawer> | null>(null)
@@ -163,7 +192,7 @@ const handleEdgeClick = (event: any) => {
       type: 'warning',
     }
   ).then(async () => {
-    await canvasStore.removeEdge(edge.id)
+    await canvasStore.removeEdge(edge.id, projectStore.currentProject?.id)
   }).catch(() => {})
 }
 
@@ -187,6 +216,11 @@ const openDbDialog = () => {
   dbDialogRef.value?.open()
 }
 
+const openAutoMappingDialog = () => {
+  if (!checkProjectSelected()) return
+  autoMappingDialogRef.value?.open()
+}
+
 const openProjectDialog = () => projectDialogRef.value?.open()
 const openBackupDialog = () => {
   if (!checkProjectSelected()) return
@@ -197,35 +231,98 @@ const openMappingDrawer = () => {
   mappingDrawerRef.value?.open()
 }
 
-// Export High-Res PNG Image
+// Full Canvas High-Res 2x PNG Export
 const handleExportImage = async () => {
   if (!canvasWrapperRef.value) return
-  ElMessage.info('正在生成高清画布图片，请稍候...')
+  if (canvasStore.nodes.length === 0) {
+    ElMessage.warning('画布中暂无数据表，无法导出')
+    return
+  }
+
+  ElMessage.info('正在生成全画布 2x 超清架构图，请稍候...')
+
+  // Calculate full bounding box of all nodes
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+  canvasStore.nodes.forEach(n => {
+    const x = n.position.x
+    const y = n.position.y
+    const colCount = n.data?.columns?.length || 0
+    const width = 320
+    const height = Math.min(Math.max(120 + colCount * 34, 180), 600)
+    if (x < minX) minX = x
+    if (y < minY) minY = y
+    if (x + width > maxX) maxX = x + width
+    if (y + height > maxY) maxY = y + height
+  })
+
+  const padding = 80
+  const exportWidth = Math.round(maxX - minX + padding * 2)
+  const exportHeight = Math.round(maxY - minY + padding * 2)
+
+  // Temporarily make all edges visible for full architecture overview
+  const prevEdgesState = canvasStore.edges.map(e => ({
+    id: e.id,
+    hidden: e.hidden,
+    animated: e.animated,
+    style: { ...(e.style || {}) },
+  }))
+
+  canvasStore.edges.forEach(e => {
+    e.hidden = false
+    e.animated = false
+    e.style = {
+      stroke: '#3b82f6',
+      strokeWidth: 2.2,
+    }
+  })
+
+  // Brief timeout to let Vue Flow layout and DOM stabilize
+  await new Promise(resolve => setTimeout(resolve, 80))
 
   try {
-    const canvasElement = canvasWrapperRef.value.querySelector('.vue-flow__viewport') as HTMLElement
-    if (!canvasElement) {
-      ElMessage.warning('未找到画布视口')
-      return
+    const viewportEl = canvasWrapperRef.value.querySelector('.vue-flow__viewport') as HTMLElement
+    if (!viewportEl) {
+      throw new Error('未找到画布视口 DOM')
     }
 
-    const canvas = await html2canvas(canvasElement, {
+    const dataUrl = await toPng(viewportEl, {
       backgroundColor: '#f8fafc',
-      scale: 2, // High resolution
-      useCORS: true,
-      logging: false,
+      pixelRatio: 2,
+      width: exportWidth,
+      height: exportHeight,
+      style: {
+        transform: `translate(${-minX + padding}px, ${-minY + padding}px) scale(1)`,
+        transformOrigin: 'top left',
+        width: `${exportWidth}px`,
+        height: `${exportHeight}px`,
+      },
+      filter: (node: HTMLElement) => {
+        if (node.classList?.contains('vue-flow__panel')) return false
+        return true
+      },
     })
 
-    const dataUrl = canvas.toDataURL('image/png')
-    const link = document.createElement('a')
     const projName = projectStore.currentProject?.name || '数据架构'
-    link.download = `${projName}_字段映射架构图.png`
+    const canvasName = canvasStore.currentCanvas?.name || '全景视图'
+    const dateStr = new Date().toISOString().slice(0, 10)
+    const link = document.createElement('a')
+    link.download = `${projName}_${canvasName}_${dateStr}.png`
     link.href = dataUrl
     link.click()
 
-    ElMessage.success('画布架构图导出成功')
+    ElMessage.success('全画布 2x 超清架构图导出成功')
   } catch (err: any) {
     ElMessage.error('导出图片失败: ' + (err.message || '未知错误'))
+  } finally {
+    // Restore original edge visibility and animations
+    prevEdgesState.forEach(st => {
+      const e = canvasStore.edges.find(edge => edge.id === st.id)
+      if (e) {
+        e.hidden = st.hidden
+        e.animated = st.animated
+        e.style = st.style
+      }
+    })
   }
 }
 </script>
@@ -370,5 +467,55 @@ const handleExportImage = async () => {
   display: flex;
   justify-content: center;
   gap: 12px;
+}
+
+/* MiniMap Container */
+:deep(.canvas-minimap) {
+  bottom: 20px !important;
+  right: 66px !important;
+  width: 200px !important;
+  height: 130px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+  overflow: hidden !important;
+}
+
+/* MiniMap Toggle Button */
+.minimap-toggle-btn {
+  position: absolute;
+  bottom: 160px;
+  right: 66px;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+  font-size: 11px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.minimap-toggle-btn:hover {
+  background: #ffffff;
+  color: #2563eb;
+  border-color: #93c5fd;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.12);
+}
+
+.minimap-toggle-btn.is-active {
+  color: #2563eb;
 }
 </style>

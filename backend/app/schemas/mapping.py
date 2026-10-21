@@ -36,3 +36,11 @@ class MappingDetailOut(MappingOut):
     target_column_name: Optional[str] = None
     target_column_comment: Optional[str] = None
     target_data_type: Optional[str] = None
+
+
+class BatchMappingCreate(BaseModel):
+    mappings: list[MappingCreate]
+
+
+class BatchDeleteRequest(BaseModel):
+    ids: list[str]

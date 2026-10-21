@@ -5,7 +5,24 @@
       <div class="app-brand">
         <div class="brand-badge">
           <svg class="brand-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="white" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <!-- Left mini table card -->
+            <rect x="2" y="3.5" width="8" height="10" rx="1.5" fill="white" fill-opacity="0.95"/>
+            <rect x="2" y="3.5" width="8" height="3" rx="1.5" fill="#DBEAFE"/>
+            <line x1="2" y1="6.5" x2="10" y2="6.5" stroke="#93C5FD" stroke-width="0.7"/>
+            <line x1="3.5" y1="8.5" x2="7" y2="8.5" stroke="#94A3B8" stroke-width="0.8" stroke-linecap="round"/>
+            <line x1="3.5" y1="10.5" x2="8" y2="10.5" stroke="#94A3B8" stroke-width="0.8" stroke-linecap="round"/>
+
+            <!-- Right mini table card -->
+            <rect x="14" y="10.5" width="8" height="10" rx="1.5" fill="white" fill-opacity="0.95"/>
+            <rect x="14" y="10.5" width="8" height="3" rx="1.5" fill="#DBEAFE"/>
+            <line x1="14" y1="13.5" x2="22" y2="13.5" stroke="#93C5FD" stroke-width="0.7"/>
+            <line x1="15.5" y1="15.5" x2="19" y2="15.5" stroke="#94A3B8" stroke-width="0.8" stroke-linecap="round"/>
+            <line x1="15.5" y1="17.5" x2="20.5" y2="17.5" stroke="#94A3B8" stroke-width="0.8" stroke-linecap="round"/>
+
+            <!-- Connecting Bezier Curve -->
+            <path d="M 10 9 C 12 9, 12 16, 14 16" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+            <circle cx="10" cy="9" r="1.1" fill="#FFFFFF"/>
+            <circle cx="14" cy="16" r="1.1" fill="#FFFFFF"/>
           </svg>
         </div>
         <span class="brand-title">ColLink</span>
@@ -43,7 +60,7 @@
           ref="searchRef"
           v-model="searchQuery"
           :fetch-suggestions="querySearch"
-          placeholder="快速找表/字段 (Ctrl+K)..."
+          placeholder="快速找表/字段..."
           clearable
           size="default"
           class="global-search-input"
@@ -89,7 +106,7 @@
             </el-dropdown-item>
             <el-dropdown-item command="db">
               <el-icon><Connection /></el-icon>
-              <span class="menu-text">在线逆向拉取</span>
+              <span class="menu-text">连接数据库导入</span>
             </el-dropdown-item>
           </el-dropdown-menu>
         </template>
@@ -97,7 +114,7 @@
 
       <div class="divider"></div>
 
-      <!-- 2. 画布视图排版 (紧凑并排) -->
+      <!-- 2. 画布视图排版与历史控制 -->
       <div class="btn-group">
         <el-button class="btn-subtle btn-compact" @click="handleAutoLayout">
           <el-icon><MagicStick /></el-icon>
@@ -108,10 +125,36 @@
           <span>适应画布</span>
         </el-button>
       </div>
+
+      <!-- Undo / Redo -->
+      <div class="undo-redo-group">
+        <el-button
+          class="btn-subtle btn-icon-only"
+          :disabled="!canvasStore.canUndo"
+          title="撤销 (Ctrl+Z)"
+          @click="canvasStore.undo()"
+        >
+          <el-icon><RefreshLeft /></el-icon>
+        </el-button>
+        <el-button
+          class="btn-subtle btn-icon-only"
+          :disabled="!canvasStore.canRedo"
+          title="重做 (Ctrl+Y / Ctrl+Shift+Z)"
+          @click="canvasStore.redo()"
+        >
+          <el-icon><RefreshRight /></el-icon>
+        </el-button>
+      </div>
     </div>
 
     <!-- Right: Deliverables & System Tools (Dropdown Aggregated) -->
     <div class="toolbar-section right-section">
+      <!-- 智能自动连线 -->
+      <el-button class="btn-subtle btn-compact" @click="emit('open-auto-mapping')">
+        <el-icon><MagicStick /></el-icon>
+        <span>智能连线</span>
+      </el-button>
+
       <!-- Lineage Filter State (Active when clicked) -->
       <el-button
         v-if="canvasStore.highlightedNodeIds.size > 0"
@@ -176,6 +219,8 @@ import {
   Connection,
   MagicStick,
   Aim,
+  RefreshLeft,
+  RefreshRight,
   Link,
   Download,
   DocumentChecked,
@@ -191,6 +236,7 @@ const emit = defineEmits([
   'open-project-dialog',
   'open-backup-dialog',
   'open-mapping-drawer',
+  'open-auto-mapping',
   'fit-view',
   'export-image',
   'focus-table',
@@ -268,6 +314,19 @@ const onGlobalKeyDown = (e: KeyboardEvent) => {
   if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
     e.preventDefault()
     searchRef.value?.focus()
+  } else if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+    e.preventDefault()
+    if (canvasStore.canUndo) {
+      canvasStore.undo()
+    }
+  } else if (
+    ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) ||
+    ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z'))
+  ) {
+    e.preventDefault()
+    if (canvasStore.canRedo) {
+      canvasStore.redo()
+    }
   }
 }
 
@@ -489,6 +548,32 @@ const handleExportCommand = (cmd: string) => {
 
 .btn-compact {
   padding: 0 10px;
+}
+
+.undo-redo-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 2px;
+}
+
+.btn-icon-only {
+  width: 32px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #475569;
+}
+
+.btn-icon-only:disabled {
+  color: #cbd5e1 !important;
+  background-color: transparent !important;
+  border-color: #f1f5f9 !important;
+  cursor: not-allowed;
 }
 
 .btn-warning-action {
