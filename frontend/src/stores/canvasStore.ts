@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Node, Edge, Connection } from '@vue-flow/core'
-import dagre from 'dagre'
+import { computeDagLayeredLayout } from '@/utils/dagLayout'
 import { api } from '@/api'
 import type { TableMeta, FieldMapping, CanvasView, CanvasTableMeta } from '@/types'
 import { ElMessage } from 'element-plus'
@@ -511,56 +511,112 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
-  // Dagre auto layout
-  const applyAutoLayout = async (direction: 'LR' | 'TB' = 'LR') => {
+  // Smoothly interpolate node coordinates using requestAnimationFrame
+  const animateNodePositions = (
+    targets: Array<{ nodeId: string; targetX: number; targetY: number }>,
+    duration = 450
+  ): Promise<void> => {
+    return new Promise(resolve => {
+      const nodeMap = new Map(nodes.value.map(n => [n.id, n]))
+      const startItems = targets
+        .map(t => {
+          const node = nodeMap.get(t.nodeId)
+          if (!node) return null
+          return {
+            node,
+            startX: node.position.x,
+            startY: node.position.y,
+            targetX: t.targetX,
+            targetY: t.targetY,
+          }
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null)
+
+      if (startItems.length === 0) {
+        resolve()
+        return
+      }
+
+      const startTime = performance.now()
+
+      const tick = (currentTime: number) => {
+        const elapsed = currentTime - startTime
+        const progress = Math.min(elapsed / duration, 1.0)
+        // Deceleration ease-out cubic curve
+        const ease = 1 - Math.pow(1 - progress, 3)
+
+        startItems.forEach(item => {
+          item.node.position = {
+            x: Math.round(item.startX + (item.targetX - item.startX) * ease),
+            y: Math.round(item.startY + (item.targetY - item.startY) * ease),
+          }
+        })
+
+        updateEdgeHandles()
+
+        if (progress < 1.0) {
+          requestAnimationFrame(tick)
+        } else {
+          resolve()
+        }
+      }
+
+      requestAnimationFrame(tick)
+    })
+  }
+
+  // DAG Directed Layered Flow Layout (Left-to-Right)
+  const applyAutoLayout = async (_direction: 'LR' | 'TB' = 'LR') => {
     if (nodes.value.length === 0) return
 
+    // 1. Snapshot previous positions for undo history
     const prevPositions = nodes.value.map(n => ({
       id: n.data.tableId,
       nodeId: n.id,
       pos: { ...n.position },
     }))
 
-    const dagreGraph = new dagre.graphlib.Graph()
-    dagreGraph.setDefaultEdgeLabel(() => ({}))
-    dagreGraph.setGraph({
-      rankdir: direction,
-      align: 'UL',
-      nodesep: 80,
-      ranksep: 220,
-      marginx: 50,
-      marginy: 50,
+    // 2. Prepare nodes and edges for DAG computation
+    const dagNodes = nodes.value.map(n => ({
+      id: n.id,
+      columnsCount: n.data.columns ? n.data.columns.length : 0,
+      data: n.data,
+    }))
+
+    const dagEdges = edges.value.map(e => ({
+      source: e.source,
+      target: e.target,
+    }))
+
+    // 3. Compute Left-to-Right Layered Layout
+    const { nodePositions } = computeDagLayeredLayout(dagNodes, dagEdges, {
+      columnSpacing: 380, // 280px card + 100px corridor
+      rowSpacing: 60,
+      startX: 80,
+      startY: 80,
     })
 
-    const nodeWidth = 330
+    const targetList: Array<{ nodeId: string; targetX: number; targetY: number }> = []
+    const updates: Array<{ id: string; pos_x: number; pos_y: number }> = []
+
     nodes.value.forEach(node => {
-      const colCount = node.data.columns ? node.data.columns.length : 0
-      const nodeHeight = Math.min(Math.max(120 + colCount * 34, 180), 600)
-      dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight })
-    })
-
-    edges.value.forEach(edge => {
-      dagreGraph.setEdge(edge.source, edge.target)
-    })
-
-    dagre.layout(dagreGraph)
-
-    const updates = nodes.value.map(node => {
-      const nodeWithPosition = dagreGraph.node(node.id)
-      const colCount = node.data.columns ? node.data.columns.length : 0
-      const nodeHeight = Math.min(Math.max(120 + colCount * 34, 180), 600)
-
-      const posX = Math.round(nodeWithPosition.x - nodeWidth / 2)
-      const posY = Math.round(nodeWithPosition.y - nodeHeight / 2)
-
-      node.position = { x: posX, y: posY }
-
-      return {
-        id: node.data.tableId,
-        pos_x: posX,
-        pos_y: posY,
+      const targetPos = nodePositions.get(node.id)
+      if (targetPos) {
+        targetList.push({
+          nodeId: node.id,
+          targetX: targetPos.x,
+          targetY: targetPos.y,
+        })
+        updates.push({
+          id: node.data.tableId,
+          pos_x: targetPos.x,
+          pos_y: targetPos.y,
+        })
       }
     })
+
+    // 4. Smooth gliding animation
+    await animateNodePositions(targetList, 450)
 
     const newPositions = nodes.value.map(n => ({
       id: n.data.tableId,
@@ -568,6 +624,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       pos: { ...n.position },
     }))
 
+    // 5. Push history for Ctrl+Z undo
     pushHistory({
       type: 'LAYOUT_NODES',
       prevPositions,
@@ -576,10 +633,10 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     updateEdgeHandles()
 
-    // Batch persist to backend
+    // 6. Batch persist to backend
     try {
       await persistPositions(updates)
-      ElMessage.success('智能排版布局完成')
+      ElMessage.success('DAG 有向拓扑分层排版完成')
     } catch (e) {
       console.error('保存自动排版坐标失败', e)
     }
@@ -634,12 +691,12 @@ export const useCanvasStore = defineStore('canvas', () => {
         redoStack.value.push(action)
         ElMessage.info('已撤销卡片移动')
       } else if (action.type === 'LAYOUT_NODES') {
-        for (const item of action.prevPositions) {
-          const node = nodes.value.find(n => n.id === item.nodeId)
-          if (node) {
-            node.position = { ...item.pos }
-          }
-        }
+        const targets = action.prevPositions.map(p => ({
+          nodeId: p.nodeId,
+          targetX: p.pos.x,
+          targetY: p.pos.y,
+        }))
+        await animateNodePositions(targets, 350)
         await persistPositions(action.prevPositions.map(p => ({ id: p.id, pos_x: p.pos.x, pos_y: p.pos.y })))
         updateEdgeHandles()
         redoStack.value.push(action)
@@ -698,12 +755,12 @@ export const useCanvasStore = defineStore('canvas', () => {
         historyStack.value.push(action)
         ElMessage.info('已重做卡片移动')
       } else if (action.type === 'LAYOUT_NODES') {
-        for (const item of action.newPositions) {
-          const node = nodes.value.find(n => n.id === item.nodeId)
-          if (node) {
-            node.position = { ...item.pos }
-          }
-        }
+        const targets = action.newPositions.map(p => ({
+          nodeId: p.nodeId,
+          targetX: p.pos.x,
+          targetY: p.pos.y,
+        }))
+        await animateNodePositions(targets, 350)
         await persistPositions(action.newPositions.map(p => ({ id: p.id, pos_x: p.pos.x, pos_y: p.pos.y })))
         updateEdgeHandles()
         historyStack.value.push(action)
