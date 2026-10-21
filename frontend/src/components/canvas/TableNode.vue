@@ -10,7 +10,13 @@
     <!-- Card Header with Top Brand Accent -->
     <div class="card-header">
       <div class="header-left">
-        <span class="db-icon">🗄️</span>
+        <div class="db-icon-badge">
+          <svg class="table-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="4" width="18" height="16" rx="2" stroke="#3b82f6" stroke-width="2"/>
+            <path d="M3 9H21" stroke="#3b82f6" stroke-width="2"/>
+            <path d="M9 20V9" stroke="#3b82f6" stroke-width="2"/>
+          </svg>
+        </div>
         <div class="title-wrap">
           <div class="table-name" :title="data.tableName">{{ data.tableName }}</div>
           <div v-if="data.tableComment" class="table-comment" :title="data.tableComment">
@@ -23,17 +29,22 @@
           {{ data.columns?.length || 0 }} 列
         </span>
         <el-dropdown trigger="click" @command="handleCommand">
-          <span class="action-btn" title="更多操作">⋮</span>
+          <span class="action-btn" title="更多操作">
+            <el-icon><MoreFilled /></el-icon>
+          </span>
           <template #dropdown>
-            <el-dropdown-menu>
+            <el-dropdown-menu class="table-dropdown-menu">
               <el-dropdown-item command="highlight">
-                🔍 高亮上下游血缘
+                <el-icon><Search /></el-icon>
+                <span>高亮上下游血缘</span>
               </el-dropdown-item>
               <el-dropdown-item command="edit">
-                ✏️ 编辑表信息
+                <el-icon><Edit /></el-icon>
+                <span>编辑表信息</span>
               </el-dropdown-item>
               <el-dropdown-item command="delete" divided style="color: #ef4444;">
-                🗑️ 删除此表
+                <el-icon><Delete /></el-icon>
+                <span>删除此表</span>
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -44,7 +55,7 @@
     <!-- Column Search Bar -->
     <div class="search-bar">
       <div class="search-input-wrap">
-        <span class="search-icon">🔍</span>
+        <el-icon class="search-icon"><Search /></el-icon>
         <input
           v-model="searchKeyword"
           type="text"
@@ -52,7 +63,7 @@
           class="search-input"
           @mousedown.stop
         />
-        <span v-if="searchKeyword" class="clear-icon" @click="searchKeyword = ''">✕</span>
+        <el-icon v-if="searchKeyword" class="clear-icon" @click="searchKeyword = ''"><CircleClose /></el-icon>
       </div>
     </div>
 
@@ -93,10 +104,14 @@
             </span>
             <span
               v-if="hasMapping(col.id)"
-              class="mapping-dot"
+              class="mapping-icon-wrap"
               title="已建立血缘映射，点击高亮并显示连线"
-            >🔗</span>
-            <span v-else class="drag-hint-icon" title="按住右侧蓝圈锚点拖拽连线">➔</span>
+            >
+              <el-icon class="mapping-icon"><Link /></el-icon>
+            </span>
+            <span v-else class="drag-hint-wrap" title="按住右侧蓝圈锚点拖拽连线">
+              <el-icon class="drag-hint-icon"><Right /></el-icon>
+            </span>
           </div>
         </div>
 
@@ -146,6 +161,7 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useProjectStore } from '@/stores/projectStore'
 import { api } from '@/api'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { Search, Edit, Delete, CircleClose, Link, Right, MoreFilled } from '@element-plus/icons-vue'
 import type { ColumnMeta } from '@/types'
 
 const props = defineProps<{
@@ -333,9 +349,20 @@ const confirmDelete = () => {
   max-width: 220px;
 }
 
-.db-icon {
-  font-size: 15px;
+.db-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #eff6ff;
+  border-radius: 6px;
   flex-shrink: 0;
+}
+
+.table-svg {
+  width: 14px;
+  height: 14px;
 }
 
 .title-wrap {
@@ -384,12 +411,15 @@ const confirmDelete = () => {
 }
 
 .action-btn {
-  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
   color: #94a3b8;
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: bold;
+  border-radius: 5px;
   transition: all 0.15s ease;
 }
 
@@ -562,13 +592,25 @@ const confirmDelete = () => {
   font-weight: 500;
 }
 
-.mapping-dot {
-  font-size: 11px;
+.mapping-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mapping-icon {
+  font-size: 13px;
   color: #3b82f6;
 }
 
+.drag-hint-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .drag-hint-icon {
-  font-size: 11px;
+  font-size: 12px;
   color: #94a3b8;
   opacity: 0.25;
   transition: all 0.2s;
@@ -673,5 +715,13 @@ const confirmDelete = () => {
   font-size: 11px;
   color: #94a3b8;
   padding: 16px 0;
+}
+
+:deep(.table-dropdown-menu .el-dropdown-menu__item) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  padding: 8px 14px;
 }
 </style>

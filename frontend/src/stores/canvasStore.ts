@@ -78,7 +78,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       const tgtTable = tableMap.get(m.target_table_id)
       const tgtCol = colMap.get(m.target_column_id)
 
-      const label = `${srcTable?.table_name || ''}.${srcCol?.column_name || ''} ➔ ${tgtTable?.table_name || ''}.${tgtCol?.column_name || ''}`
+      const label = `${srcTable?.table_name || ''}.${srcCol?.column_name || ''} → ${tgtTable?.table_name || ''}.${tgtCol?.column_name || ''}`
 
       return {
         id: `edge_${m.id}`,

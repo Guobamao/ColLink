@@ -1,11 +1,16 @@
 <template>
   <el-dialog
     v-model="visible"
-    :title="step === 'config' ? '在线数据库逆向拉取 - 数据库配置' : '在线数据库逆向拉取 - 选择导入数据表'"
     width="820px"
     destroy-on-close
     :close-on-click-modal="false"
   >
+    <template #header>
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: #1e293b;">
+        <el-icon color="#3b82f6"><Connection /></el-icon>
+        <span>{{ step === 'config' ? '在线数据库逆向拉取 - 数据库配置' : '在线数据库逆向拉取 - 选择导入数据表' }}</span>
+      </div>
+    </template>
     <div class="dialog-body">
       <!-- Step 1: Connection Form (hidden once tables are fetched) -->
       <div v-if="step === 'config'" class="config-step">
@@ -56,7 +61,7 @@
           <div class="form-actions">
             <el-button :loading="testing" @click="handleTestConnection">测试连接</el-button>
             <el-button type="primary" :loading="fetchingTables" @click="handleFetchTables">
-              下一步：获取表清单 ➔
+              下一步：获取表清单 <el-icon class="el-icon--right"><Right /></el-icon>
             </el-button>
           </div>
         </el-form>
@@ -72,8 +77,8 @@
               <strong>{{ getDbLabel(form.db_type) }}</strong>: {{ form.host }}:{{ form.port }} / {{ form.database }} (用户: {{ form.username }})
             </span>
           </div>
-          <el-button size="small" plain @click="step = 'config'">
-            ← 返回修改配置
+          <el-button size="small" plain :icon="Back" @click="step = 'config'">
+            返回修改配置
           </el-button>
         </div>
 
@@ -155,6 +160,7 @@ import { api } from '@/api'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Connection, Right, Back } from '@element-plus/icons-vue'
 import type { DbTableSummary } from '@/types'
 
 const visible = ref(false)

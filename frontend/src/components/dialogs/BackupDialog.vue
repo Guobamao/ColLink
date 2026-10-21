@@ -1,25 +1,36 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="项目备份与数据迁移"
     width="540px"
     destroy-on-close
   >
+    <template #header>
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: #1e293b;">
+        <el-icon color="#3b82f6"><TakeawayBox /></el-icon>
+        <span>项目备份与数据迁移</span>
+      </div>
+    </template>
     <div class="backup-dialog-body">
       <!-- Section 1: Backup Download -->
       <div class="card-box">
-        <div class="box-title">📦 项目快照导出 (.json)</div>
+        <div class="box-title">
+          <el-icon color="#3b82f6"><Download /></el-icon>
+          <span>项目快照导出 (.json)</span>
+        </div>
         <p class="box-desc">
           将当前项目「{{ projectStore.currentProject?.name }}」包含的所有表结构、字段、节点坐标及连线血缘导出为标准 JSON 备份包。
         </p>
-        <el-button type="primary" plain @click="handleDownloadJson">
+        <el-button type="primary" plain :icon="Download" @click="handleDownloadJson">
           下载项目 JSON 备份包
         </el-button>
       </div>
 
       <!-- Section 2: Restore / Import -->
       <div class="card-box">
-        <div class="box-title">📥 备份文件导入恢复</div>
+        <div class="box-title">
+          <el-icon color="#10b981"><Upload /></el-icon>
+          <span>备份文件导入恢复</span>
+        </div>
         <p class="box-desc">
           从本地上传之前导出的 JSON 备份文件，系统将完整还原所有表卡片及其映射关系并创建新项目。
         </p>
@@ -30,7 +41,7 @@
           accept=".json"
           :on-change="handleRestoreFile"
         >
-          <el-button type="success" :loading="restoring">
+          <el-button type="success" :icon="Upload" :loading="restoring">
             选择 JSON 备份文件恢复
           </el-button>
         </el-upload>
@@ -45,6 +56,7 @@ import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { api } from '@/api'
 import { ElMessage } from 'element-plus'
+import { TakeawayBox, Download, Upload } from '@element-plus/icons-vue'
 
 const visible = ref(false)
 const restoring = ref(false)

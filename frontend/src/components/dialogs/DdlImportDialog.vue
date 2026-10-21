@@ -1,11 +1,16 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="DDL 脚本解析导入"
     width="840px"
     destroy-on-close
     :close-on-click-modal="false"
   >
+    <template #header>
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: #1e293b;">
+        <el-icon color="#3b82f6"><DocumentAdd /></el-icon>
+        <span>DDL 脚本解析导入</span>
+      </div>
+    </template>
     <div class="dialog-body">
       <!-- Dialect & Input Mode Selector -->
       <div class="config-bar">
@@ -60,6 +65,7 @@ COMMENT ON COLUMN &quot;SYS_USER&quot;.&quot;USER_ID&quot; IS '用户ID';"
           accept=".sql,.txt"
           :on-change="handleFileChange"
         >
+          <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
           <div class="el-upload__text">
             将 <em>.sql 文件</em> 拖到此处，或 <em>点击上传</em>
           </div>
@@ -138,6 +144,7 @@ import { api } from '@/api'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { DocumentAdd, UploadFilled } from '@element-plus/icons-vue'
 import type { ParsedTable } from '@/types'
 
 const visible = ref(false)

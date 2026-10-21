@@ -39,19 +39,21 @@
 
         <!-- Floating Operational Tip Pill -->
         <div class="canvas-floating-tip">
-          <span class="tip-icon">💡</span>
+          <el-icon class="tip-icon" color="#3b82f6"><InfoFilled /></el-icon>
           <span class="tip-text">点击字段查看连线 · 拖动右侧蓝点建立映射</span>
         </div>
 
         <!-- Custom Empty State overlay if no tables -->
         <div v-if="canvasStore.nodes.length === 0" class="canvas-empty-state">
           <div class="empty-card">
-            <span class="empty-icon">📊</span>
+            <div class="empty-icon-wrap">
+              <el-icon class="empty-icon" color="#3b82f6"><DataAnalysis /></el-icon>
+            </div>
             <h3>当前项目画布暂无数据表</h3>
-            <p>请点击顶部按钮，通过 <strong>DDL 脚本导入</strong> 或 <strong>在线数据库逆向拉取</strong> 快速载入数据表模型。</p>
+            <p>请通过 <strong>DDL 脚本导入</strong> 或 <strong>在线数据库逆向拉取</strong> 快速载入数据表模型。</p>
             <div class="empty-actions">
-              <el-button type="primary" @click="openDdlDialog">📝 DDL 解析导入 (推荐)</el-button>
-              <el-button plain @click="openDbDialog">🔌 在线数据库拉取</el-button>
+              <el-button type="primary" :icon="DocumentAdd" @click="openDdlDialog">DDL 解析导入 (推荐)</el-button>
+              <el-button plain :icon="Connection" @click="openDbDialog">在线数据库拉取</el-button>
             </div>
           </div>
         </div>
@@ -74,6 +76,7 @@ import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import html2canvas from 'html2canvas'
 import { ElMessageBox, ElMessage } from 'element-plus'
+import { InfoFilled, DataAnalysis, DocumentAdd, Connection } from '@element-plus/icons-vue'
 
 // Styles for Vue Flow
 import '@vue-flow/core/dist/style.css'
@@ -249,8 +252,10 @@ const handleExportImage = async () => {
 }
 
 .tip-icon {
-  font-size: 13px;
-  line-height: 1;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tip-text {
@@ -317,10 +322,19 @@ const handleExportImage = async () => {
   max-width: 460px;
 }
 
+.empty-icon-wrap {
+  width: 56px;
+  height: 56px;
+  background: #eff6ff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px auto;
+}
+
 .empty-icon {
-  font-size: 48px;
-  display: block;
-  margin-bottom: 12px;
+  font-size: 28px;
 }
 
 .empty-card h3 {

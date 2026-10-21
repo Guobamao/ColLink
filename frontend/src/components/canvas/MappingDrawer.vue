@@ -1,10 +1,15 @@
 <template>
   <el-drawer
     v-model="visible"
-    title="字段映射血缘清单"
     size="680px"
     destroy-on-close
   >
+    <template #header>
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: #1e293b;">
+        <el-icon color="#3b82f6"><Link /></el-icon>
+        <span>字段映射血缘清单</span>
+      </div>
+    </template>
     <div class="drawer-body">
       <div class="drawer-header-bar">
         <el-input
@@ -14,8 +19,8 @@
           style="width: 240px"
           clearable
         />
-        <el-button type="primary" size="small" @click="downloadExcel">
-          📊 导出 Excel 清单
+        <el-button type="primary" :icon="DocumentChecked" size="small" @click="downloadExcel">
+          导出 Excel 清单
         </el-button>
       </div>
 
@@ -31,8 +36,13 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="➔" width="40" align="center">
-          <template #default>➔</template>
+        <el-table-column width="46" align="center">
+          <template #header>
+            <el-icon color="#94a3b8"><Right /></el-icon>
+          </template>
+          <template #default>
+            <el-icon color="#94a3b8"><Right /></el-icon>
+          </template>
         </el-table-column>
 
         <el-table-column label="目标字段 (Target)" min-width="160">
@@ -68,6 +78,7 @@ import { api } from '@/api'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { ElMessage } from 'element-plus'
+import { Link, DocumentChecked, Right } from '@element-plus/icons-vue'
 import type { FieldMapping } from '@/types'
 
 const visible = ref(false)

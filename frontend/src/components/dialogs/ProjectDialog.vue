@@ -1,10 +1,15 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="项目空间管理"
     width="680px"
     destroy-on-close
   >
+    <template #header>
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: #1e293b;">
+        <el-icon color="#3b82f6"><FolderOpened /></el-icon>
+        <span>项目空间管理</span>
+      </div>
+    </template>
     <div class="project-dialog-body">
       <!-- Create New Project -->
       <div class="create-box">
@@ -18,7 +23,7 @@
           placeholder="项目描述 (可选)"
           style="width: 240px"
         />
-        <el-button type="primary" :loading="creating" @click="handleCreate">
+        <el-button type="primary" :icon="Plus" :loading="creating" @click="handleCreate">
           新建项目
         </el-button>
       </div>
@@ -80,6 +85,7 @@ import { ref } from 'vue'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { FolderOpened, Plus } from '@element-plus/icons-vue'
 
 const visible = ref(false)
 const newProjectName = ref('')

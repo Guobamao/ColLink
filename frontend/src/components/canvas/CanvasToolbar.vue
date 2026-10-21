@@ -3,7 +3,11 @@
     <!-- Left: Brand & Project Selector -->
     <div class="toolbar-section left-section">
       <div class="app-brand">
-        <span class="logo">⚡</span>
+        <div class="brand-badge">
+          <svg class="brand-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="white" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
         <span class="brand-title">ColLink</span>
       </div>
 
@@ -25,7 +29,8 @@
           />
         </el-select>
         <el-button class="btn-subtle btn-manage" @click="emit('open-project-dialog')">
-          📁 项目管理
+          <el-icon><FolderOpened /></el-icon>
+          <span>项目管理</span>
         </el-button>
       </div>
     </div>
@@ -35,17 +40,18 @@
       <!-- 1. 导入数据源 (下拉菜单聚合) -->
       <el-dropdown trigger="click" @command="handleImportCommand">
         <el-button type="primary" class="btn-primary-action">
-          <span>➕ 导入表结构</span>
-          <span class="dropdown-arrow">▾</span>
+          <el-icon><Plus /></el-icon>
+          <span>导入表结构</span>
+          <el-icon class="el-icon--right"><ArrowDown /></el-icon>
         </el-button>
         <template #dropdown>
           <el-dropdown-menu class="toolbar-dropdown-menu">
             <el-dropdown-item command="ddl">
-              <span class="menu-icon">📝</span>
+              <el-icon><DocumentAdd /></el-icon>
               <span class="menu-text">DDL 解析导入</span>
             </el-dropdown-item>
             <el-dropdown-item command="db">
-              <span class="menu-icon">🔌</span>
+              <el-icon><Connection /></el-icon>
               <span class="menu-text">在线逆向拉取</span>
             </el-dropdown-item>
           </el-dropdown-menu>
@@ -57,10 +63,12 @@
       <!-- 2. 画布视图排版 (紧凑并排) -->
       <div class="btn-group">
         <el-button class="btn-subtle btn-compact" @click="handleAutoLayout">
-          ✨ 自动排版
+          <el-icon><MagicStick /></el-icon>
+          <span>自动排版</span>
         </el-button>
         <el-button class="btn-subtle btn-compact" @click="emit('fit-view')">
-          🎯 适应画布
+          <el-icon><Aim /></el-icon>
+          <span>适应画布</span>
         </el-button>
       </div>
     </div>
@@ -75,13 +83,15 @@
         class="btn-warning-action"
         @click="canvasStore.clearHighlight()"
       >
-        ✕ 清除血缘高亮
+        <el-icon><CircleClose /></el-icon>
+        <span>清除高亮</span>
       </el-button>
 
       <!-- 3. 映射清单 (独立保留带Badge) -->
       <el-badge :value="canvasStore.edges.length" :max="999" class="badge-item">
         <el-button class="btn-subtle btn-compact" @click="emit('open-mapping-drawer')">
-          🔗 映射清单
+          <el-icon><Link /></el-icon>
+          <span>映射清单</span>
         </el-button>
       </el-badge>
 
@@ -90,21 +100,22 @@
       <!-- 4. 导出与备份 (下拉菜单聚合) -->
       <el-dropdown trigger="click" @command="handleExportCommand">
         <el-button class="btn-excel">
-          <span>📤 导出与备份</span>
-          <span class="dropdown-arrow">▾</span>
+          <el-icon><Download /></el-icon>
+          <span>导出与备份</span>
+          <el-icon class="el-icon--right"><ArrowDown /></el-icon>
         </el-button>
         <template #dropdown>
           <el-dropdown-menu class="toolbar-dropdown-menu">
             <el-dropdown-item command="excel">
-              <span class="menu-icon">📊</span>
+              <el-icon><DocumentChecked /></el-icon>
               <span class="menu-text">导出 Excel 映射清单</span>
             </el-dropdown-item>
             <el-dropdown-item command="image">
-              <span class="menu-icon">🖼️</span>
+              <el-icon><Picture /></el-icon>
               <span class="menu-text">导出高清拓扑图片 (PNG)</span>
             </el-dropdown-item>
             <el-dropdown-item command="backup" divided>
-              <span class="menu-icon">⚙️</span>
+              <el-icon><TakeawayBox /></el-icon>
               <span class="menu-text">项目快照备份 / 迁移 (JSON)</span>
             </el-dropdown-item>
           </el-dropdown-menu>
@@ -119,6 +130,21 @@ import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { api } from '@/api'
 import { ElMessage } from 'element-plus'
+import {
+  FolderOpened,
+  Plus,
+  ArrowDown,
+  DocumentAdd,
+  Connection,
+  MagicStick,
+  Aim,
+  Link,
+  Download,
+  DocumentChecked,
+  Picture,
+  TakeawayBox,
+  CircleClose,
+} from '@element-plus/icons-vue'
 
 const emit = defineEmits([
   'open-ddl-dialog',
@@ -239,17 +265,29 @@ const handleExportCommand = (cmd: string) => {
 .app-brand {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   user-select: none;
 }
 
-.logo {
-  font-size: 19px;
-  line-height: 1;
+.brand-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.28);
+  flex-shrink: 0;
+}
+
+.brand-svg {
+  width: 16px;
+  height: 16px;
 }
 
 .brand-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: #0f172a;
   letter-spacing: -0.4px;
@@ -278,21 +316,13 @@ const handleExportCommand = (cmd: string) => {
 }
 
 .project-select {
-  width: 170px;
+  width: 168px;
 }
 
 .btn-group {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-.dropdown-arrow {
-  margin-left: 4px;
-  font-size: 11px;
-  opacity: 0.8;
-  display: inline-block;
-  line-height: 1;
 }
 
 /* Button Stylings */
@@ -308,6 +338,7 @@ const handleExportCommand = (cmd: string) => {
   transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
 }
 
 .btn-primary-action:hover {
@@ -324,6 +355,9 @@ const handleExportCommand = (cmd: string) => {
   font-size: 13px;
   border-radius: 6px;
   transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .btn-subtle:hover {
@@ -345,6 +379,9 @@ const handleExportCommand = (cmd: string) => {
   font-size: 12px;
   padding: 0 10px;
   border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* Fresh business green Excel & export dropdown button */
@@ -360,6 +397,7 @@ const handleExportCommand = (cmd: string) => {
   transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
+  gap: 6px;
 }
 
 .btn-excel:hover {
@@ -392,9 +430,13 @@ const handleExportCommand = (cmd: string) => {
   color: #2563eb;
 }
 
-.toolbar-dropdown-menu .menu-icon {
-  font-size: 14px;
-  line-height: 1;
+.toolbar-dropdown-menu .el-dropdown-menu__item .el-icon {
+  font-size: 15px;
+  color: #64748b;
+}
+
+.toolbar-dropdown-menu .el-dropdown-menu__item:hover .el-icon {
+  color: #2563eb;
 }
 
 .toolbar-dropdown-menu .menu-text {
