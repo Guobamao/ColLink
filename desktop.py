@@ -1,5 +1,24 @@
 import os
 import sys
+import io
+
+# Crucial Windows pythonw.exe fix:
+# Under pythonw.exe (GUI mode), sys.stdout and sys.stderr are None.
+# Libraries like uvicorn call sys.stdout.isatty() which crashes with:
+# AttributeError: 'NoneType' object has no attribute 'isatty' -> ValueError: Unable to configure formatter 'default'
+class NullWriter(io.StringIO):
+    def write(self, s):
+        pass
+    def flush(self):
+        pass
+    def isatty(self):
+        return False
+
+if sys.stdout is None:
+    sys.stdout = NullWriter()
+if sys.stderr is None:
+    sys.stderr = NullWriter()
+
 import time
 import socket
 import logging
@@ -153,6 +172,7 @@ def main():
             host="127.0.0.1",
             port=port,
             log_level="warning",
+            log_config=None,
             loop="asyncio",
         )
         server = uvicorn.Server(config)
