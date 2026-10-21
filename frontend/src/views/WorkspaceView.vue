@@ -104,7 +104,7 @@ import { VueFlow, useVueFlow, ConnectionMode } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
-import { toPng } from 'html-to-image'
+import { exportCanvasAsImage } from '@/utils/exportImage'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { InfoFilled, DataAnalysis, DocumentAdd, Connection, View, Hide } from '@element-plus/icons-vue'
 
@@ -238,7 +238,7 @@ const openMappingDrawer = () => {
   mappingDrawerRef.value?.open()
 }
 
-// Full Canvas High-Res 2x PNG Export
+// Full Canvas High-Res 2x PNG Export (SVG Serialization & Offscreen Canvas)
 const handleExportImage = async () => {
   if (!canvasWrapperRef.value) return
   if (canvasStore.nodes.length === 0) {
@@ -247,24 +247,6 @@ const handleExportImage = async () => {
   }
 
   ElMessage.info('正在生成全画布 2x 超清架构图，请稍候...')
-
-  // Calculate full bounding box of all nodes
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-  canvasStore.nodes.forEach(n => {
-    const x = n.position.x
-    const y = n.position.y
-    const colCount = n.data?.columns?.length || 0
-    const width = 320
-    const height = Math.min(Math.max(120 + colCount * 34, 180), 600)
-    if (x < minX) minX = x
-    if (y < minY) minY = y
-    if (x + width > maxX) maxX = x + width
-    if (y + height > maxY) maxY = y + height
-  })
-
-  const padding = 80
-  const exportWidth = Math.round(maxX - minX + padding * 2)
-  const exportHeight = Math.round(maxY - minY + padding * 2)
 
   // Temporarily make all edges visible for full architecture overview
   const prevEdgesState = canvasStore.edges.map(e => ({
@@ -279,7 +261,7 @@ const handleExportImage = async () => {
     e.animated = false
     e.style = {
       stroke: '#3b82f6',
-      strokeWidth: 2.2,
+      strokeWidth: 2,
     }
   })
 
@@ -287,35 +269,19 @@ const handleExportImage = async () => {
   await new Promise(resolve => setTimeout(resolve, 80))
 
   try {
-    const viewportEl = canvasWrapperRef.value.querySelector('.vue-flow__viewport') as HTMLElement
-    if (!viewportEl) {
-      throw new Error('未找到画布视口 DOM')
-    }
-
-    const dataUrl = await toPng(viewportEl, {
-      backgroundColor: '#f8fafc',
-      pixelRatio: 2,
-      width: exportWidth,
-      height: exportHeight,
-      style: {
-        transform: `translate(${-minX + padding}px, ${-minY + padding}px) scale(1)`,
-        transformOrigin: 'top left',
-        width: `${exportWidth}px`,
-        height: `${exportHeight}px`,
-      },
-      filter: (node: HTMLElement) => {
-        if (node.classList?.contains('vue-flow__panel')) return false
-        return true
-      },
-    })
-
     const projName = projectStore.currentProject?.name || '数据架构'
     const canvasName = canvasStore.currentCanvas?.name || '全景视图'
     const dateStr = new Date().toISOString().slice(0, 10)
-    const link = document.createElement('a')
-    link.download = `${projName}_${canvasName}_${dateStr}.png`
-    link.href = dataUrl
-    link.click()
+    const filename = `${projName}_${canvasName}_${dateStr}.png`
+
+    await exportCanvasAsImage({
+      canvasWrapper: canvasWrapperRef.value,
+      nodes: canvasStore.nodes,
+      filename,
+      padding: 70,
+      scale: 2,
+      backgroundColor: '#F8FAFC',
+    })
 
     ElMessage.success('全画布 2x 超清架构图导出成功')
   } catch (err: any) {
