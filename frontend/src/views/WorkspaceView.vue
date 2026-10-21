@@ -37,6 +37,12 @@
         <!-- Controls: Zoom In/Out, Fit View, Lock -->
         <Controls position="bottom-right" />
 
+        <!-- Floating Operational Tip Pill -->
+        <div class="canvas-floating-tip">
+          <span class="tip-icon">💡</span>
+          <span class="tip-text">点击字段查看连线 · 拖动右侧蓝点建立映射</span>
+        </div>
+
         <!-- Custom Empty State overlay if no tables -->
         <div v-if="canvasStore.nodes.length === 0" class="canvas-empty-state">
           <div class="empty-card">
@@ -218,8 +224,77 @@ const handleExportImage = async () => {
 .canvas-wrapper {
   flex: 1;
   width: 100%;
-  height: calc(100vh - 52px);
+  height: calc(100vh - 56px);
   position: relative;
+}
+
+/* Floating Operational Tip Pill (Bottom Left) */
+.canvas-floating-tip {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  padding: 6px 14px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  user-select: none;
+  pointer-events: none;
+}
+
+.tip-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.tip-text {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+}
+
+/* Vue Flow Controls Aesthetic Upgrade */
+:deep(.vue-flow__controls) {
+  bottom: 20px !important;
+  right: 20px !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+:deep(.vue-flow__controls-button) {
+  width: 32px !important;
+  height: 32px !important;
+  border: none !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  background: transparent !important;
+  color: #475569 !important;
+  transition: all 0.15s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+:deep(.vue-flow__controls-button:last-child) {
+  border-bottom: none !important;
+}
+
+:deep(.vue-flow__controls-button:hover) {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
 }
 
 .canvas-empty-state {

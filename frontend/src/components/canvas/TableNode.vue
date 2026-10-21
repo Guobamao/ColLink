@@ -7,7 +7,7 @@
     }"
     @wheel.stop
   >
-    <!-- Card Header -->
+    <!-- Card Header with Top Brand Accent -->
     <div class="card-header">
       <div class="header-left">
         <span class="db-icon">🗄️</span>
@@ -19,11 +19,11 @@
         </div>
       </div>
       <div class="header-right">
-        <el-tag size="small" type="info" effect="plain" round class="count-tag">
+        <span class="count-pill">
           {{ data.columns?.length || 0 }} 列
-        </el-tag>
+        </span>
         <el-dropdown trigger="click" @command="handleCommand">
-          <span class="action-btn">⋮</span>
+          <span class="action-btn" title="更多操作">⋮</span>
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="highlight">
@@ -32,7 +32,7 @@
               <el-dropdown-item command="edit">
                 ✏️ 编辑表信息
               </el-dropdown-item>
-              <el-dropdown-item command="delete" divided style="color: #F56C6C;">
+              <el-dropdown-item command="delete" divided style="color: #ef4444;">
                 🗑️ 删除此表
               </el-dropdown-item>
             </el-dropdown-menu>
@@ -43,17 +43,20 @@
 
     <!-- Column Search Bar -->
     <div class="search-bar">
-      <input
-        v-model="searchKeyword"
-        type="text"
-        placeholder="搜索字段名/注释..."
-        class="search-input"
-        @mousedown.stop
-      />
-      <span v-if="searchKeyword" class="clear-icon" @click="searchKeyword = ''">✕</span>
+      <div class="search-input-wrap">
+        <span class="search-icon">🔍</span>
+        <input
+          v-model="searchKeyword"
+          type="text"
+          placeholder="搜索字段名/注释..."
+          class="search-input"
+          @mousedown.stop
+        />
+        <span v-if="searchKeyword" class="clear-icon" @click="searchKeyword = ''">✕</span>
+      </div>
     </div>
 
-    <!-- Column List (with nowheel and @wheel.stop to prevent canvas zooming) -->
+    <!-- Column List (nowheel + @wheel.stop prevents canvas zooming) -->
     <div class="column-list nowheel" @wheel.stop>
       <div
         v-for="col in filteredColumns"
@@ -110,11 +113,6 @@
       <div v-if="filteredColumns.length === 0" class="empty-tip">
         无匹配字段
       </div>
-    </div>
-
-    <!-- Bottom Helper Bar -->
-    <div class="card-footer">
-      <span class="footer-tip">💡 点击字段查看连线；拖动右侧蓝点建立映射</span>
     </div>
 
     <!-- Edit Dialog -->
@@ -287,21 +285,23 @@ const confirmDelete = () => {
 
 <style scoped>
 .table-card-node {
-  width: 330px;
+  width: 320px;
   background: #ffffff;
   border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
-  border: 1px solid #cbd5e1;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
+  border: 1px solid #e2e8f0;
+  border-top: 3px solid #3b82f6;
   display: flex;
   flex-direction: column;
-  transition: all 0.25s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   overflow: visible !important;
 }
 
 .table-card-node:hover {
-  box-shadow: 0 8px 24px rgba(31, 78, 121, 0.16);
+  box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -2px rgba(15, 23, 42, 0.05);
   border-color: #93c5fd;
+  border-top-color: #2563eb;
 }
 
 .table-card-node.is-dimmed {
@@ -310,16 +310,17 @@ const confirmDelete = () => {
 }
 
 .table-card-node.is-highlighted {
-  border: 2px solid #3b82f6;
-  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25), 0 8px 24px rgba(59, 130, 246, 0.3);
+  border-color: #3b82f6;
+  border-top-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), 0 12px 28px rgba(59, 130, 246, 0.2);
 }
 
 .card-header {
   padding: 10px 14px;
   background: #f8fafc;
-  border-top-left-radius: 9px;
-  border-top-right-radius: 9px;
-  border-bottom: 1px solid #e2e8f0;
+  border-top-left-radius: 7px;
+  border-top-right-radius: 7px;
+  border-bottom: 1px solid #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -333,7 +334,8 @@ const confirmDelete = () => {
 }
 
 .db-icon {
-  font-size: 16px;
+  font-size: 15px;
+  flex-shrink: 0;
 }
 
 .title-wrap {
@@ -349,6 +351,7 @@ const confirmDelete = () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .table-comment {
@@ -357,69 +360,102 @@ const confirmDelete = () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
-.count-tag {
+.count-pill {
   font-size: 11px;
-  padding: 0 6px;
+  padding: 2px 8px;
   height: 20px;
+  line-height: 16px;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #dbeafe;
+  border-radius: 12px;
+  font-weight: 500;
+  user-select: none;
 }
 
 .action-btn {
   font-size: 16px;
   color: #94a3b8;
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 2px 6px;
   border-radius: 4px;
   font-weight: bold;
+  transition: all 0.15s ease;
 }
 
 .action-btn:hover {
   background: #e2e8f0;
-  color: #334155;
+  color: #1e293b;
 }
 
 .search-bar {
-  position: relative;
-  padding: 6px 12px;
-  background: #fdfdfd;
+  padding: 6px 10px;
+  background: #ffffff;
   border-bottom: 1px solid #f1f5f9;
+}
+
+.search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 8px;
+  font-size: 10px;
+  color: #94a3b8;
+  pointer-events: none;
 }
 
 .search-input {
   width: 100%;
   box-sizing: border-box;
-  padding: 5px 8px;
+  padding: 5px 24px 5px 24px;
   font-size: 11px;
-  border: 1px solid #cbd5e1;
-  border-radius: 5px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
   outline: none;
-  background: #ffffff;
+  background: #f8fafc;
+  color: #334155;
+  transition: all 0.2s ease;
 }
 
 .search-input:focus {
+  background: #ffffff;
   border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
 .clear-icon {
   position: absolute;
-  right: 18px;
-  top: 10px;
+  right: 8px;
   font-size: 10px;
   color: #94a3b8;
   cursor: pointer;
+  padding: 2px;
+}
+
+.clear-icon:hover {
+  color: #64748b;
 }
 
 .column-list {
   max-height: 280px;
   overflow-y: auto;
   padding: 4px 0;
+  border-bottom-left-radius: 9px;
+  border-bottom-right-radius: 9px;
 }
 
 .column-item {
@@ -427,12 +463,23 @@ const confirmDelete = () => {
   display: flex;
   align-items: center;
   padding: 6px 26px 6px 22px;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   user-select: none;
   cursor: pointer;
+  border-left: 2px solid transparent;
 }
 
 .column-item:hover {
+  background: #f1f5f9;
+}
+
+/* Subtle accent for columns that have mappings */
+.column-item.has-mapping {
+  background: #f8faff;
+  border-left-color: #3b82f6;
+}
+
+.column-item.has-mapping:hover {
   background: #eff6ff;
 }
 
@@ -461,7 +508,7 @@ const confirmDelete = () => {
 
 .column-item.is-breathing {
   animation: breathe-pulse 1.6s ease-in-out infinite;
-  border-radius: 6px;
+  border-radius: 4px;
   z-index: 20;
 }
 
@@ -477,16 +524,17 @@ const confirmDelete = () => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  max-width: 180px;
+  max-width: 175px;
 }
 
 .col-name {
   font-size: 12px;
   font-weight: 500;
-  color: #334155;
+  color: #1e293b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.4;
 }
 
 .col-comment {
@@ -495,47 +543,51 @@ const confirmDelete = () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .col-right-group {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .col-type {
-  font-size: 10px;
-  font-family: monospace;
-  padding: 2px 5px;
-  border-radius: 3px;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  padding: 1px 5px;
+  border-radius: 4px;
   white-space: nowrap;
+  font-weight: 500;
 }
 
 .mapping-dot {
-  font-size: 12px;
+  font-size: 11px;
   color: #3b82f6;
 }
 
 .drag-hint-icon {
   font-size: 11px;
   color: #94a3b8;
-  opacity: 0.3;
+  opacity: 0.25;
   transition: all 0.2s;
 }
 
+/* Morandi Soft Type Badges */
 .type-num {
   background: #fef3c7;
-  color: #b45309;
+  color: #92400e;
 }
 
 .type-str {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #eef2ff;
+  color: #3730a3;
 }
 
 .type-date {
   background: #dcfce7;
-  color: #15803d;
+  color: #166534;
 }
 
 .type-other {
@@ -545,20 +597,27 @@ const confirmDelete = () => {
 
 /* ========================================================
    Field Connection Handles (Left Target, Right Source Anchor)
+   Unhovered: 0.35 opacity; Hovered or Breathing: 1.0 opacity
    ======================================================== */
 .field-handle {
   position: absolute !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
   z-index: 50 !important;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  opacity: 0.35;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.column-item:hover .field-handle,
+.column-item.is-breathing .field-handle {
+  opacity: 1 !important;
 }
 
 /* Target Handle (Left) */
 .target-handle {
   left: 6px !important;
-  width: 10px !important;
-  height: 10px !important;
+  width: 9px !important;
+  height: 9px !important;
   border-radius: 50% !important;
   background-color: #94a3b8 !important;
   border: 2px solid #ffffff !important;
@@ -566,21 +625,21 @@ const confirmDelete = () => {
   cursor: crosshair !important;
 }
 
-.target-handle:hover {
-  transform: translateY(-50%) scale(1.4) !important;
+.target-handle:hover,
+.column-item:hover .target-handle {
   background-color: #10b981 !important;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4) !important;
+  box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.35) !important;
 }
 
 /* Source Handle (Right) - Draggable Anchor Port */
 .source-handle {
   right: 6px !important;
-  width: 14px !important;
-  height: 14px !important;
+  width: 13px !important;
+  height: 13px !important;
   border-radius: 50% !important;
   background: #ffffff !important;
-  border: 2.5px solid #2563eb !important;
-  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4) !important;
+  border: 2px solid #3b82f6 !important;
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3) !important;
   cursor: crosshair !important;
   display: flex !important;
   align-items: center !important;
@@ -591,33 +650,22 @@ const confirmDelete = () => {
   content: '';
   width: 4px;
   height: 4px;
-  background-color: #2563eb;
+  background-color: #3b82f6;
   border-radius: 50%;
   pointer-events: none;
 }
 
-.source-handle:hover {
-  transform: translateY(-50%) scale(1.35) !important;
+.source-handle:hover,
+.column-item:hover .source-handle {
+  transform: translateY(-50%) scale(1.3) !important;
   background: #2563eb !important;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.3) !important;
+  border-color: #1d4ed8 !important;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25) !important;
 }
 
-.source-handle:hover::after {
+.source-handle:hover::after,
+.column-item:hover .source-handle::after {
   background-color: #ffffff;
-}
-
-.card-footer {
-  padding: 4px 10px;
-  background: #f8fafc;
-  border-top: 1px solid #f1f5f9;
-  border-bottom-left-radius: 9px;
-  border-bottom-right-radius: 9px;
-  text-align: center;
-}
-
-.footer-tip {
-  font-size: 10px;
-  color: #94a3b8;
 }
 
 .empty-tip {
