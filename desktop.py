@@ -138,11 +138,22 @@ def launch_browser(url: str) -> None:
         profile_dir = os.path.join(os.environ.get("LOCALAPPDATA", ROOT_DIR), "ColLink", "edge_profile")
         os.makedirs(profile_dir, exist_ok=True)
 
+        # Clean stale browser disk cache so UI updates take effect immediately
+        for cache_name in ["Cache", "Code Cache", "GPUCache"]:
+            cache_path = os.path.join(profile_dir, "Default", cache_name)
+            if os.path.exists(cache_path):
+                try:
+                    import shutil
+                    shutil.rmtree(cache_path, ignore_errors=True)
+                except Exception:
+                    pass
+
         cmd = [
             browser_exe,
             f"--user-data-dir={profile_dir}",
             "--no-first-run",
             "--no-default-browser-check",
+            "--disable-http-cache",
             f"--app={url}",
             "--window-size=1440,900",
         ]

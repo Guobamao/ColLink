@@ -67,7 +67,12 @@ if os.path.exists(DIST_DIR):
         target_file = os.path.join(DIST_DIR, full_path)
         if full_path and os.path.isfile(target_file):
             return FileResponse(target_file)
-        return FileResponse(os.path.join(DIST_DIR, "index.html"))
+        
+        response = FileResponse(os.path.join(DIST_DIR, "index.html"))
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
 else:
     @app.get("/")
     def health_check():
