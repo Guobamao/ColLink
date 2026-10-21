@@ -107,13 +107,28 @@
         :title="col.column_comment ? `${col.column_name} (${col.column_comment}) - 点击高亮血缘` : `${col.column_name} - 点击高亮血缘`"
         @click.stop="handleFieldClick(col.id)"
       >
-        <!-- Target Handle (Left - Input Port) -->
+        <!-- Left Handles (Dual-directional: Target & Source) -->
+        <Handle
+          :id="`target_${col.id}_left`"
+          type="target"
+          :position="Position.Left"
+          class="field-handle left-handle left-target"
+          title="左侧输入锚点"
+        />
+        <Handle
+          :id="`source_${col.id}_left`"
+          type="source"
+          :position="Position.Left"
+          class="field-handle left-handle left-source"
+          title="左侧拖拽/输出锚点"
+        />
+        <!-- Legacy left fallback -->
         <Handle
           :id="`target_${col.id}`"
           type="target"
           :position="Position.Left"
-          class="field-handle target-handle"
-          title="输入锚点：接收连线"
+          class="field-handle left-handle"
+          style="display: none;"
         />
 
         <div class="col-content">
@@ -135,19 +150,34 @@
             >
               <el-icon class="mapping-icon"><Link /></el-icon>
             </span>
-            <span v-else class="drag-hint-wrap" title="按住右侧蓝圈锚点拖拽连线">
+            <span v-else class="drag-hint-wrap" title="拖拽两侧蓝圈锚点建立映射">
               <el-icon class="drag-hint-icon"><Right /></el-icon>
             </span>
           </div>
         </div>
 
-        <!-- Source Handle (Right - Prominent Draggable Anchor Port) -->
+        <!-- Right Handles (Dual-directional: Target & Source) -->
+        <Handle
+          :id="`target_${col.id}_right`"
+          type="target"
+          :position="Position.Right"
+          class="field-handle right-handle right-target"
+          title="右侧输入锚点"
+        />
+        <Handle
+          :id="`source_${col.id}_right`"
+          type="source"
+          :position="Position.Right"
+          class="field-handle right-handle right-source"
+          title="右侧拖拽/输出锚点"
+        />
+        <!-- Legacy right fallback -->
         <Handle
           :id="`source_${col.id}`"
           type="source"
           :position="Position.Right"
-          class="field-handle source-handle"
-          title="输出锚点：按住拖拽连线至目标表字段"
+          class="field-handle right-handle"
+          style="display: none;"
         />
       </div>
 
@@ -744,7 +774,7 @@ const confirmDelete = () => {
 }
 
 /* ========================================================
-   Field Connection Handles (Left Target, Right Source Anchor)
+   Field Connection Handles (Dual-directional Left & Right)
    Unhovered: 0.35 opacity; Hovered or Breathing: 1.0 opacity
    ======================================================== */
 .field-handle {
@@ -761,26 +791,31 @@ const confirmDelete = () => {
   opacity: 1 !important;
 }
 
-/* Target Handle (Left) */
-.target-handle {
+/* Left Port Handles */
+.left-handle {
   left: 6px !important;
-  width: 9px !important;
-  height: 9px !important;
+  width: 11px !important;
+  height: 11px !important;
   border-radius: 50% !important;
-  background-color: #94a3b8 !important;
-  border: 2px solid #ffffff !important;
-  box-shadow: 0 0 0 1px #64748b !important;
+  background-color: #ffffff !important;
+  border: 2px solid #94a3b8 !important;
+  box-shadow: 0 1px 2px rgba(100, 116, 139, 0.2) !important;
   cursor: crosshair !important;
 }
 
-.target-handle:hover,
-.column-item:hover .target-handle {
-  background-color: #10b981 !important;
-  box-shadow: 0 0 0 2.5px rgba(16, 185, 129, 0.35) !important;
+.left-source {
+  z-index: 52 !important;
 }
 
-/* Source Handle (Right) - Draggable Anchor Port */
-.source-handle {
+.left-handle:hover,
+.column-item:hover .left-handle {
+  border-color: #3b82f6 !important;
+  background-color: #eff6ff !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+}
+
+/* Right Port Handles */
+.right-handle {
   right: 6px !important;
   width: 13px !important;
   height: 13px !important;
@@ -794,7 +829,11 @@ const confirmDelete = () => {
   justify-content: center !important;
 }
 
-.source-handle::after {
+.right-source {
+  z-index: 52 !important;
+}
+
+.right-handle::after {
   content: '';
   width: 4px;
   height: 4px;
@@ -803,16 +842,16 @@ const confirmDelete = () => {
   pointer-events: none;
 }
 
-.source-handle:hover,
-.column-item:hover .source-handle {
-  transform: translateY(-50%) scale(1.3) !important;
+.right-handle:hover,
+.column-item:hover .right-handle {
+  transform: translateY(-50%) scale(1.25) !important;
   background: #2563eb !important;
   border-color: #1d4ed8 !important;
   box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25) !important;
 }
 
-.source-handle:hover::after,
-.column-item:hover .source-handle::after {
+.right-handle:hover::after,
+.column-item:hover .right-handle::after {
   background-color: #ffffff;
 }
 

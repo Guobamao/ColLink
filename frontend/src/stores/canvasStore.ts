@@ -98,23 +98,49 @@ export const useCanvasStore = defineStore('canvas', () => {
   // Dynamically adapt edge handles: always connect via the closest handles
   const updateEdgeHandles = () => {
     const nodeMap = new Map(nodes.value.map(n => [n.id, n]))
+    const sw = 280
+    const tw = 280
+
+    const parseColId = (h: string | null | undefined): string => {
+      if (!h) return ''
+      return h.replace(/^(source|target)_/, '').replace(/_(left|right)$/, '')
+    }
+
     edges.value.forEach(edge => {
       const srcNode = nodeMap.get(edge.source)
       const tgtNode = nodeMap.get(edge.target)
       if (srcNode && tgtNode) {
-        const srcColId = edge.data?.sourceColumnId
-        const tgtColId = edge.data?.targetColumnId
+        const srcColId = parseColId(edge.sourceHandle) || edge.data?.sourceColumnId
+        const tgtColId = parseColId(edge.targetHandle) || edge.data?.targetColumnId
 
-        // If source node is to the left of target node:
-        // Use source node's RIGHT handle (source_*) and target node's LEFT handle (target_*)
-        if (srcNode.position.x <= tgtNode.position.x) {
-          edge.sourceHandle = `source_${srcColId}`
-          edge.targetHandle = `target_${tgtColId}`
-        } else {
-          // If source node is to the right of target node:
-          // Use source node's LEFT handle (target_*) and target node's RIGHT handle (source_*)
-          edge.sourceHandle = `target_${srcColId}`
-          edge.targetHandle = `source_${tgtColId}`
+        if (!srcColId || !tgtColId) return
+
+        const sx = srcNode.position.x
+        const tx = tgtNode.position.x
+        const srcW = (srcNode as any).dimensions?.width || sw
+        const tgtW = (tgtNode as any).dimensions?.width || tw
+
+        // Case A: Target node is strictly to the right of source node
+        if (tx > sx + srcW + 20) {
+          edge.sourceHandle = `source_${srcColId}_right`
+          edge.targetHandle = `target_${tgtColId}_left`
+        }
+        // Case B: Target node is strictly to the left of source node
+        else if (tx + tgtW + 20 < sx) {
+          edge.sourceHandle = `source_${srcColId}_left`
+          edge.targetHandle = `target_${tgtColId}_right`
+        }
+        // Case C: Horizontally overlapping or vertically aligned (C-shape outer detour)
+        else {
+          const srcCenterX = sx + srcW / 2
+          const tgtCenterX = tx + tgtW / 2
+          if (srcCenterX <= tgtCenterX) {
+            edge.sourceHandle = `source_${srcColId}_right`
+            edge.targetHandle = `target_${tgtColId}_right`
+          } else {
+            edge.sourceHandle = `source_${srcColId}_left`
+            edge.targetHandle = `target_${tgtColId}_left`
+          }
         }
       }
     })
@@ -160,10 +186,10 @@ export const useCanvasStore = defineStore('canvas', () => {
       return {
         id: `edge_${m.id}`,
         source: `table_${m.source_table_id}`,
-        sourceHandle: `source_${m.source_column_id}`,
+        sourceHandle: `source_${m.source_column_id}_right`,
         target: `table_${m.target_table_id}`,
-        targetHandle: `target_${m.target_column_id}`,
-        type: 'smoothstep',
+        targetHandle: `target_${m.target_column_id}_left`,
+        type: 'smartObstacle',
         animated: false,
         hidden: true, // Hidden by default, only shown when field is activated
         data: {
@@ -175,8 +201,8 @@ export const useCanvasStore = defineStore('canvas', () => {
           label,
         },
         style: {
-          stroke: '#2563eb',
-          strokeWidth: 2.5,
+          stroke: '#3b82f6',
+          strokeWidth: 2,
         },
       }
     })
@@ -271,9 +297,10 @@ export const useCanvasStore = defineStore('canvas', () => {
       if (isMatch) {
         e.hidden = false
         e.animated = true
+        e.type = 'smartObstacle'
         e.style = {
-          stroke: '#2563eb',
-          strokeWidth: 3,
+          stroke: '#3b82f6',
+          strokeWidth: 2,
         }
         if (e.data?.sourceColumnId) matchedCols.add(e.data.sourceColumnId)
         if (e.data?.targetColumnId) matchedCols.add(e.data.targetColumnId)
@@ -303,8 +330,12 @@ export const useCanvasStore = defineStore('canvas', () => {
   const onConnect = async (params: Connection, projectId: string) => {
     const sourceTableId = params.source.replace('table_', '')
     const targetTableId = params.target.replace('table_', '')
-    const sourceColumnId = (params.sourceHandle || '').replace('source_', '').replace('target_', '')
-    const targetColumnId = (params.targetHandle || '').replace('target_', '').replace('source_', '')
+    const parseColId = (h: string | null | undefined): string => {
+      if (!h) return ''
+      return h.replace(/^(source|target)_/, '').replace(/_(left|right)$/, '')
+    }
+    const sourceColumnId = parseColId(params.sourceHandle)
+    const targetColumnId = parseColId(params.targetHandle)
 
     if (!sourceColumnId || !targetColumnId) {
       ElMessage.warning('未能识别字段端点')
@@ -337,7 +368,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         sourceHandle: params.sourceHandle,
         target: params.target,
         targetHandle: params.targetHandle,
-        type: 'smoothstep',
+        type: 'smartObstacle',
         animated: true,
         hidden: false, // Show immediately upon creation
         data: {
@@ -348,8 +379,8 @@ export const useCanvasStore = defineStore('canvas', () => {
           targetColumnId,
         },
         style: {
-          stroke: '#2563eb',
-          strokeWidth: 3,
+          stroke: '#3b82f6',
+          strokeWidth: 2,
         },
       }
 
@@ -399,10 +430,10 @@ export const useCanvasStore = defineStore('canvas', () => {
         const edge: Edge = {
           id: edgeId,
           source: `table_${m.source_table_id}`,
-          sourceHandle: `source_${m.source_column_id}`,
+          sourceHandle: `source_${m.source_column_id}_right`,
           target: `table_${m.target_table_id}`,
-          targetHandle: `target_${m.target_column_id}`,
-          type: 'smoothstep',
+          targetHandle: `target_${m.target_column_id}_left`,
+          type: 'smartObstacle',
           animated: true,
           hidden: false,
           data: {
@@ -413,8 +444,8 @@ export const useCanvasStore = defineStore('canvas', () => {
             targetColumnId: m.target_column_id,
           },
           style: {
-            stroke: '#2563eb',
-            strokeWidth: 3,
+            stroke: '#3b82f6',
+            strokeWidth: 2,
           },
         }
         edges.value.push(edge)

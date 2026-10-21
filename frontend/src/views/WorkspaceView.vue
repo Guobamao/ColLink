@@ -26,9 +26,10 @@
         :max-zoom="2.5"
         :fit-view-on-init="true"
         :node-types="nodeTypes"
-        :default-edge-options="{ type: 'smoothstep' }"
+        :edge-types="edgeTypes"
+        :default-edge-options="{ type: 'smartObstacle' }"
         :connection-mode="ConnectionMode.Loose"
-        :connection-line-style="{ stroke: '#2563eb', strokeWidth: 2.5 }"
+        :connection-line-style="{ stroke: '#3b82f6', strokeWidth: 2 }"
         :connection-line-type="'smoothstep'"
         @node-drag-start="canvasStore.onNodeDragStart"
         @node-drag="canvasStore.onNodeDrag"
@@ -122,6 +123,7 @@ import AutoMappingDialog from '@/components/canvas/AutoMappingDialog.vue'
 import ProjectDialog from '@/components/dialogs/ProjectDialog.vue'
 import BackupDialog from '@/components/dialogs/BackupDialog.vue'
 import MappingDrawer from '@/components/canvas/MappingDrawer.vue'
+import SmartObstacleEdge from '@/components/canvas/SmartObstacleEdge.vue'
 
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
@@ -140,9 +142,14 @@ const projectDialogRef = ref<InstanceType<typeof ProjectDialog> | null>(null)
 const backupDialogRef = ref<InstanceType<typeof BackupDialog> | null>(null)
 const mappingDrawerRef = ref<InstanceType<typeof MappingDrawer> | null>(null)
 
-// Register custom node components
+// Register custom node & edge components
 const nodeTypes = {
   tableCard: markRaw(TableNode),
+}
+
+const edgeTypes = {
+  smartObstacle: markRaw(SmartObstacleEdge),
+  smoothstep: markRaw(SmartObstacleEdge),
 }
 
 onMounted(async () => {
@@ -517,5 +524,19 @@ const handleExportImage = async () => {
 
 .minimap-toggle-btn.is-active {
   color: #2563eb;
+}
+
+/* Edge and Node Layering: Edges below cards, Nodes above edges */
+:deep(.vue-flow__edges) {
+  z-index: 10 !important;
+}
+
+:deep(.vue-flow__node) {
+  z-index: 20 !important;
+}
+
+:deep(.vue-flow__node.selected),
+:deep(.vue-flow__node:hover) {
+  z-index: 30 !important;
 }
 </style>
