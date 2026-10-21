@@ -68,13 +68,12 @@ const open = () => {
   visible.value = true
 }
 
-const handleDownloadJson = () => {
+const handleDownloadJson = async () => {
   if (!projectStore.currentProject) {
     ElMessage.warning('当前无可用项目')
     return
   }
-  const url = api.getJsonExportUrl(projectStore.currentProject.id)
-  window.open(url, '_blank')
+  await api.exportProjectJson(projectStore.currentProject.id, projectStore.currentProject.name)
 }
 
 const handleRestoreFile = async (file: any) => {

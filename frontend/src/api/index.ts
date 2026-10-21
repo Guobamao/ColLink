@@ -1,5 +1,6 @@
 import axios from 'axios'
 import type { Project, TableMeta, FieldMapping, ParsedTable, DbTableSummary, CanvasView, CanvasDetail } from '@/types'
+import { downloadFileStream, downloadJsonFile } from '@/utils/download'
 
 const apiClient = axios.create({
   baseURL: '/api',
@@ -62,6 +63,14 @@ export const api = {
   }).then(res => res.data),
 
   // Export / Backup
+  exportExcel: (projectId: string, projectName: string = '项目') => {
+    const dateStr = new Date().toISOString().slice(0, 10)
+    return downloadFileStream(`/export/excel/${projectId}`, `${projectName}_字段血缘映射表_${dateStr}.xlsx`)
+  },
+  exportProjectJson: (projectId: string, projectName: string = '项目') => {
+    const dateStr = new Date().toISOString().slice(0, 10)
+    return downloadJsonFile(`/export/json/${projectId}`, `${projectName}_备份快照_${dateStr}.json`)
+  },
   getExcelExportUrl: (projectId: string) => `/api/export/excel/${projectId}`,
   getJsonExportUrl: (projectId: string) => `/api/export/json/${projectId}`,
   restoreProjectJson: (formData: FormData) => apiClient.post<Project>('/export/restore-json', formData, {

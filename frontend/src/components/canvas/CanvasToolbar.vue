@@ -114,7 +114,7 @@
 
       <div class="divider"></div>
 
-      <!-- 2. 画布视图排版与历史控制 -->
+      <!-- 2. 画布视图排版 -->
       <div class="btn-group">
         <el-button class="btn-subtle btn-compact" @click="handleAutoLayout">
           <el-icon><MagicStick /></el-icon>
@@ -123,26 +123,6 @@
         <el-button class="btn-subtle btn-compact" @click="emit('fit-view')">
           <el-icon><Aim /></el-icon>
           <span>适应画布</span>
-        </el-button>
-      </div>
-
-      <!-- Undo / Redo -->
-      <div class="undo-redo-group">
-        <el-button
-          class="btn-subtle btn-icon-only"
-          :disabled="!canvasStore.canUndo"
-          title="撤销 (Ctrl+Z)"
-          @click="canvasStore.undo()"
-        >
-          <el-icon><RefreshLeft /></el-icon>
-        </el-button>
-        <el-button
-          class="btn-subtle btn-icon-only"
-          :disabled="!canvasStore.canRedo"
-          title="重做 (Ctrl+Y / Ctrl+Shift+Z)"
-          @click="canvasStore.redo()"
-        >
-          <el-icon><RefreshRight /></el-icon>
         </el-button>
       </div>
     </div>
@@ -219,8 +199,6 @@ import {
   Connection,
   MagicStick,
   Aim,
-  RefreshLeft,
-  RefreshRight,
   Link,
   Download,
   DocumentChecked,
@@ -310,11 +288,27 @@ const handleSearchSelect = (item: any) => {
   })
 }
 
+const isEditableElement = (el: Element | null): boolean => {
+  if (!el) return false
+  const tagName = el.tagName.toLowerCase()
+  if (tagName === 'input' || tagName === 'textarea') return true
+  if ((el as HTMLElement).isContentEditable) return true
+  return false
+}
+
 const onGlobalKeyDown = (e: KeyboardEvent) => {
   if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
     e.preventDefault()
     searchRef.value?.focus()
-  } else if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+    return
+  }
+
+  // Do not intercept Ctrl+Z / Ctrl+Y when typing in text fields
+  if (isEditableElement(document.activeElement)) {
+    return
+  }
+
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
     e.preventDefault()
     if (canvasStore.canUndo) {
       canvasStore.undo()
@@ -369,13 +363,12 @@ const handleOpenDb = () => {
   emit('open-db-dialog')
 }
 
-const handleExportExcel = () => {
+const handleExportExcel = async () => {
   if (!projectStore.currentProject) {
     ElMessage.warning('当前无可用项目')
     return
   }
-  const url = api.getExcelExportUrl(projectStore.currentProject.id)
-  window.open(url, '_blank')
+  await api.exportExcel(projectStore.currentProject.id, projectStore.currentProject.name)
 }
 
 const handleImportCommand = (cmd: string) => {
@@ -548,32 +541,6 @@ const handleExportCommand = (cmd: string) => {
 
 .btn-compact {
   padding: 0 10px;
-}
-
-.undo-redo-group {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  margin-left: 2px;
-}
-
-.btn-icon-only {
-  width: 32px;
-  height: 34px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  font-size: 14px;
-  color: #475569;
-}
-
-.btn-icon-only:disabled {
-  color: #cbd5e1 !important;
-  background-color: transparent !important;
-  border-color: #f1f5f9 !important;
-  cursor: not-allowed;
 }
 
 .btn-warning-action {

@@ -127,10 +127,9 @@ const handleDeleteMapping = async (mappingId: string) => {
   }
 }
 
-const downloadExcel = () => {
+const downloadExcel = async () => {
   if (!projectStore.currentProject) return
-  const url = api.getExcelExportUrl(projectStore.currentProject.id)
-  window.open(url, '_blank')
+  await api.exportExcel(projectStore.currentProject.id, projectStore.currentProject.name)
 }
 
 defineExpose({ open })

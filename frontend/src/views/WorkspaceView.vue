@@ -67,7 +67,7 @@
         <!-- Floating Operational Tip Pill -->
         <div class="canvas-floating-tip">
           <el-icon class="tip-icon" color="#3b82f6"><InfoFilled /></el-icon>
-          <span class="tip-text">点击字段查看连线 · 拖动右侧蓝点建立映射</span>
+          <span class="tip-text">点击字段查看连线 · 拖动右侧蓝点建立映射 · Ctrl+Z 撤销</span>
         </div>
 
         <!-- Custom Empty State overlay if no tables -->
@@ -487,8 +487,8 @@ const handleExportImage = async () => {
 /* MiniMap Toggle Button */
 .minimap-toggle-btn {
   position: absolute;
-  bottom: 160px;
-  right: 66px;
+  bottom: 170px;
+  right: 80px;
   z-index: 10;
   display: inline-flex;
   align-items: center;
