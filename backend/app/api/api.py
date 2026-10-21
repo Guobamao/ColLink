@@ -8,7 +8,8 @@ api_router = APIRouter()
 # Global state for client lifecycle management
 APP_STATE = {
     "last_heartbeat": time.time(),
-    "shutdown_requested": False,
+    "has_connected": False,
+    "shutdown_requested_at": None,
     "started_at": time.time(),
 }
 
@@ -28,10 +29,12 @@ def health():
 @api_router.post("/heartbeat")
 def heartbeat():
     APP_STATE["last_heartbeat"] = time.time()
+    APP_STATE["has_connected"] = True
+    APP_STATE["shutdown_requested_at"] = None  # Cancel shutdown if user merely refreshed
     return {"status": "alive"}
 
 
 @api_router.post("/shutdown")
 def shutdown():
-    APP_STATE["shutdown_requested"] = True
-    return {"status": "shutting_down"}
+    APP_STATE["shutdown_requested_at"] = time.time()
+    return {"status": "shutdown_scheduled"}

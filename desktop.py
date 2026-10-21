@@ -61,12 +61,40 @@ def get_browser_executable() -> str | None:
     return None
 
 
+def launch_browser(url: str) -> None:
+    """Launch application in Edge/Chrome standalone app mode, fallback to default browser."""
+    browser_exe = get_browser_executable()
+    if browser_exe:
+        # Dedicated user-data-dir in AppData prevents ProcessSingleton lock collision (Error code: 32)
+        # when Edge is already running on the machine, while --no-first-run prevents setup wizards.
+        profile_dir = os.path.join(os.environ.get("LOCALAPPDATA", ROOT_DIR), "ColLink", "edge_profile")
+        os.makedirs(profile_dir, exist_ok=True)
+
+        cmd = [
+            browser_exe,
+            f"--user-data-dir={profile_dir}",
+            "--no-first-run",
+            "--no-default-browser-check",
+            f"--app={url}",
+            "--window-size=1440,900",
+        ]
+        try:
+            subprocess.Popen(cmd)
+            print(f"[ColLink] Launched app window via {os.path.basename(browser_exe)}.", flush=True)
+            return
+        except Exception as e:
+            print(f"[ColLink] Warning: Failed to launch via {browser_exe}: {e}", flush=True)
+
+    print("[ColLink] Launching in default system browser...", flush=True)
+    webbrowser.open(url)
+
+
 def main():
     port = find_available_port(8000)
     server_url = f"http://127.0.0.1:{port}"
     health_url = f"{server_url}/api/health"
 
-    print(f"[ColLink] Starting background API server on port {port}...")
+    print(f"[ColLink] Starting background API server on port {port}...", flush=True)
 
     # Configure and launch lightweight Uvicorn server in a daemon thread
     config = uvicorn.Config(
@@ -82,73 +110,52 @@ def main():
 
     # Fast wait for server
     if not wait_for_server(health_url, timeout=10.0):
-        print("[ColLink] Error: Background API server failed to start.")
+        print("[ColLink] Error: Background API server failed to start within timeout.", flush=True)
         server.should_exit = True
         sys.exit(1)
 
-    print(f"[ColLink] API ready at {server_url}. Launching standalone window...")
+    print(f"[ColLink] API ready at {server_url}. Opening workspace...", flush=True)
 
-    browser_exe = get_browser_executable()
-    browser_process = None
+    # Launch browser window
+    launch_browser(server_url)
 
-    if browser_exe:
-        # Isolated profile directory to ensure standalone window even if Edge is already open
-        profile_dir = os.path.join(ROOT_DIR, "backend", "data", "edge_profile")
-        os.makedirs(profile_dir, exist_ok=True)
-
-        cmd = [
-            browser_exe,
-            f"--app={server_url}",
-            f"--user-data-dir={profile_dir}",
-            "--window-size=1440,900",
-            "--disable-features=TranslateUI",
-            "--no-first-run",
-            "--no-default-browser-check",
-        ]
-        browser_process = subprocess.Popen(cmd)
-    else:
-        # Fallback to default system browser
-        webbrowser.open(server_url)
-
-    # Initialize heartbeat state
-    APP_STATE["started_at"] = time.time()
-    APP_STATE["last_heartbeat"] = time.time()
-    APP_STATE["shutdown_requested"] = False
+    # Initialize lifecycle state
+    start_time = time.time()
+    APP_STATE["started_at"] = start_time
+    APP_STATE["last_heartbeat"] = start_time
+    APP_STATE["has_connected"] = False
+    APP_STATE["shutdown_requested_at"] = None
 
     # Process watchdog loop
-    # Exits when:
-    # 1. Edge application window process terminates
-    # 2. Frontend window emits shutdown beacon (/api/shutdown)
-    # 3. Heartbeat lost for > 8 seconds (after initial 15s grace period)
+    # NOTE: Chromium launches delegate to existing master processes and their helper
+    # launchers exit immediately. We DO NOT monitor the subprocess exit code.
+    # Instead, we rely strictly on frontend heartbeats & the beforeunload shutdown beacon.
     while True:
-        time.sleep(0.5)
-
-        # Condition 1: Browser process exited
-        if browser_process is not None and browser_process.poll() is not None:
-            print("[ColLink] Window closed by user.")
-            break
-
-        # Condition 2: Explicit shutdown request from frontend beforeunload
-        if APP_STATE.get("shutdown_requested"):
-            print("[ColLink] Shutdown beacon received from frontend.")
-            break
-
-        # Condition 3: Heartbeat watchdog
+        time.sleep(1.0)
         now = time.time()
-        if now - APP_STATE["started_at"] > 15.0:
-            if now - APP_STATE["last_heartbeat"] > 8.0:
-                print("[ColLink] Heartbeat lost. Window assumed closed.")
+
+        # Check 1: User closed the window (beforeunload beacon received)
+        # Give a 5-second grace window to allow for potential page reloads (F5)
+        shutdown_req = APP_STATE.get("shutdown_requested_at")
+        if shutdown_req is not None:
+            if now - shutdown_req >= 5.0:
+                print("[ColLink] Client window closed. Shutting down server...", flush=True)
+                break
+
+        # Check 2: Active client lost heartbeat for > 15 seconds
+        if APP_STATE.get("has_connected"):
+            if now - APP_STATE["last_heartbeat"] > 15.0:
+                print("[ColLink] Heartbeat timeout (>15s). Shutting down server...", flush=True)
+                break
+        else:
+            # Check 3: Initial connection timeout (60 seconds)
+            if now - start_time > 60.0:
+                print("[ColLink] Initial connection timeout. No client connected within 60s.", flush=True)
                 break
 
     # Clean shutdown
-    if browser_process is not None and browser_process.poll() is None:
-        try:
-            browser_process.terminate()
-        except Exception:
-            pass
-
     server.should_exit = True
-    print("[ColLink] Exiting cleanly.")
+    print("[ColLink] Exiting cleanly.", flush=True)
     sys.exit(0)
 
 
