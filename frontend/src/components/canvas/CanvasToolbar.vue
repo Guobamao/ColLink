@@ -24,40 +24,50 @@
             :value="p.id"
           />
         </el-select>
-        <el-button class="btn-subtle" @click="emit('open-project-dialog')">
+        <el-button class="btn-subtle btn-manage" @click="emit('open-project-dialog')">
           📁 项目管理
         </el-button>
       </div>
     </div>
 
-    <!-- Center: Main Actions & Canvas Controls (Strictly single horizontal line) -->
+    <!-- Center: Main Actions & Canvas Controls (Compact) -->
     <div class="toolbar-section center-section">
-      <!-- Data Source Group -->
-      <div class="btn-group">
-        <el-button type="primary" class="btn-primary-action" @click="handleOpenDdl">
-          📝 DDL 解析导入
+      <!-- 1. 导入数据源 (下拉菜单聚合) -->
+      <el-dropdown trigger="click" @command="handleImportCommand">
+        <el-button type="primary" class="btn-primary-action">
+          <span>➕ 导入表结构</span>
+          <span class="dropdown-arrow">▾</span>
         </el-button>
-        <el-button class="btn-secondary-blue" @click="handleOpenDb">
-          🔌 在线逆向拉取
-        </el-button>
-      </div>
+        <template #dropdown>
+          <el-dropdown-menu class="toolbar-dropdown-menu">
+            <el-dropdown-item command="ddl">
+              <span class="menu-icon">📝</span>
+              <span class="menu-text">DDL 解析导入</span>
+            </el-dropdown-item>
+            <el-dropdown-item command="db">
+              <span class="menu-icon">🔌</span>
+              <span class="menu-text">在线逆向拉取</span>
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
 
       <div class="divider"></div>
 
-      <!-- Canvas Layout Group -->
+      <!-- 2. 画布视图排版 (紧凑并排) -->
       <div class="btn-group">
-        <el-button class="btn-subtle" @click="handleAutoLayout">
-          ✨ 智能自动排版
+        <el-button class="btn-subtle btn-compact" @click="handleAutoLayout">
+          ✨ 自动排版
         </el-button>
-        <el-button class="btn-subtle" @click="emit('fit-view')">
+        <el-button class="btn-subtle btn-compact" @click="emit('fit-view')">
           🎯 适应画布
         </el-button>
       </div>
     </div>
 
-    <!-- Right: Deliverables & System Tools -->
+    <!-- Right: Deliverables & System Tools (Dropdown Aggregated) -->
     <div class="toolbar-section right-section">
-      <!-- Lineage Filter State -->
+      <!-- Lineage Filter State (Active when clicked) -->
       <el-button
         v-if="canvasStore.highlightedNodeIds.size > 0"
         type="warning"
@@ -68,27 +78,38 @@
         ✕ 清除血缘高亮
       </el-button>
 
-      <!-- Mapping Drawer Button -->
+      <!-- 3. 映射清单 (独立保留带Badge) -->
       <el-badge :value="canvasStore.edges.length" :max="999" class="badge-item">
-        <el-button class="btn-subtle" @click="emit('open-mapping-drawer')">
+        <el-button class="btn-subtle btn-compact" @click="emit('open-mapping-drawer')">
           🔗 映射清单
         </el-button>
       </el-badge>
 
       <div class="divider"></div>
 
-      <!-- Export Actions -->
-      <el-button class="btn-excel" @click="handleExportExcel">
-        📊 导出 Excel
-      </el-button>
-
-      <el-button class="btn-subtle" @click="emit('export-image')">
-        🖼️ 导出图片
-      </el-button>
-
-      <el-button class="btn-subtle" @click="emit('open-backup-dialog')">
-        ⚙️ 备份/迁移
-      </el-button>
+      <!-- 4. 导出与备份 (下拉菜单聚合) -->
+      <el-dropdown trigger="click" @command="handleExportCommand">
+        <el-button class="btn-excel">
+          <span>📤 导出与备份</span>
+          <span class="dropdown-arrow">▾</span>
+        </el-button>
+        <template #dropdown>
+          <el-dropdown-menu class="toolbar-dropdown-menu">
+            <el-dropdown-item command="excel">
+              <span class="menu-icon">📊</span>
+              <span class="menu-text">导出 Excel 映射清单</span>
+            </el-dropdown-item>
+            <el-dropdown-item command="image">
+              <span class="menu-icon">🖼️</span>
+              <span class="menu-text">导出高清拓扑图片 (PNG)</span>
+            </el-dropdown-item>
+            <el-dropdown-item command="backup" divided>
+              <span class="menu-icon">⚙️</span>
+              <span class="menu-text">项目快照备份 / 迁移 (JSON)</span>
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
   </div>
 </template>
@@ -154,6 +175,28 @@ const handleExportExcel = () => {
   const url = api.getExcelExportUrl(projectStore.currentProject.id)
   window.open(url, '_blank')
 }
+
+const handleImportCommand = (cmd: string) => {
+  if (cmd === 'ddl') {
+    handleOpenDdl()
+  } else if (cmd === 'db') {
+    handleOpenDb()
+  }
+}
+
+const handleExportCommand = (cmd: string) => {
+  if (cmd === 'excel') {
+    handleExportExcel()
+  } else if (cmd === 'image') {
+    emit('export-image')
+  } else if (cmd === 'backup') {
+    if (!projectStore.currentProject?.id) {
+      ElMessage.error('请先选择或新建一个项目！')
+      return
+    }
+    emit('open-backup-dialog')
+  }
+}
 </script>
 
 <style scoped>
@@ -164,11 +207,14 @@ const handleExportExcel = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 16px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
   z-index: 20;
   white-space: nowrap;
-  gap: 16px;
+  box-sizing: border-box;
+  width: 100%;
+  overflow: hidden;
+  gap: 12px;
 }
 
 .toolbar-section {
@@ -179,31 +225,31 @@ const handleExportExcel = () => {
 }
 
 .left-section {
-  gap: 14px;
+  gap: 10px;
 }
 
 .center-section {
-  gap: 12px;
+  gap: 8px;
 }
 
 .right-section {
-  gap: 10px;
+  gap: 8px;
 }
 
 .app-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   user-select: none;
 }
 
 .logo {
-  font-size: 20px;
+  font-size: 19px;
   line-height: 1;
 }
 
 .brand-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   color: #0f172a;
   letter-spacing: -0.4px;
@@ -211,15 +257,16 @@ const handleExportExcel = () => {
 
 .divider {
   width: 1px;
-  height: 20px;
+  height: 18px;
   background: #e2e8f0;
   flex-shrink: 0;
+  margin: 0 2px;
 }
 
 .project-selector {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .proj-label {
@@ -231,13 +278,21 @@ const handleExportExcel = () => {
 }
 
 .project-select {
-  width: 210px;
+  width: 170px;
 }
 
 .btn-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+}
+
+.dropdown-arrow {
+  margin-left: 4px;
+  font-size: 11px;
+  opacity: 0.8;
+  display: inline-block;
+  line-height: 1;
 }
 
 /* Button Stylings */
@@ -248,32 +303,16 @@ const handleExportExcel = () => {
   color: #ffffff;
   font-weight: 500;
   font-size: 13px;
-  padding: 0 14px;
+  padding: 0 12px;
   border-radius: 6px;
   transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
 }
 
 .btn-primary-action:hover {
   background: #2563eb;
   border-color: #2563eb;
-}
-
-.btn-secondary-blue {
-  height: 34px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1d4ed8;
-  font-weight: 500;
-  font-size: 13px;
-  padding: 0 14px;
-  border-radius: 6px;
-  transition: all 0.15s ease;
-}
-
-.btn-secondary-blue:hover {
-  background: #dbeafe;
-  border-color: #93c5fd;
-  color: #1e40af;
 }
 
 .btn-subtle {
@@ -283,7 +322,6 @@ const handleExportExcel = () => {
   color: #334155;
   font-weight: 500;
   font-size: 13px;
-  padding: 0 13px;
   border-radius: 6px;
   transition: all 0.15s ease;
 }
@@ -294,14 +332,22 @@ const handleExportExcel = () => {
   color: #0f172a;
 }
 
+.btn-manage {
+  padding: 0 10px;
+}
+
+.btn-compact {
+  padding: 0 10px;
+}
+
 .btn-warning-action {
   height: 34px;
   font-size: 12px;
-  padding: 0 12px;
+  padding: 0 10px;
   border-radius: 6px;
 }
 
-/* Fresh business green Excel export button */
+/* Fresh business green Excel & export dropdown button */
 .btn-excel {
   height: 34px;
   background: #f0fdf4;
@@ -309,9 +355,11 @@ const handleExportExcel = () => {
   color: #16a34a;
   font-weight: 500;
   font-size: 13px;
-  padding: 0 14px;
+  padding: 0 12px;
   border-radius: 6px;
   transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
 }
 
 .btn-excel:hover {
@@ -323,5 +371,33 @@ const handleExportExcel = () => {
 .badge-item :deep(.el-badge__content) {
   top: 3px;
   right: 5px;
+}
+</style>
+
+<style>
+/* Refined Dropdown Menu Items */
+.toolbar-dropdown-menu .el-dropdown-menu__item {
+  font-size: 13px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 4px;
+  color: #334155;
+  transition: all 0.15s ease;
+}
+
+.toolbar-dropdown-menu .el-dropdown-menu__item:hover {
+  background-color: #f1f5f9;
+  color: #2563eb;
+}
+
+.toolbar-dropdown-menu .menu-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.toolbar-dropdown-menu .menu-text {
+  font-weight: 500;
 }
 </style>
