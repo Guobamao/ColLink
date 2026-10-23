@@ -28,6 +28,44 @@
 
 ---
 
+## 🖼️ 系统界面预览 (UI Showcase)
+
+### 1. 工作台主视图与 DAG 分层拓扑排版 (Workspace Overview)
+> 现代化清爽设计，集成全局模糊搜索（`Ctrl+K`）、多业务主题域画布视图切换（Tabs）、DAG 有向分层拓扑智能排版、实时鹰眼导航与流式导出体系。
+
+<p align="center">
+  <img src="docs/images/workspace_overview.png" alt="ColLink 工作台主视图" width="96%" />
+</p>
+
+---
+
+### 2. 字段级精准血缘连线与自适应避障 (Field Lineage & Smart Routing)
+> 每个字段具备高亮蓝圈交互锚点，支持实时字段名/注释模糊过滤；根据节点相对几何位置自适应选取最短路径左右锚点；单击激活字段两端呼吸脉冲光效，关联字段自动平滑滚入可视区域。
+
+<p align="center">
+  <img src="docs/images/field_mapping_detail.png" alt="字段级血缘映射与动态就近锚点" width="88%" />
+</p>
+
+---
+
+### 3. 智能同名 / 同义字段自动连线向导 (Smart Auto-Mapping)
+> 一键自动化建立表间字段映射。支持同名字段忽略大小写与下划线精准对齐、中文业务注释同义词深度识别，支持冲突检测与已连线字段智能排除。
+
+<p align="center">
+  <img src="docs/images/auto_mapping_dialog.png" alt="智能同名与同义字段自动连线向导" width="88%" />
+</p>
+
+---
+
+### 4. 字段映射血缘清单审查与规范化导出 (Mapping Drawer & Export)
+> 抽屉式侧边栏集中呈现当前画布全部字段级血缘关系，支持关键字秒级筛选、快捷单条解除连线与一键安全流式导出标准双工作表 Excel 交付物。
+
+<p align="center">
+  <img src="docs/images/mapping_drawer.png" alt="字段映射血缘清单抽屉" width="88%" />
+</p>
+
+---
+
 ## ✨ 核心特性亮点
 
 ### 1. 🎯 字段级精准拓扑与自适应最短路径
@@ -234,7 +272,8 @@ ColLink/
 │   │   │   └── WorkspaceView.vue# 工作台主视图 (集成 Vue Flow 画布与事件监听)
 │   │   └── types/               # TypeScript 类型定义
 │   ├── package.json
-│   └── vite.config.ts
+├── docs/                        # 项目设计文档与资源
+│   └── images/                  # 系统界面预览高清截图
 ├── ColLink.bat                  # Windows 极简静默一键启动桌面客户端
 ├── ColLink_Debug.bat            # Windows 调试模式启动 (带实时后端控制台日志)
 ├── desktop.py                   # PyWebView 桌面宿主启动脚本 (动态避让端口)
