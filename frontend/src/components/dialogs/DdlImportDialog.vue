@@ -469,10 +469,11 @@ defineExpose({ open })
 }
 
 .sql-textarea :deep(textarea) {
-  font-family: Consolas, Monaco, "Courier New", monospace;
+  font-family: var(--cl-font-mono) !important;
   font-size: 12px;
-  background: #fcfcfc;
-  line-height: 1.45;
+  background: var(--cl-surface-subtle);
+  line-height: 1.5;
+  border-radius: 6px;
 }
 
 .textarea-actions {

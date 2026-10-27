@@ -18,13 +18,16 @@
       <!-- Strategy Settings -->
       <div class="config-panel">
         <div class="tables-selector-row">
-          <div class="selector-item">
-            <span class="label">源数据表 (Source Table)</span>
+          <div class="selector-card source-card">
+            <div class="card-badge-row">
+              <span class="card-badge source-badge">源数据表 (Source)</span>
+            </div>
             <el-select
               v-model="sourceTableId"
               placeholder="选择源数据表"
               filterable
               style="width: 100%"
+              size="default"
               @change="onTableSelectionChange"
             >
               <el-option
@@ -38,16 +41,21 @@
           </div>
 
           <div class="arrow-indicator">
-            <el-icon><Right /></el-icon>
+            <div class="arrow-circle">
+              <el-icon><Right /></el-icon>
+            </div>
           </div>
 
-          <div class="selector-item">
-            <span class="label">目标数据表 (Target Table)</span>
+          <div class="selector-card target-card">
+            <div class="card-badge-row">
+              <span class="card-badge target-badge">目标数据表 (Target)</span>
+            </div>
             <el-select
               v-model="targetTableId"
               placeholder="选择目标数据表"
               filterable
               style="width: 100%"
+              size="default"
               @change="onTableSelectionChange"
             >
               <el-option
@@ -64,10 +72,10 @@
         <div class="strategies-row">
           <span class="strategy-label">匹配策略：</span>
           <el-checkbox v-model="matchExactName">
-            同名字段精确匹配 <span class="strategy-hint">(忽略大小写及下划线，如 WORK_PLAN_ID 与 work_plan_id)</span>
+            同名字段精确匹配 <span class="strategy-hint">(忽略大小写及下划线风格)</span>
           </el-checkbox>
           <el-checkbox v-model="matchCommentSynonym">
-            中文注释同义匹配 <span class="strategy-hint">(忽略“主键/ID/编号”后缀或注释完全一致)</span>
+            中文注释同义匹配 <span class="strategy-hint">(忽略主键/ID/编号后缀)</span>
           </el-checkbox>
           <el-checkbox v-model="skipExisting">
             排除已连线字段
@@ -448,29 +456,71 @@ defineExpose({
 .tables-selector-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
-.selector-item {
+.selector-card {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
 }
 
-.selector-item .label {
-  font-size: 12px;
+.source-card {
+  background: #f8faff;
+  border: 1px solid #bfdbfe;
+}
+
+.target-card {
+  background: #faf5ff;
+  border: 1px solid #e9d5ff;
+}
+
+.card-badge-row {
+  display: flex;
+  align-items: center;
+}
+
+.card-badge {
+  font-size: 11px;
   font-weight: 600;
-  color: #475569;
+  padding: 2px 8px;
+  border-radius: 4px;
+  line-height: 1.3;
+}
+
+.source-badge {
+  color: var(--cl-primary);
+  background: #dbeafe;
+}
+
+.target-badge {
+  color: #7e22ce;
+  background: #f3e8ff;
 }
 
 .arrow-indicator {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  color: #94a3b8;
-  margin-top: 18px;
+  flex-shrink: 0;
+}
+
+.arrow-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid var(--cl-border);
+  box-shadow: var(--cl-shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cl-text-muted);
+  font-size: 16px;
 }
 
 .strategies-row {

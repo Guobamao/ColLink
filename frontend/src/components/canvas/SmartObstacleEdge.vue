@@ -386,11 +386,11 @@ const edgePath = computed(() => {
 
 .smart-obstacle-edge {
   fill: none;
-  stroke: #3b82f6;
+  stroke: #2563eb;
   stroke-width: 2px;
   stroke-linecap: round;
   stroke-linejoin: round;
-  transition: stroke 0.2s, stroke-width 0.2s;
+  transition: stroke 0.2s, stroke-width 0.2s, filter 0.2s;
   pointer-events: stroke;
 }
 
@@ -400,9 +400,9 @@ const edgePath = computed(() => {
 }
 
 .smart-obstacle-edge-group:hover .smart-obstacle-edge {
-  stroke: #2563eb;
-  stroke-width: 3.5px;
-  filter: drop-shadow(0 0 4px rgba(37, 99, 235, 0.4));
+  stroke: #1d4ed8;
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 5px rgba(29, 78, 216, 0.45));
 }
 
 @keyframes edgeDashFlow {

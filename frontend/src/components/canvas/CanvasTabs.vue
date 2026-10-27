@@ -12,7 +12,7 @@
       >
         <el-icon class="tab-icon"><DataBoard /></el-icon>
         <span class="tab-title" :title="`双击重命名: ${c.name}`">{{ c.name }}</span>
-        <span class="tab-badge" :title="`包含 ${c.table_count || 0} 张表`">
+        <span class="tab-badge" :title="`当前视图包含 ${c.table_count || 0} 张表`">
           {{ c.table_count || 0 }}
         </span>
 
@@ -20,7 +20,7 @@
         <span class="tab-actions" @click.stop>
           <el-icon
             class="action-icon edit-icon"
-            title="重命名画布"
+            title="重命名画布视图"
             @click="handleRename(c)"
           >
             <Edit />
@@ -28,7 +28,7 @@
           <el-icon
             v-if="canvasStore.canvases.length > 1"
             class="action-icon close-icon"
-            title="删除此画布视图"
+            title="关闭并删除此画布视图"
             @click="handleDelete(c)"
           >
             <Close />
@@ -43,71 +43,78 @@
       </button>
     </div>
 
-    <!-- Right: Import from Project Table Pool Button -->
+    <!-- Right: Pool Summary & Import Button -->
     <div class="tabs-right-actions">
+      <span class="pool-stat-label">
+        项目表库共 <strong>{{ projectStore.currentProject?.tables?.length || 0 }}</strong> 张表
+      </span>
       <el-button
         size="small"
-        type="primary"
-        plain
         class="btn-import-pool"
         @click="openImportDialog"
       >
         <el-icon><FolderAdd /></el-icon>
-        <span>从项目表库引入</span>
+        <span>从表库引入</span>
       </el-button>
     </div>
 
     <!-- Dialog: Import Tables from Project Pool -->
     <el-dialog
       v-model="importDialogVisible"
-      title="从项目表库引入已有数据表"
-      width="640px"
+      title="从项目表库引入数据表"
+      width="680px"
       destroy-on-close
     >
       <div class="import-dialog-content">
         <p class="dialog-desc">
-          将当前项目「{{ projectStore.currentProject?.name }}」中已导入但尚未加入当前视图的公共表引入画布中参与连线。
+          将当前项目「<strong>{{ projectStore.currentProject?.name }}</strong>」中尚未加入当前视图的公共表引入画布中参与连线。
         </p>
-        <el-input
-          v-model="searchPoolKeyword"
-          placeholder="搜索表名或中文注释..."
-          clearable
-          size="small"
-          class="pool-search-input"
-        >
-          <template #prefix>
-            <el-icon><Search /></el-icon>
-          </template>
-        </el-input>
+        <div class="dialog-search-bar">
+          <el-input
+            v-model="searchPoolKeyword"
+            placeholder="按英文表名或中文注释过滤..."
+            clearable
+            size="small"
+            class="pool-search-input"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+        </div>
 
         <el-table
           ref="tablePoolRef"
           :data="filteredProjectTables"
           border
           size="small"
-          max-height="300"
+          max-height="320"
           row-key="id"
           @selection-change="handleSelectionChange"
         >
           <el-table-column
             type="selection"
-            width="45"
+            width="42"
             align="center"
             :selectable="(row) => !isTableInCurrentCanvas(row.id)"
           />
-          <el-table-column prop="table_name" label="表英文名" min-width="160" />
-          <el-table-column prop="table_comment" label="中文注释" min-width="160">
+          <el-table-column prop="table_name" label="表英文名" min-width="160">
             <template #default="{ row }">
-              <span v-if="row.table_comment">{{ row.table_comment }}</span>
+              <span class="pool-tbl-name">{{ row.table_name }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="table_comment" label="中文业务注释" min-width="160">
+            <template #default="{ row }">
+              <span v-if="row.table_comment" class="pool-tbl-comment">{{ row.table_comment }}</span>
               <span v-else class="text-muted">无注释</span>
             </template>
           </el-table-column>
-          <el-table-column label="字段数" width="70" align="center">
+          <el-table-column label="字段数" width="75" align="center">
             <template #default="{ row }">
-              {{ row.columns?.length || 0 }}
+              <span class="pool-col-count">{{ row.columns?.length || 0 }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="视图状态" width="110" align="center">
+          <el-table-column label="视图状态" width="105" align="center">
             <template #default="{ row }">
               <el-tag v-if="isTableInCurrentCanvas(row.id)" type="info" size="small" effect="plain">
                 已在视图中
@@ -123,16 +130,16 @@
       <template #footer>
         <div class="dialog-footer">
           <span class="selected-hint">
-            已选择 {{ selectedTableIds.length }} 张新表
+            已勾选 <strong style="color: var(--cl-primary)">{{ selectedTableIds.length }}</strong> 张新数据表
           </span>
-          <div>
+          <div class="footer-btn-group">
             <el-button @click="importDialogVisible = false">取消</el-button>
             <el-button
               type="primary"
               :disabled="selectedTableIds.length === 0"
               @click="confirmImportTables"
             >
-              确认引入画布
+              引入所选数据表
             </el-button>
           </div>
         </div>
@@ -250,85 +257,87 @@ const confirmImportTables = async () => {
 .canvas-tabs-bar {
   height: 38px;
   background: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--cl-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
   box-sizing: border-box;
   user-select: none;
-  z-index: 15;
+  z-index: 40;
 }
 
 .tabs-scroll-container {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   overflow-x: auto;
-  max-width: calc(100% - 170px);
+  max-width: calc(100% - 240px);
+  height: 100%;
 }
 
 .tabs-scroll-container::-webkit-scrollbar {
-  height: 3px;
+  height: 2px;
 }
 
 .tabs-scroll-container::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--cl-border-strong);
   border-radius: 2px;
 }
 
 .canvas-tab {
-  height: 30px;
-  padding: 0 10px;
+  height: 37px;
+  padding: 0 12px;
   background: transparent;
-  border-radius: 6px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #64748b;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--cl-text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
-  border: 1px solid transparent;
+  border-bottom: 2px solid transparent;
+  border-right: 1px solid rgba(226, 232, 240, 0.6);
+  position: relative;
 }
 
 .canvas-tab:hover {
-  background: #f1f5f9;
-  color: #1e293b;
+  background: rgba(241, 245, 249, 0.8);
+  color: var(--cl-text-primary);
 }
 
 .canvas-tab.is-active {
   background: #ffffff;
-  color: #2563eb;
+  color: var(--cl-primary);
   font-weight: 600;
-  border-color: #cbd5e1;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  border-bottom-color: var(--cl-primary);
 }
 
 .tab-icon {
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .tab-title {
-  max-width: 130px;
+  max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .tab-badge {
+  font-family: var(--cl-font-mono);
   font-size: 10px;
   background: #f1f5f9;
-  color: #64748b;
+  color: var(--cl-text-muted);
   padding: 1px 5px;
-  border-radius: 10px;
-  font-weight: normal;
+  border-radius: 4px;
+  line-height: 1.2;
 }
 
 .canvas-tab.is-active .tab-badge {
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--cl-primary-light);
+  color: var(--cl-primary);
   font-weight: 600;
 }
 
@@ -347,57 +356,80 @@ const confirmImportTables = async () => {
 }
 
 .action-icon {
-  font-size: 12px;
+  font-size: 11px;
   padding: 2px;
   border-radius: 3px;
-  color: #94a3b8;
+  color: var(--cl-text-faint);
   transition: all 0.15s ease;
 }
 
 .action-icon:hover {
   background: #e2e8f0;
-  color: #1e293b;
+  color: var(--cl-text-primary);
 }
 
 .close-icon:hover {
-  color: #ef4444;
+  color: var(--cl-danger);
+  background: var(--cl-danger-light);
 }
 
 .btn-new-tab {
-  height: 26px;
+  height: 24px;
   padding: 0 8px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   background: transparent;
-  border: 1px dashed #cbd5e1;
-  border-radius: 5px;
-  color: #64748b;
-  font-size: 12px;
+  border: 1px dashed var(--cl-border-strong);
+  border-radius: 4px;
+  color: var(--cl-text-muted);
+  font-size: 11px;
   cursor: pointer;
   transition: all 0.15s ease;
-  margin-left: 4px;
+  margin-left: 6px;
   white-space: nowrap;
 }
 
 .btn-new-tab:hover {
   background: #ffffff;
-  color: #2563eb;
-  border-color: #3b82f6;
+  color: var(--cl-primary);
+  border-color: var(--cl-primary);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
 .tabs-right-actions {
   display: flex;
   align-items: center;
+  gap: 12px;
+}
+
+.pool-stat-label {
+  font-size: 11px;
+  color: var(--cl-text-muted);
+}
+
+.pool-stat-label strong {
+  font-family: var(--cl-font-mono);
+  color: var(--cl-text-primary);
 }
 
 .btn-import-pool {
   font-size: 12px;
-  height: 28px;
+  height: 26px;
   padding: 0 10px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
+  border-radius: 5px;
+  background: #ffffff;
+  border: 1px solid var(--cl-border);
+  color: var(--cl-text-secondary);
+}
+
+.btn-import-pool:hover {
+  background: var(--cl-surface-hover);
+  color: var(--cl-primary);
+  border-color: var(--cl-border-strong);
 }
 
 .import-dialog-content {
@@ -407,18 +439,41 @@ const confirmImportTables = async () => {
 }
 
 .dialog-desc {
-  font-size: 12px;
-  color: #64748b;
+  font-size: 13px;
+  color: var(--cl-text-muted);
   margin: 0;
   line-height: 1.5;
 }
 
+.dialog-search-bar {
+  display: flex;
+  justify-content: flex-start;
+}
+
 .pool-search-input {
-  width: 240px;
+  width: 260px;
+}
+
+.pool-tbl-name {
+  font-family: var(--cl-font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cl-text-primary);
+}
+
+.pool-tbl-comment {
+  font-size: 12px;
+  color: var(--cl-text-muted);
+}
+
+.pool-col-count {
+  font-family: var(--cl-font-mono);
+  font-size: 11px;
+  color: var(--cl-text-secondary);
 }
 
 .text-muted {
-  color: #94a3b8;
+  color: var(--cl-text-faint);
   font-size: 12px;
 }
 
@@ -426,10 +481,16 @@ const confirmImportTables = async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
 }
 
 .selected-hint {
   font-size: 12px;
-  color: #64748b;
+  color: var(--cl-text-muted);
+}
+
+.footer-btn-group {
+  display: flex;
+  gap: 10px;
 }
 </style>

@@ -109,8 +109,8 @@ defineExpose({ open })
 }
 
 .card-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--cl-surface-subtle);
+  border: 1px solid var(--cl-border);
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -121,12 +121,15 @@ defineExpose({ open })
 .box-title {
   font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--cl-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .box-desc {
   font-size: 12px;
-  color: #64748b;
+  color: var(--cl-text-muted);
   margin: 0;
   line-height: 1.5;
 }

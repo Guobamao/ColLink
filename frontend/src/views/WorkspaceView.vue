@@ -67,20 +67,26 @@
 
         <!-- Floating Operational Tip Pill -->
         <div class="canvas-floating-tip">
-          <el-icon class="tip-icon" color="#3b82f6"><InfoFilled /></el-icon>
-          <span class="tip-text">点击字段查看连线 · 拖动右侧蓝点建立映射 · Ctrl+Z 撤销</span>
+          <el-icon class="tip-icon"><InfoFilled /></el-icon>
+          <span class="tip-text">{{ statusTipText }}</span>
         </div>
 
         <!-- Custom Empty State overlay if no tables -->
         <div v-if="canvasStore.nodes.length === 0" class="canvas-empty-state">
           <div class="empty-card">
             <div class="empty-icon-wrap">
-              <el-icon class="empty-icon" color="#3b82f6"><DataAnalysis /></el-icon>
+              <svg class="blueprint-svg" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="6" y="8" width="15" height="22" rx="3" stroke="#1D4ED8" stroke-width="2" stroke-dasharray="3 3"/>
+                <rect x="27" y="18" width="15" height="22" rx="3" stroke="#1D4ED8" stroke-width="2"/>
+                <path d="M 21 16 C 24 16, 24 26, 27 26" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="21" cy="16" r="2" fill="#1D4ED8"/>
+                <circle cx="27" cy="26" r="2" fill="#3B82F6"/>
+              </svg>
             </div>
-            <h3>当前项目画布暂无数据表</h3>
-            <p>请通过 <strong>DDL 脚本导入</strong> 或 <strong>连接数据库导入</strong> 快速载入数据表模型。</p>
+            <h3>当前业务视图暂无数据表</h3>
+            <p>通过 DDL 建表脚本解析或直连数据库，一键载入数据表模型并开启可视化字段映射。</p>
             <div class="empty-actions">
-              <el-button type="primary" :icon="DocumentAdd" @click="openDdlDialog">DDL 解析导入 (推荐)</el-button>
+              <el-button type="primary" :icon="DocumentAdd" @click="openDdlDialog">DDL 解析导入</el-button>
               <el-button plain :icon="Connection" @click="openDbDialog">连接数据库导入</el-button>
             </div>
           </div>
@@ -99,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, markRaw } from 'vue'
+import { ref, computed, onMounted, markRaw } from 'vue'
 import { VueFlow, useVueFlow, ConnectionMode } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -132,6 +138,16 @@ const { fitView } = useVueFlow()
 
 const projectStore = useProjectStore()
 const canvasStore = useCanvasStore()
+
+const statusTipText = computed(() => {
+  if (canvasStore.highlightedNodeIds.size > 0) {
+    return '已高亮表上下游血缘 · 单击空白画布退出高亮'
+  }
+  if (canvasStore.selectedColumnId) {
+    return '已激活字段血缘脉冲连线 · 单击空白画布恢复全景'
+  }
+  return '点击字段聚焦血缘 · 拖拽两端蓝点建立连线 · Ctrl+Z 撤销'
+})
 
 const canvasWrapperRef = ref<HTMLElement | null>(null)
 const showMiniMap = ref(true)
@@ -307,13 +323,13 @@ const handleExportImage = async () => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background-color: #f8fafc;
+  background-color: var(--cl-canvas-bg);
 }
 
 .canvas-wrapper {
   flex: 1;
   width: 100%;
-  height: calc(100vh - 56px - 38px);
+  height: calc(100vh - 52px - 38px);
   position: relative;
 }
 
@@ -325,42 +341,43 @@ const handleExportImage = async () => {
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid #e2e8f0;
-  border-radius: 24px;
-  padding: 6px 14px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--cl-border);
+  border-radius: 20px;
+  padding: 5px 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
   user-select: none;
   pointer-events: none;
 }
 
 .tip-icon {
-  font-size: 15px;
+  font-size: 14px;
+  color: var(--cl-primary);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .tip-text {
-  font-size: 12px;
-  color: #64748b;
+  font-size: 11px;
+  color: var(--cl-text-secondary);
   font-weight: 500;
-  letter-spacing: 0.1px;
+  letter-spacing: 0.01em;
 }
 
 /* Vue Flow Controls Aesthetic Upgrade */
 :deep(.vue-flow__controls) {
   bottom: 20px !important;
   right: 20px !important;
-  background: rgba(255, 255, 255, 0.88) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 8px !important;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid var(--cl-border) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
   overflow: hidden !important;
   display: flex !important;
   flex-direction: column !important;
@@ -370,9 +387,9 @@ const handleExportImage = async () => {
   width: 32px !important;
   height: 32px !important;
   border: none !important;
-  border-bottom: 1px solid #f1f5f9 !important;
+  border-bottom: 1px solid var(--cl-border) !important;
   background: transparent !important;
-  color: #475569 !important;
+  color: var(--cl-text-secondary) !important;
   transition: all 0.15s ease !important;
   display: flex !important;
   align-items: center !important;
@@ -384,8 +401,8 @@ const handleExportImage = async () => {
 }
 
 :deep(.vue-flow__controls-button:hover) {
-  background: #f1f5f9 !important;
-  color: #0f172a !important;
+  background: var(--cl-surface-hover) !important;
+  color: var(--cl-text-primary) !important;
 }
 
 .canvas-empty-state {
@@ -398,42 +415,46 @@ const handleExportImage = async () => {
 }
 
 .empty-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  padding: 36px 48px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  padding: 40px 48px;
   border-radius: 12px;
-  border: 1px dashed #cbd5e1;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--cl-border);
+  box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.08);
   text-align: center;
-  max-width: 460px;
+  max-width: 440px;
 }
 
 .empty-icon-wrap {
-  width: 56px;
-  height: 56px;
-  background: #eff6ff;
-  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  background: var(--cl-primary-light);
+  border: 1px solid var(--cl-primary-border);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 16px auto;
+  margin: 0 auto 18px auto;
 }
 
-.empty-icon {
-  font-size: 28px;
+.blueprint-svg {
+  width: 36px;
+  height: 36px;
 }
 
 .empty-card h3 {
   margin: 0 0 8px 0;
   font-size: 16px;
-  color: #1e293b;
+  font-weight: 600;
+  color: var(--cl-text-primary);
+  letter-spacing: -0.01em;
 }
 
 .empty-card p {
   font-size: 13px;
-  color: #64748b;
+  color: var(--cl-text-muted);
   line-height: 1.6;
-  margin: 0 0 20px 0;
+  margin: 0 0 24px 0;
 }
 
 .empty-actions {
@@ -445,37 +466,37 @@ const handleExportImage = async () => {
 /* MiniMap Container */
 :deep(.canvas-minimap) {
   bottom: 20px !important;
-  right: 66px !important;
-  width: 200px !important;
-  height: 130px !important;
-  background: rgba(255, 255, 255, 0.92) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
-  border: 1px solid #e2e8f0 !important;
-  border-radius: 8px !important;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08) !important;
+  right: 64px !important;
+  width: 190px !important;
+  height: 125px !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid var(--cl-border) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
   overflow: hidden !important;
 }
 
 /* MiniMap Toggle Button */
 .minimap-toggle-btn {
   position: absolute;
-  bottom: 170px;
-  right: 80px;
+  bottom: 156px;
+  right: 64px;
   z-index: 10;
   display: inline-flex;
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--cl-border);
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
   font-size: 11px;
   font-weight: 500;
-  color: #475569;
+  color: var(--cl-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
   user-select: none;
@@ -483,16 +504,15 @@ const handleExportImage = async () => {
 
 .minimap-toggle-btn:hover {
   background: #ffffff;
-  color: #2563eb;
-  border-color: #93c5fd;
-  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.12);
+  color: var(--cl-primary);
+  border-color: var(--cl-border-active);
 }
 
 .minimap-toggle-btn.is-active {
-  color: #2563eb;
+  color: var(--cl-primary);
 }
 
-/* Edge and Node Layering: Edges below cards, Nodes above edges */
+/* Edge and Node Layering */
 :deep(.vue-flow__edges) {
   z-index: 10 !important;
 }

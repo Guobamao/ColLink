@@ -1,8 +1,8 @@
 <template>
   <div class="canvas-toolbar">
-    <!-- Left: Brand & Project Selector -->
+    <!-- Left: Brand & Workspace / Project Context -->
     <div class="toolbar-section left-section">
-      <div class="app-brand">
+      <div class="app-brand" title="ColLink - 字段级数据血缘与映射设计平台">
         <div class="brand-badge">
           <svg class="brand-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <!-- Left mini table card -->
@@ -19,7 +19,7 @@
             <line x1="15.5" y1="15.5" x2="19" y2="15.5" stroke="#94A3B8" stroke-width="0.8" stroke-linecap="round"/>
             <line x1="15.5" y1="17.5" x2="20.5" y2="17.5" stroke="#94A3B8" stroke-width="0.8" stroke-linecap="round"/>
 
-            <!-- Connecting Bezier Curve -->
+            <!-- Connecting Line -->
             <path d="M 10 9 C 12 9, 12 16, 14 16" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
             <circle cx="10" cy="9" r="1.1" fill="#FFFFFF"/>
             <circle cx="14" cy="16" r="1.1" fill="#FFFFFF"/>
@@ -30,14 +30,18 @@
 
       <div class="divider"></div>
 
+      <!-- Project Switcher & Manager -->
       <div class="project-selector">
-        <span class="proj-label">当前项目：</span>
         <el-select
           :model-value="projectStore.currentProject?.id"
-          placeholder="请选择项目"
+          placeholder="选择项目空间..."
           class="project-select"
+          size="default"
           @change="onProjectChange"
         >
+          <template #prefix>
+            <el-icon class="proj-prefix-icon"><FolderOpened /></el-icon>
+          </template>
           <el-option
             v-for="p in projectStore.projects"
             :key="p.id"
@@ -45,14 +49,17 @@
             :value="p.id"
           />
         </el-select>
-        <el-button class="btn-subtle btn-manage" @click="emit('open-project-dialog')">
-          <el-icon><FolderOpened /></el-icon>
-          <span>项目管理</span>
+        <el-button
+          class="btn-icon-subtle"
+          title="项目空间管理"
+          @click="emit('open-project-dialog')"
+        >
+          <el-icon><Setting /></el-icon>
         </el-button>
       </div>
     </div>
 
-    <!-- Center: Main Actions & Canvas Controls (Compact) -->
+    <!-- Center: Global Quick Search & Canvas Operations -->
     <div class="toolbar-section center-section">
       <!-- Quick Table / Column Search (Ctrl+K) -->
       <div class="search-box">
@@ -60,7 +67,7 @@
           ref="searchRef"
           v-model="searchQuery"
           :fetch-suggestions="querySearch"
-          placeholder="快速找表/字段..."
+          placeholder="快速找表 / 字段..."
           clearable
           size="default"
           class="global-search-input"
@@ -78,7 +85,7 @@
               <div class="item-main">
                 <span class="item-tbl-name">[{{ item.tableName }}]</span>
                 <span v-if="item.tableComment" class="item-tbl-comment">{{ item.tableComment }}</span>
-                <span class="item-col-count">({{ item.columnCount }}列)</span>
+                <span class="item-col-count">{{ item.columnCount }} 列</span>
               </div>
               <div v-if="item.matchedColumn" class="item-sub-col">
                 匹配字段: <span class="highlight-matched">{{ item.matchedColumn.column_name }}</span>
@@ -91,7 +98,7 @@
 
       <div class="divider"></div>
 
-      <!-- 1. 导入数据源 (下拉菜单聚合) -->
+      <!-- Import Structure Dropdown -->
       <el-dropdown trigger="click" @command="handleImportCommand">
         <el-button type="primary" class="btn-primary-action">
           <el-icon><Plus /></el-icon>
@@ -102,11 +109,11 @@
           <el-dropdown-menu class="toolbar-dropdown-menu">
             <el-dropdown-item command="ddl">
               <el-icon><DocumentAdd /></el-icon>
-              <span class="menu-text">DDL 解析导入</span>
+              <span class="menu-text">DDL 脚本解析导入</span>
             </el-dropdown-item>
             <el-dropdown-item command="db">
               <el-icon><Connection /></el-icon>
-              <span class="menu-text">连接数据库导入</span>
+              <span class="menu-text">连接数据库直接导入</span>
             </el-dropdown-item>
           </el-dropdown-menu>
         </template>
@@ -114,20 +121,20 @@
 
       <div class="divider"></div>
 
-      <!-- 2. 画布视图排版 -->
-      <div class="btn-group">
-        <el-button class="btn-subtle btn-compact" @click="handleAutoLayout">
+      <!-- Layout & View Fit -->
+      <div class="btn-group-segmented">
+        <button class="btn-segment" title="DAG 有向分层拓扑智能排版 (从左至右)" @click="handleAutoLayout">
           <el-icon><MagicStick /></el-icon>
           <span>自动排版</span>
-        </el-button>
-        <el-button class="btn-subtle btn-compact" @click="emit('fit-view')">
+        </button>
+        <button class="btn-segment" title="自动缩放平移以完整容纳所有节点" @click="emit('fit-view')">
           <el-icon><Aim /></el-icon>
           <span>适应画布</span>
-        </el-button>
+        </button>
       </div>
     </div>
 
-    <!-- Right: Deliverables & System Tools (Dropdown Aggregated) -->
+    <!-- Right: Lineage Automation, Review & Deliverables -->
     <div class="toolbar-section right-section">
       <!-- 智能自动连线 -->
       <el-button class="btn-subtle btn-compact" @click="emit('open-auto-mapping')">
@@ -135,7 +142,7 @@
         <span>智能连线</span>
       </el-button>
 
-      <!-- Lineage Filter State (Active when clicked) -->
+      <!-- Clear Lineage Highlight Filter -->
       <el-button
         v-if="canvasStore.highlightedNodeIds.size > 0"
         type="warning"
@@ -147,7 +154,7 @@
         <span>清除高亮</span>
       </el-button>
 
-      <!-- 3. 映射清单 (独立保留带Badge) -->
+      <!-- Mapping Review Drawer with Badge -->
       <el-badge :value="canvasStore.edges.length" :max="999" class="badge-item">
         <el-button class="btn-subtle btn-compact" @click="emit('open-mapping-drawer')">
           <el-icon><Link /></el-icon>
@@ -157,26 +164,26 @@
 
       <div class="divider"></div>
 
-      <!-- 4. 导出与备份 (下拉菜单聚合) -->
+      <!-- Export & Backup Deliverables -->
       <el-dropdown trigger="click" @command="handleExportCommand">
         <el-button class="btn-excel">
           <el-icon><Download /></el-icon>
-          <span>导出与备份</span>
+          <span>导出交付物</span>
           <el-icon class="el-icon--right"><ArrowDown /></el-icon>
         </el-button>
         <template #dropdown>
           <el-dropdown-menu class="toolbar-dropdown-menu">
             <el-dropdown-item command="excel">
               <el-icon><DocumentChecked /></el-icon>
-              <span class="menu-text">导出 Excel 映射清单</span>
+              <span class="menu-text">导出 Excel 映射清单 (.xlsx)</span>
             </el-dropdown-item>
             <el-dropdown-item command="image">
               <el-icon><Picture /></el-icon>
-              <span class="menu-text">导出高清拓扑图片 (PNG)</span>
+              <span class="menu-text">导出 2x 高清拓扑图 (.png)</span>
             </el-dropdown-item>
             <el-dropdown-item command="backup" divided>
               <el-icon><TakeawayBox /></el-icon>
-              <span class="menu-text">项目快照备份 / 迁移 (JSON)</span>
+              <span class="menu-text">项目快照备份 / 迁移 (.json)</span>
             </el-dropdown-item>
           </el-dropdown-menu>
         </template>
@@ -193,6 +200,7 @@ import { api } from '@/api'
 import { ElMessage } from 'element-plus'
 import {
   FolderOpened,
+  Setting,
   Plus,
   ArrowDown,
   DocumentAdd,
@@ -396,15 +404,15 @@ const handleExportCommand = (cmd: string) => {
 
 <style scoped>
 .canvas-toolbar {
-  height: 56px;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  height: 52px;
+  background: var(--cl-surface);
+  border-bottom: 1px solid var(--cl-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
-  z-index: 20;
+  z-index: 50;
   white-space: nowrap;
   box-sizing: border-box;
   width: 100%;
@@ -420,52 +428,53 @@ const handleExportCommand = (cmd: string) => {
 }
 
 .left-section {
-  gap: 10px;
+  gap: 12px;
 }
 
 .center-section {
-  gap: 8px;
+  gap: 10px;
 }
 
 .right-section {
-  gap: 8px;
+  gap: 10px;
 }
 
 .app-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   user-select: none;
+  cursor: default;
 }
 
 .brand-badge {
   width: 28px;
   height: 28px;
-  border-radius: 7px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 6px;
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 2px 5px rgba(29, 78, 216, 0.25);
   flex-shrink: 0;
 }
 
 .brand-svg {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
 }
 
 .brand-title {
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
-  letter-spacing: -0.4px;
+  color: var(--cl-text-primary);
+  letter-spacing: -0.02em;
 }
 
 .divider {
   width: 1px;
-  height: 18px;
-  background: #e2e8f0;
+  height: 20px;
+  background: var(--cl-border);
   flex-shrink: 0;
   margin: 0 2px;
 }
@@ -476,67 +485,74 @@ const handleExportCommand = (cmd: string) => {
   gap: 6px;
 }
 
-.proj-label {
-  font-size: 13px;
-  color: #64748b;
-  font-weight: 500;
-  white-space: nowrap;
-  flex-shrink: 0;
+.proj-prefix-icon {
+  color: var(--cl-text-muted);
+  font-size: 14px;
 }
 
 .project-select {
-  width: 168px;
+  width: 180px;
 }
 
-.btn-group {
-  display: flex;
+.btn-icon-subtle {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: #ffffff;
+  border: 1px solid var(--cl-border);
+  color: var(--cl-text-muted);
+  border-radius: 6px;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-icon-subtle:hover {
+  background: var(--cl-surface-hover);
+  color: var(--cl-text-primary);
+  border-color: var(--cl-border-strong);
 }
 
 /* Button Stylings */
 .btn-primary-action {
-  height: 34px;
-  background: #3b82f6;
-  border-color: #3b82f6;
+  height: 32px;
+  background: var(--cl-primary);
+  border-color: var(--cl-primary);
   color: #ffffff;
   font-weight: 500;
   font-size: 13px;
   padding: 0 12px;
   border-radius: 6px;
-  transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  box-shadow: 0 1px 2px rgba(29, 78, 216, 0.15);
 }
 
 .btn-primary-action:hover {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--cl-primary-hover);
+  border-color: var(--cl-primary-hover);
 }
 
 .btn-subtle {
-  height: 34px;
+  height: 32px;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  color: #334155;
+  border: 1px solid var(--cl-border);
+  color: var(--cl-text-secondary);
   font-weight: 500;
-  font-size: 13px;
+  font-size: 12px;
   border-radius: 6px;
-  transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
 .btn-subtle:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  color: #0f172a;
-}
-
-.btn-manage {
-  padding: 0 10px;
+  background: var(--cl-surface-hover);
+  border-color: var(--cl-border-strong);
+  color: var(--cl-text-primary);
 }
 
 .btn-compact {
@@ -544,7 +560,7 @@ const handleExportCommand = (cmd: string) => {
 }
 
 .btn-warning-action {
-  height: 34px;
+  height: 32px;
   font-size: 12px;
   padding: 0 10px;
   border-radius: 6px;
@@ -553,17 +569,49 @@ const handleExportCommand = (cmd: string) => {
   gap: 4px;
 }
 
+/* Segmented Button Group (Auto-Layout & Fit-View) */
+.btn-group-segmented {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  padding: 2px;
+  border-radius: 6px;
+  border: 1px solid var(--cl-border);
+}
+
+.btn-segment {
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: var(--cl-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0 10px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-segment:hover {
+  background: #ffffff;
+  color: var(--cl-text-primary);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
 /* Fresh business green Excel & export dropdown button */
 .btn-excel {
-  height: 34px;
+  height: 32px;
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
-  color: #16a34a;
+  color: #15803d;
   font-weight: 500;
-  font-size: 13px;
+  font-size: 12px;
   padding: 0 12px;
   border-radius: 6px;
-  transition: all 0.15s ease;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -572,48 +620,55 @@ const handleExportCommand = (cmd: string) => {
 .btn-excel:hover {
   background: #dcfce7;
   border-color: #86efac;
-  color: #15803d;
+  color: #166534;
 }
 
 .badge-item :deep(.el-badge__content) {
-  top: 3px;
-  right: 5px;
+  top: 2px;
+  right: 4px;
+  font-family: var(--cl-font-mono);
+  font-size: 10px;
+  height: 16px;
+  line-height: 16px;
+  padding: 0 4px;
 }
 
 /* Quick Search Box */
 .search-box {
-  width: 220px;
+  width: 230px;
 }
 
 :deep(.global-search-input .el-input__wrapper) {
   border-radius: 6px;
-  background-color: #f8fafc;
-  box-shadow: 0 0 0 1px #e2e8f0 inset;
-  transition: all 0.2s ease;
-  padding: 0 8px;
+  background-color: var(--cl-surface-subtle);
+  box-shadow: 0 0 0 1px var(--cl-border) inset;
+  transition: all 0.15s ease;
+  padding: 0 10px;
   height: 32px;
 }
 
 :deep(.global-search-input .el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px #cbd5e1 inset;
+  box-shadow: 0 0 0 1px var(--cl-border-strong) inset;
   background-color: #ffffff;
 }
 
 :deep(.global-search-input .el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1.5px #3b82f6 inset;
+  box-shadow: 0 0 0 1.5px var(--cl-primary) inset;
   background-color: #ffffff;
 }
 
 .search-prefix-icon {
   font-size: 14px;
-  color: #94a3b8;
+  color: var(--cl-text-muted);
 }
 
 .search-shortcut-badge {
+  font-family: var(--cl-font-mono);
   font-size: 10px;
-  color: #94a3b8;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  font-weight: 500;
+  color: var(--cl-text-muted);
+  background: #ffffff;
+  border: 1px solid var(--cl-border);
   border-radius: 3px;
   padding: 1px 4px;
   line-height: 1.2;
@@ -634,31 +689,35 @@ const handleExportCommand = (cmd: string) => {
 }
 
 .item-tbl-name {
+  font-family: var(--cl-font-mono);
   font-weight: 600;
-  color: #1e293b;
+  color: var(--cl-text-primary);
+  font-size: 12px;
 }
 
 .item-tbl-comment {
-  color: #64748b;
+  color: var(--cl-text-muted);
   font-size: 12px;
 }
 
 .item-col-count {
-  color: #94a3b8;
+  color: var(--cl-text-faint);
   font-size: 11px;
+  font-family: var(--cl-font-mono);
 }
 
 .item-sub-col {
   font-size: 11px;
-  color: #64748b;
+  color: var(--cl-text-muted);
   padding-left: 8px;
-  border-left: 2px solid #3b82f6;
+  border-left: 2px solid var(--cl-accent-glow);
   margin-top: 2px;
 }
 
 .highlight-matched {
-  color: #2563eb;
+  color: var(--cl-primary);
   font-weight: 600;
+  font-family: var(--cl-font-mono);
 }
 </style>
 

@@ -133,7 +133,10 @@
 
         <div class="col-content">
           <div class="col-info">
-            <span class="col-name">{{ col.column_name }}</span>
+            <div class="col-name-row">
+              <span class="col-name">{{ col.column_name }}</span>
+              <span v-if="isPrimaryKey(col)" class="pk-badge" title="主键字段">PK</span>
+            </div>
             <span v-if="col.column_comment" class="col-comment">
               {{ col.column_comment }}
             </span>
@@ -303,6 +306,12 @@ const getTypeClass = (typeStr: string = '') => {
   return 'type-other'
 }
 
+const isPrimaryKey = (col: any) => {
+  const name = (col?.column_name || '').toUpperCase()
+  const comment = col?.column_comment || ''
+  return name === 'ID' || name === `${props.data.tableName?.toUpperCase()}_ID` || comment.includes('主键') || comment.includes('唯一标识')
+}
+
 const handleCommand = (cmd: string) => {
   if (cmd === 'highlight') {
     if (isHighlighted.value && canvasStore.highlightedNodeIds.size > 0) {
@@ -375,62 +384,59 @@ const confirmDelete = () => {
 <style scoped>
 .table-card-node {
   width: 320px;
-  background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -1px rgba(15, 23, 42, 0.04);
-  border: 1px solid #e2e8f0;
-  border-top: 3px solid #3b82f6;
+  background: var(--cl-surface);
+  border-radius: 8px;
+  box-shadow: var(--cl-shadow-card);
+  border: 1px solid var(--cl-border);
   display: flex;
   flex-direction: column;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: var(--cl-font-sans);
   overflow: visible !important;
 }
 
 .table-card-node:hover {
-  box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.1), 0 4px 6px -2px rgba(15, 23, 42, 0.05);
-  border-color: #93c5fd;
-  border-top-color: #2563eb;
+  box-shadow: var(--cl-shadow-card-hover);
+  border-color: var(--cl-border-strong);
 }
 
 .table-card-node.is-dimmed {
-  opacity: 0.25;
-  filter: grayscale(80%);
+  opacity: 0.22;
+  filter: grayscale(85%);
 }
 
 .table-card-node.is-highlighted {
-  border-color: #3b82f6;
-  border-top-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), 0 12px 28px rgba(59, 130, 246, 0.2);
+  border-color: var(--cl-primary);
+  box-shadow: 0 0 0 2.5px var(--cl-primary-border), var(--cl-shadow-card-hover);
 }
 
 @keyframes focus-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7), 0 4px 12px rgba(15, 23, 42, 0.1);
-    border-color: #3b82f6;
+    box-shadow: 0 0 0 0 rgba(29, 78, 216, 0.6), var(--cl-shadow-card);
+    border-color: var(--cl-primary);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.4), 0 16px 36px rgba(59, 130, 246, 0.35);
-    border-color: #2563eb;
-    transform: scale(1.02);
+    box-shadow: 0 0 0 5px rgba(29, 78, 216, 0.25), 0 12px 30px rgba(29, 78, 216, 0.2);
+    border-color: var(--cl-primary-hover);
+    transform: scale(1.015);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7), 0 4px 12px rgba(15, 23, 42, 0.1);
-    border-color: #3b82f6;
+    box-shadow: 0 0 0 0 rgba(29, 78, 216, 0.6), var(--cl-shadow-card);
+    border-color: var(--cl-primary);
   }
 }
 
 .table-card-node.is-focused {
-  animation: focus-pulse 1.2s ease-in-out infinite;
+  animation: focus-pulse 1.4s ease-in-out infinite;
   z-index: 100 !important;
 }
 
 .card-header {
-  padding: 10px 14px;
+  padding: 10px 12px;
   background: #f8fafc;
   border-top-left-radius: 7px;
   border-top-right-radius: 7px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--cl-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -449,8 +455,9 @@ const confirmDelete = () => {
   justify-content: center;
   width: 24px;
   height: 24px;
-  background: #eff6ff;
-  border-radius: 6px;
+  background: var(--cl-primary-light);
+  border: 1px solid var(--cl-primary-border);
+  border-radius: 5px;
   flex-shrink: 0;
 }
 
@@ -466,22 +473,25 @@ const confirmDelete = () => {
 }
 
 .table-name {
+  font-family: var(--cl-font-mono);
   font-weight: 600;
   font-size: 13px;
-  color: #1e293b;
+  color: var(--cl-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.3;
+  letter-spacing: -0.01em;
 }
 
 .table-comment {
   font-size: 11px;
-  color: #64748b;
+  color: var(--cl-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.3;
+  margin-top: 1px;
 }
 
 .header-right {
@@ -492,14 +502,15 @@ const confirmDelete = () => {
 }
 
 .count-pill {
-  font-size: 11px;
-  padding: 2px 8px;
-  height: 20px;
+  font-family: var(--cl-font-mono);
+  font-size: 10px;
+  padding: 1px 6px;
+  height: 18px;
   line-height: 16px;
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #dbeafe;
-  border-radius: 12px;
+  background: #f1f5f9;
+  color: var(--cl-text-secondary);
+  border: 1px solid var(--cl-border);
+  border-radius: 4px;
   font-weight: 500;
   user-select: none;
 }
@@ -511,21 +522,21 @@ const confirmDelete = () => {
   width: 22px;
   height: 22px;
   font-size: 14px;
-  color: #94a3b8;
+  color: var(--cl-text-muted);
   cursor: pointer;
-  border-radius: 5px;
+  border-radius: 4px;
   transition: all 0.15s ease;
 }
 
 .action-btn:hover {
   background: #e2e8f0;
-  color: #1e293b;
+  color: var(--cl-text-primary);
 }
 
 .search-bar {
   padding: 6px 10px;
   background: #ffffff;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--cl-border);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -545,9 +556,9 @@ const confirmDelete = () => {
   align-items: center;
   justify-content: center;
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--cl-border);
   border-radius: 4px;
-  color: #64748b;
+  color: var(--cl-text-muted);
   cursor: pointer;
   font-size: 12px;
   transition: all 0.15s ease;
@@ -555,80 +566,81 @@ const confirmDelete = () => {
 }
 
 .btn-filter-mapped:hover {
-  background: #f1f5f9;
-  color: #1e293b;
-  border-color: #cbd5e1;
+  background: var(--cl-surface-hover);
+  color: var(--cl-text-primary);
+  border-color: var(--cl-border-strong);
 }
 
 .btn-filter-mapped.is-active {
-  background: #eff6ff;
-  color: #2563eb;
-  border-color: #93c5fd;
+  background: var(--cl-primary-light);
+  color: var(--cl-primary);
+  border-color: var(--cl-primary-border);
 }
 
 .filter-folded-banner {
   font-size: 11px;
-  color: #3b82f6;
-  background: #eff6ff;
-  border-bottom: 1px solid #dbeafe;
-  padding: 4px 10px;
+  color: var(--cl-primary);
+  background: var(--cl-primary-light);
+  border-bottom: 1px solid var(--cl-primary-border);
+  padding: 3px 10px;
   text-align: center;
   font-weight: 500;
+  font-family: var(--cl-font-mono);
 }
 
 .search-icon {
   position: absolute;
   left: 8px;
-  font-size: 10px;
-  color: #94a3b8;
+  font-size: 11px;
+  color: var(--cl-text-faint);
   pointer-events: none;
 }
 
 .search-input {
   width: 100%;
   box-sizing: border-box;
-  padding: 5px 24px 5px 24px;
+  padding: 4px 24px;
   font-size: 11px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border: 1px solid var(--cl-border);
+  border-radius: 4px;
   outline: none;
-  background: #f8fafc;
-  color: #334155;
-  transition: all 0.2s ease;
+  background: var(--cl-surface-subtle);
+  color: var(--cl-text-primary);
+  transition: all 0.15s ease;
 }
 
 .search-input:focus {
   background: #ffffff;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  border-color: var(--cl-primary);
+  box-shadow: 0 0 0 1px var(--cl-primary);
 }
 
 .clear-icon {
   position: absolute;
   right: 8px;
-  font-size: 10px;
-  color: #94a3b8;
+  font-size: 11px;
+  color: var(--cl-text-faint);
   cursor: pointer;
   padding: 2px;
 }
 
 .clear-icon:hover {
-  color: #64748b;
+  color: var(--cl-text-muted);
 }
 
 .column-list {
   max-height: 280px;
   overflow-y: auto;
-  padding: 4px 0;
-  border-bottom-left-radius: 9px;
-  border-bottom-right-radius: 9px;
+  padding: 2px 0;
+  border-bottom-left-radius: 7px;
+  border-bottom-right-radius: 7px;
 }
 
 .column-item {
   position: relative;
   display: flex;
   align-items: center;
-  padding: 6px 26px 6px 22px;
+  padding: 6px 24px 6px 20px;
   transition: all 0.15s ease;
   user-select: none;
   cursor: pointer;
@@ -636,39 +648,37 @@ const confirmDelete = () => {
 }
 
 .column-item:hover {
-  background: #f1f5f9;
+  background: #f8fafc;
 }
 
 /* Subtle accent for columns that have mappings */
 .column-item.has-mapping {
   background: #f8faff;
-  border-left-color: #3b82f6;
+  border-left-color: var(--cl-primary);
 }
 
 .column-item.has-mapping:hover {
-  background: #eff6ff;
+  background: var(--cl-primary-light);
 }
 
 .column-item:hover .drag-hint-icon {
   opacity: 1;
-  color: #2563eb;
+  color: var(--cl-primary);
 }
 
-/* ========================================================
-   Breathing / Pulsing Animation for Activated Fields
-   ======================================================== */
+/* Breathing / Pulsing Animation for Activated Fields */
 @keyframes breathe-pulse {
   0% {
-    background-color: #eff6ff;
-    box-shadow: 0 0 0 2px #3b82f6, 0 0 8px rgba(59, 130, 246, 0.4);
+    background-color: var(--cl-primary-light);
+    box-shadow: 0 0 0 1.5px var(--cl-primary), 0 0 8px rgba(29, 78, 216, 0.35);
   }
   50% {
     background-color: #dbeafe;
-    box-shadow: 0 0 0 3px #2563eb, 0 0 16px rgba(37, 99, 235, 0.65);
+    box-shadow: 0 0 0 2px var(--cl-primary-hover), 0 0 14px rgba(29, 78, 216, 0.55);
   }
   100% {
-    background-color: #eff6ff;
-    box-shadow: 0 0 0 2px #3b82f6, 0 0 8px rgba(59, 130, 246, 0.4);
+    background-color: var(--cl-primary-light);
+    box-shadow: 0 0 0 1.5px var(--cl-primary), 0 0 8px rgba(29, 78, 216, 0.35);
   }
 }
 
@@ -693,10 +703,30 @@ const confirmDelete = () => {
   max-width: 175px;
 }
 
+.col-name-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pk-badge {
+  font-family: var(--cl-font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  color: #b45309;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  padding: 0 3px;
+  border-radius: 2px;
+  line-height: 1.1;
+  flex-shrink: 0;
+}
+
 .col-name {
+  font-family: var(--cl-font-mono);
   font-size: 12px;
   font-weight: 500;
-  color: #1e293b;
+  color: var(--cl-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -705,7 +735,7 @@ const confirmDelete = () => {
 
 .col-comment {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--cl-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -720,12 +750,15 @@ const confirmDelete = () => {
 }
 
 .col-type {
-  font-size: 11px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-family: var(--cl-font-mono);
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: 3px;
   white-space: nowrap;
   font-weight: 500;
+  background: #f1f5f9;
+  color: var(--cl-text-secondary);
+  border: 1px solid var(--cl-border);
 }
 
 .mapping-icon-wrap {
@@ -735,8 +768,8 @@ const confirmDelete = () => {
 }
 
 .mapping-icon {
-  font-size: 13px;
-  color: #3b82f6;
+  font-size: 12px;
+  color: var(--cl-primary);
 }
 
 .drag-hint-wrap {
@@ -746,37 +779,38 @@ const confirmDelete = () => {
 }
 
 .drag-hint-icon {
-  font-size: 12px;
-  color: #94a3b8;
+  font-size: 11px;
+  color: var(--cl-text-faint);
   opacity: 0.25;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
-/* Morandi Soft Type Badges */
+/* Subtle, Muted Type Badges */
 .type-num {
-  background: #fef3c7;
-  color: #92400e;
+  background: #fafaf9;
+  color: #78350f;
+  border-color: #fef3c7;
 }
 
 .type-str {
-  background: #eef2ff;
-  color: #3730a3;
+  background: #f8fafc;
+  color: #1e3a8a;
+  border-color: #dbeafe;
 }
 
 .type-date {
-  background: #dcfce7;
+  background: #f0fdf4;
   color: #166534;
+  border-color: #dcfce7;
 }
 
 .type-other {
-  background: #f1f5f9;
+  background: #f8fafc;
   color: #475569;
+  border-color: #e2e8f0;
 }
 
-/* ========================================================
-   Field Connection Handles (Dual-directional Left & Right)
-   Unhovered: 0.35 opacity; Hovered or Breathing: 1.0 opacity
-   ======================================================== */
+/* Field Connection Handles */
 .field-handle {
   position: absolute !important;
   top: 50% !important;
@@ -794,12 +828,12 @@ const confirmDelete = () => {
 /* Left Port Handles */
 .left-handle {
   left: 6px !important;
-  width: 11px !important;
-  height: 11px !important;
+  width: 10px !important;
+  height: 10px !important;
   border-radius: 50% !important;
   background-color: #ffffff !important;
-  border: 2px solid #94a3b8 !important;
-  box-shadow: 0 1px 2px rgba(100, 116, 139, 0.2) !important;
+  border: 2px solid var(--cl-text-faint) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
   cursor: crosshair !important;
 }
 
@@ -809,20 +843,20 @@ const confirmDelete = () => {
 
 .left-handle:hover,
 .column-item:hover .left-handle {
-  border-color: #3b82f6 !important;
-  background-color: #eff6ff !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+  border-color: var(--cl-primary) !important;
+  background-color: var(--cl-primary-light) !important;
+  box-shadow: 0 0 0 3px var(--cl-primary-border) !important;
 }
 
 /* Right Port Handles */
 .right-handle {
   right: 6px !important;
-  width: 13px !important;
-  height: 13px !important;
+  width: 11px !important;
+  height: 11px !important;
   border-radius: 50% !important;
   background: #ffffff !important;
-  border: 2px solid #3b82f6 !important;
-  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3) !important;
+  border: 2px solid var(--cl-primary) !important;
+  box-shadow: 0 1px 3px rgba(29, 78, 216, 0.25) !important;
   cursor: crosshair !important;
   display: flex !important;
   align-items: center !important;
@@ -835,19 +869,19 @@ const confirmDelete = () => {
 
 .right-handle::after {
   content: '';
-  width: 4px;
-  height: 4px;
-  background-color: #3b82f6;
+  width: 3.5px;
+  height: 3.5px;
+  background-color: var(--cl-primary);
   border-radius: 50%;
   pointer-events: none;
 }
 
 .right-handle:hover,
 .column-item:hover .right-handle {
-  transform: translateY(-50%) scale(1.25) !important;
-  background: #2563eb !important;
-  border-color: #1d4ed8 !important;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.25) !important;
+  transform: translateY(-50%) scale(1.2) !important;
+  background: var(--cl-primary) !important;
+  border-color: var(--cl-primary-hover) !important;
+  box-shadow: 0 0 0 3.5px var(--cl-primary-border) !important;
 }
 
 .right-handle:hover::after,
@@ -858,7 +892,7 @@ const confirmDelete = () => {
 .empty-tip {
   text-align: center;
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--cl-text-muted);
   padding: 16px 0;
 }
 
@@ -869,6 +903,4 @@ const confirmDelete = () => {
   font-size: 13px;
   padding: 8px 14px;
 }
-
-
 </style>

@@ -163,14 +163,14 @@ defineExpose({ open })
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #f8fafc;
+  background: var(--cl-surface-subtle);
   padding: 12px;
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--cl-border);
 }
 
 .proj-name {
-  font-weight: 500;
-  color: #1e293b;
+  font-weight: 600;
+  color: var(--cl-text-primary);
 }
 </style>

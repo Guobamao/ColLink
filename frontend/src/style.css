@@ -1,9 +1,60 @@
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Font Families */
+  --cl-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  --cl-font-mono: "JetBrains Mono", "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+
+  /* Palette Tokens */
+  --cl-canvas-bg: #f8fafc;
+  --cl-surface: #ffffff;
+  --cl-surface-subtle: #f8fafc;
+  --cl-surface-hover: #f1f5f9;
+  
+  --cl-border: #e2e8f0;
+  --cl-border-strong: #cbd5e1;
+  --cl-border-active: #93c5fd;
+
+  --cl-text-primary: #0f172a;
+  --cl-text-secondary: #334155;
+  --cl-text-muted: #64748b;
+  --cl-text-faint: #94a3b8;
+
+  --cl-primary: #1d4ed8;
+  --cl-primary-hover: #1e40af;
+  --cl-primary-light: #eff6ff;
+  --cl-primary-border: #bfdbfe;
+
+  --cl-accent-glow: #3b82f6;
+  --cl-accent-glow-subtle: rgba(59, 130, 246, 0.15);
+
+  --cl-success: #059669;
+  --cl-success-light: #ecfdf5;
+  --cl-warning: #d97706;
+  --cl-warning-light: #fffbeb;
+  --cl-danger: #dc2626;
+  --cl-danger-light: #fef2f2;
+
+  /* Shadows */
+  --cl-shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  --cl-shadow-card: 0 2px 8px -1px rgba(15, 23, 42, 0.06), 0 1px 3px -1px rgba(15, 23, 42, 0.04);
+  --cl-shadow-card-hover: 0 10px 25px -4px rgba(15, 23, 42, 0.09), 0 4px 8px -2px rgba(15, 23, 42, 0.04);
+  --cl-shadow-popup: 0 12px 32px -4px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+
+  /* Element Plus Theme Harmonization */
+  --el-color-primary: var(--cl-primary);
+  --el-color-primary-hover: var(--cl-primary-hover);
+  --el-color-primary-light-9: var(--cl-primary-light);
+  --el-border-radius-base: 6px;
+  --el-border-radius-small: 4px;
+  --el-font-family: var(--cl-font-sans);
+
+  font-family: var(--cl-font-sans);
   line-height: 1.5;
   font-weight: 400;
   color-scheme: light;
-  background-color: #f8fafc;
+  background-color: var(--cl-canvas-bg);
+  color: var(--cl-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
@@ -16,12 +67,14 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  background-color: var(--cl-canvas-bg);
+  color: var(--cl-text-primary);
 }
 
-/* Custom scrollbar */
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -36,3 +89,78 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Global UI Polish for Element Plus Dialogs & Drawers */
+.el-dialog {
+  border-radius: 10px !important;
+  box-shadow: var(--cl-shadow-popup) !important;
+  border: 1px solid var(--cl-border) !important;
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  padding: 16px 20px !important;
+  margin: 0 !important;
+  border-bottom: 1px solid var(--cl-border) !important;
+  background: #ffffff !important;
+}
+
+.el-dialog__title {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  color: var(--cl-text-primary) !important;
+  letter-spacing: -0.01em;
+}
+
+.el-dialog__body {
+  padding: 20px !important;
+  color: var(--cl-text-secondary) !important;
+}
+
+.el-dialog__footer {
+  padding: 14px 20px !important;
+  border-top: 1px solid var(--cl-border) !important;
+  background: #fafafa !important;
+}
+
+.el-drawer__header {
+  padding: 16px 20px !important;
+  margin-bottom: 0 !important;
+  border-bottom: 1px solid var(--cl-border) !important;
+  color: var(--cl-text-primary) !important;
+}
+
+.el-table {
+  --el-table-header-bg-color: #f8fafc !important;
+  --el-table-header-text-color: var(--cl-text-secondary) !important;
+  --el-table-border-color: var(--cl-border) !important;
+  font-size: 12px !important;
+}
+
+.el-table th.el-table__cell {
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  letter-spacing: 0.01em;
+}
+
+.el-button {
+  font-weight: 500 !important;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.el-input__wrapper,
+.el-select__wrapper {
+  box-shadow: 0 0 0 1px var(--cl-border) inset !important;
+  transition: all 0.15s ease !important;
+}
+
+.el-input__wrapper:hover,
+.el-select__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--cl-border-strong) inset !important;
+}
+
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused {
+  box-shadow: 0 0 0 1.5px var(--cl-primary) inset !important;
+}
+
