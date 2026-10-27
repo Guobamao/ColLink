@@ -54,6 +54,14 @@ from fastapi.staticfiles import StaticFiles
 
 app.include_router(api_router, prefix="/api")
 
+# Mount MCP Server (SSE transport for web and network-based LLM agents)
+try:
+    from app.mcp.server import mcp_server
+    app.mount("/mcp", mcp_server.sse_app())
+except Exception as e:
+    import logging
+    logging.warning(f"Failed to mount MCP server SSE app: {e}")
+
 # Static files & SPA frontend serving
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DIST_DIR = os.path.join(BASE_DIR, "frontend", "dist")
