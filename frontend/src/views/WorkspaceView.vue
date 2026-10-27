@@ -47,8 +47,8 @@
         <!-- MiniMap Component -->
         <MiniMap
           v-if="showMiniMap"
-          :node-stroke-color="() => '#3b82f6'"
-          :node-color="() => '#dbeafe'"
+          node-stroke-color="#3b82f6"
+          node-color="#dbeafe"
           :node-border-radius="3"
           mask-color="rgba(241, 245, 249, 0.6)"
           class="canvas-minimap"
@@ -105,7 +105,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, markRaw } from 'vue'
+import { ref, computed, onMounted, markRaw, nextTick } from 'vue'
 import { VueFlow, useVueFlow, ConnectionMode } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
@@ -281,8 +281,9 @@ const handleExportImage = async () => {
     }
   })
 
-  // Brief timeout to let Vue Flow layout and DOM stabilize
-  await new Promise(resolve => setTimeout(resolve, 80))
+  // Wait for nextTick and layout to stabilize
+  await nextTick()
+  await new Promise(resolve => setTimeout(resolve, 150))
 
   try {
     const projName = projectStore.currentProject?.name || '数据架构'
@@ -333,6 +334,14 @@ const handleExportImage = async () => {
   position: relative;
 }
 
+:deep(.vue-flow__viewport) {
+  will-change: transform;
+}
+
+:deep(.vue-flow__node) {
+  will-change: transform;
+}
+
 /* Floating Operational Tip Pill (Bottom Left) */
 .canvas-floating-tip {
   position: absolute;
@@ -342,13 +351,11 @@ const handleExportImage = async () => {
   display: flex;
   align-items: center;
   gap: 7px;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: #ffffff;
   border: 1px solid var(--cl-border);
   border-radius: 20px;
   padding: 5px 14px;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
   user-select: none;
   pointer-events: none;
 }
@@ -372,12 +379,10 @@ const handleExportImage = async () => {
 :deep(.vue-flow__controls) {
   bottom: 20px !important;
   right: 20px !important;
-  background: rgba(255, 255, 255, 0.92) !important;
-  backdrop-filter: blur(10px) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
+  background: #ffffff !important;
   border: 1px solid var(--cl-border) !important;
   border-radius: 6px !important;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
   overflow: hidden !important;
   display: flex !important;
   flex-direction: column !important;
@@ -415,8 +420,7 @@ const handleExportImage = async () => {
 }
 
 .empty-card {
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(12px);
+  background: #ffffff;
   padding: 40px 48px;
   border-radius: 12px;
   border: 1px solid var(--cl-border);
@@ -469,9 +473,7 @@ const handleExportImage = async () => {
   right: 64px !important;
   width: 190px !important;
   height: 125px !important;
-  background: rgba(255, 255, 255, 0.94) !important;
-  backdrop-filter: blur(10px) !important;
-  -webkit-backdrop-filter: blur(10px) !important;
+  background: #ffffff !important;
   border: 1px solid var(--cl-border) !important;
   border-radius: 6px !important;
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
@@ -488,12 +490,10 @@ const handleExportImage = async () => {
   align-items: center;
   gap: 5px;
   padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: #ffffff;
   border: 1px solid var(--cl-border);
   border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
   font-size: 11px;
   font-weight: 500;
   color: var(--cl-text-secondary);

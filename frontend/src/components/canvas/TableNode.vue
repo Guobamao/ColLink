@@ -390,9 +390,10 @@ const confirmDelete = () => {
   border: 1px solid var(--cl-border);
   display: flex;
   flex-direction: column;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
   font-family: var(--cl-font-sans);
   overflow: visible !important;
+  contain: layout style;
 }
 
 .table-card-node:hover {

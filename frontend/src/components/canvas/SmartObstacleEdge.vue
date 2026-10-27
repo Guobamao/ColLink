@@ -144,24 +144,37 @@ function pointsToRoundedSvgPath(pts: Point[], radius = 8): string {
 }
 
 const edgePath = computed(() => {
+  if (props.sourceX == null || props.targetX == null || isNaN(props.sourceX) || isNaN(props.targetX)) {
+    return ''
+  }
+
+  // Fast path: if this edge is hidden, skip expensive obstacle raycasting
+  const currentEdge = edges.value.find(e => e.id === props.id)
+  if (currentEdge && currentEdge.hidden) {
+    return ''
+  }
+
   const MARGIN = 16
   const STUB = 24
 
-  // Collect obstacles (bounding boxes of all table cards)
+  // Collect obstacles (bounding boxes of all other table cards)
   const allNodes = getNodes.value || []
-  const obstacles: Rect[] = allNodes.map(n => {
+  const obstacles: Rect[] = []
+  for (let i = 0; i < allNodes.length; i++) {
+    const n = allNodes[i]
+    if (n.id === props.source || n.id === props.target) continue
     const x = n.position.x
     const y = n.position.y
-    const w = (n as any).dimensions?.width || 280
-    const h = (n as any).dimensions?.height || 360
-    return {
+    const w = (n as any).dimensions?.width || 320
+    const h = (n as any).dimensions?.height || 300
+    obstacles.push({
       id: n.id,
       left: x - MARGIN,
       right: x + w + MARGIN,
       top: y - MARGIN,
       bottom: y + h + MARGIN,
-    }
-  })
+    })
+  }
 
   // Lane offset for parallel lines to prevent overlapping
   const visibleEdges = edges.value.filter(e => !e.hidden)
@@ -355,6 +368,7 @@ const edgePath = computed(() => {
     </defs>
     <!-- Background hit area for easy clicking and hover -->
     <path
+      v-if="edgePath"
       :d="edgePath"
       class="vue-flow__edge-interaction"
       fill="none"
@@ -365,6 +379,7 @@ const edgePath = computed(() => {
     />
     <!-- Visible animated path -->
     <path
+      v-if="edgePath"
       :id="id"
       :d="edgePath"
       class="vue-flow__edge-path smart-obstacle-edge is-animated"

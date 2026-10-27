@@ -98,8 +98,8 @@ export const useCanvasStore = defineStore('canvas', () => {
   // Dynamically adapt edge handles: always connect via the closest handles
   const updateEdgeHandles = () => {
     const nodeMap = new Map(nodes.value.map(n => [n.id, n]))
-    const sw = 280
-    const tw = 280
+    const sw = 320
+    const tw = 320
 
     const parseColId = (h: string | null | undefined): string => {
       if (!h) return ''
@@ -120,27 +120,41 @@ export const useCanvasStore = defineStore('canvas', () => {
         const srcW = (srcNode as any).dimensions?.width || sw
         const tgtW = (tgtNode as any).dimensions?.width || tw
 
+        let newSrcSide: 'left' | 'right' = 'right'
+        let newTgtSide: 'left' | 'right' = 'left'
+
         // Case A: Target node is strictly to the right of source node
         if (tx > sx + srcW + 20) {
-          edge.sourceHandle = `source_${srcColId}_right`
-          edge.targetHandle = `target_${tgtColId}_left`
+          newSrcSide = 'right'
+          newTgtSide = 'left'
         }
         // Case B: Target node is strictly to the left of source node
         else if (tx + tgtW + 20 < sx) {
-          edge.sourceHandle = `source_${srcColId}_left`
-          edge.targetHandle = `target_${tgtColId}_right`
+          newSrcSide = 'left'
+          newTgtSide = 'right'
         }
         // Case C: Horizontally overlapping or vertically aligned (C-shape outer detour)
         else {
           const srcCenterX = sx + srcW / 2
           const tgtCenterX = tx + tgtW / 2
           if (srcCenterX <= tgtCenterX) {
-            edge.sourceHandle = `source_${srcColId}_right`
-            edge.targetHandle = `target_${tgtColId}_right`
+            newSrcSide = 'right'
+            newTgtSide = 'right'
           } else {
-            edge.sourceHandle = `source_${srcColId}_left`
-            edge.targetHandle = `target_${tgtColId}_left`
+            newSrcSide = 'left'
+            newTgtSide = 'left'
           }
+        }
+
+        const newSrcHandle = `source_${srcColId}_${newSrcSide}`
+        const newTgtHandle = `target_${tgtColId}_${newTgtSide}`
+
+        // Only assign when handle value actually changes to avoid triggering reactive proxy cascades
+        if (edge.sourceHandle !== newSrcHandle) {
+          edge.sourceHandle = newSrcHandle
+        }
+        if (edge.targetHandle !== newTgtHandle) {
+          edge.targetHandle = newTgtHandle
         }
       }
     })
@@ -211,7 +225,9 @@ export const useCanvasStore = defineStore('canvas', () => {
     updateEdgeHandles()
   }
 
-  // Handle node dragging: dynamically update handles in real-time
+  // Handle node dragging: dynamically update handles in real-time throttled by rAF
+  let nodeDragRafId: number | null = null
+
   const onNodeDragStart = (e: any) => {
     if (e?.node) {
       dragStartPosMap.set(e.node.id, { x: e.node.position.x, y: e.node.position.y })
@@ -219,11 +235,19 @@ export const useCanvasStore = defineStore('canvas', () => {
   }
 
   const onNodeDrag = () => {
-    updateEdgeHandles()
+    if (nodeDragRafId !== null) return
+    nodeDragRafId = requestAnimationFrame(() => {
+      updateEdgeHandles()
+      nodeDragRafId = null
+    })
   }
 
   // Handle node drag end - debounce position saving to backend
   const onNodeDragStop = (e?: any) => {
+    if (nodeDragRafId !== null) {
+      cancelAnimationFrame(nodeDragRafId)
+      nodeDragRafId = null
+    }
     updateEdgeHandles()
 
     if (e?.node) {
