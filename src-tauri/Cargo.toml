@@ -9,6 +9,14 @@ edition = "2021"
 name = "collink_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[[bin]]
+name = "collink"
+path = "src/main.rs"
+
+[[bin]]
+name = "collink-mcp"
+path = "src/mcp_main.rs"
+
 [build-dependencies]
 tauri-build = { version = "2.7.4", features = [] }
 

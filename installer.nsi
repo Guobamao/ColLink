@@ -21,6 +21,7 @@ Section "MainSection" SEC01
   SetOutPath "$INSTDIR"
   SetOverwrite ifnewer
   File "release\ColLink-v1.0.0-Portable\ColLink.exe"
+  File "release\ColLink-v1.0.0-Portable\collink-mcp.exe"
   File "app_icon.ico"
   
   CreateDirectory "$SMPROGRAMS\ColLink"
@@ -43,6 +44,7 @@ Section "Uninstall"
   RMDir "$SMPROGRAMS\ColLink"
   
   Delete "$INSTDIR\ColLink.exe"
+  Delete "$INSTDIR\collink-mcp.exe"
   Delete "$INSTDIR\app_icon.ico"
   Delete "$INSTDIR\uninstall.exe"
   RMDir "$INSTDIR"

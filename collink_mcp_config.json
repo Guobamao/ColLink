@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "collink": {
+      "command": "C:\\Program Files\\ColLink\\collink-mcp.exe",
+      "args": [],
+      "env": {}
+    }
+  }
+}
