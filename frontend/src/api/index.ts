@@ -1,93 +1,219 @@
-import axios from 'axios'
-import type { Project, TableMeta, FieldMapping, ParsedTable, DbTableSummary, CanvasView, CanvasDetail, RelationPathResult } from '@/types'
-import { downloadFileStream, downloadJsonFile } from '@/utils/download'
-
-const apiClient = axios.create({
-  baseURL: '/api',
-  timeout: 30000,
-})
-
-apiClient.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.response?.data?.detail) {
-      error.message = typeof error.response.data.detail === 'string'
-        ? error.response.data.detail
-        : JSON.stringify(error.response.data.detail)
-    }
-    return Promise.reject(error)
-  }
-)
+import { invoke } from '@tauri-apps/api/core'
+import type {
+  Project,
+  TableMeta,
+  FieldMapping,
+  ParsedTable,
+  DbTableSummary,
+  CanvasView,
+  CanvasDetail,
+  RelationPathResult,
+} from '@/types'
+import { ElMessage } from 'element-plus'
 
 export const api = {
   // Projects
-  getProjects: () => apiClient.get<Project[]>('/projects').then(res => res.data),
-  getProjectDetail: (id: string) => apiClient.get<Project>(`/projects/${id}`).then(res => res.data),
-  createProject: (data: { name: string; description?: string }) => apiClient.post<Project>('/projects', data).then(res => res.data),
-  updateProject: (id: string, data: { name?: string; description?: string }) => apiClient.put<Project>(`/projects/${id}`, data).then(res => res.data),
-  deleteProject: (id: string) => apiClient.delete(`/projects/${id}`).then(res => res.data),
+  getProjects: () => invoke<Project[]>('get_projects'),
+  getProjectDetail: (id: string) => invoke<Project>('get_project_detail', { id }),
+  createProject: (data: { name: string; description?: string }) =>
+    invoke<Project>('create_project', { input: data }),
+  updateProject: (id: string, data: { name?: string; description?: string }) =>
+    invoke<Project>('update_project', { id, input: data }),
+  deleteProject: (id: string) => invoke<void>('delete_project', { id }),
 
   // Canvases (Subject Views)
-  getCanvases: (projectId: string) => apiClient.get<CanvasView[]>(`/canvases/project/${projectId}`).then(res => res.data),
-  getCanvasDetail: (canvasId: string) => apiClient.get<CanvasDetail>(`/canvases/${canvasId}`).then(res => res.data),
-  createCanvas: (projectId: string, data: { name: string }) => apiClient.post<CanvasView>(`/canvases/project/${projectId}`, data).then(res => res.data),
-  updateCanvas: (canvasId: string, data: { name?: string; sort_order?: number }) => apiClient.put<CanvasView>(`/canvases/${canvasId}`, data).then(res => res.data),
-  deleteCanvas: (canvasId: string) => apiClient.delete(`/canvases/${canvasId}`).then(res => res.data),
-  addTablesToCanvas: (canvasId: string, tableIds: string[]) => apiClient.post(`/canvases/${canvasId}/tables`, { table_ids: tableIds }).then(res => res.data),
-  removeTableFromCanvas: (canvasId: string, tableId: string) => apiClient.delete(`/canvases/${canvasId}/tables/${tableId}`).then(res => res.data),
-  updateCanvasPositions: (canvasId: string, positions: { id: string; pos_x: number; pos_y: number }[]) => apiClient.put(`/canvases/${canvasId}/positions`, positions).then(res => res.data),
-  updateCanvasTableColor: (canvasId: string, tableId: string, colorTag: string) => apiClient.put(`/canvases/${canvasId}/tables/${tableId}/color`, { color_tag: colorTag }).then(res => res.data),
+  getCanvases: (projectId: string) => invoke<CanvasView[]>('get_canvases', { projectId }),
+  getCanvasDetail: (canvasId: string) => invoke<CanvasDetail>('get_canvas_detail', { canvasId }),
+  createCanvas: (projectId: string, data: { name: string }) =>
+    invoke<CanvasView>('create_canvas', { projectId, input: data }),
+  updateCanvas: (canvasId: string, data: { name?: string; sort_order?: number }) =>
+    invoke<CanvasView>('update_canvas', { canvasId, input: data }),
+  deleteCanvas: (canvasId: string) => invoke<void>('delete_canvas', { canvasId }),
+  addTablesToCanvas: (canvasId: string, tableIds: string[]) =>
+    invoke<void>('add_tables_to_canvas', { canvasId, tableIds }),
+  removeTableFromCanvas: (canvasId: string, tableId: string) =>
+    invoke<void>('remove_table_from_canvas', { canvasId, tableId }),
+  updateCanvasPositions: (
+    canvasId: string,
+    positions: { id: string; pos_x: number; pos_y: number }[]
+  ) => invoke<void>('update_canvas_positions', { canvasId, positions }),
+  updateCanvasTableColor: (canvasId: string, tableId: string, colorTag: string) =>
+    invoke<void>('update_canvas_table_color', { canvasId, tableId, colorTag }),
 
   // Tables
-  createTable: (projectId: string, data: any) => apiClient.post<TableMeta>(`/tables?project_id=${projectId}`, data).then(res => res.data),
-  updateTable: (id: string, data: { table_name?: string; table_comment?: string; pos_x?: number; pos_y?: number }) => apiClient.put<TableMeta>(`/tables/${id}`, data).then(res => res.data),
-  updateTablePositions: (positions: { id: string; pos_x: number; pos_y: number }[]) => apiClient.put('/tables/positions', positions).then(res => res.data),
-  deleteTable: (id: string) => apiClient.delete(`/tables/${id}`).then(res => res.data),
+  createTable: (projectId: string, data: any) =>
+    invoke<TableMeta>('create_table', { projectId, input: data }),
+  updateTable: (
+    id: string,
+    data: { table_name?: string; table_comment?: string; pos_x?: number; pos_y?: number }
+  ) => invoke<TableMeta>('update_table', { id, input: data }),
+  updateTablePositions: (positions: { id: string; pos_x: number; pos_y: number }[]) =>
+    invoke<void>('update_table_positions', { positions }),
+  deleteTable: (id: string) => invoke<void>('delete_table', { id }),
 
   // Mappings
-  getMappings: (projectId: string) => apiClient.get<FieldMapping[]>(`/mappings?project_id=${projectId}`).then(res => res.data),
-  createMapping: (projectId: string, data: { source_table_id: string; source_column_id: string; target_table_id: string; target_column_id: string }) =>
-    apiClient.post<FieldMapping>(`/mappings?project_id=${projectId}`, data).then(res => res.data),
-  batchCreateMappings: (projectId: string, mappings: Array<{ source_table_id: string; source_column_id: string; target_table_id: string; target_column_id: string }>) =>
-    apiClient.post<FieldMapping[]>(`/mappings/batch?project_id=${projectId}`, { mappings }).then(res => res.data),
-  deleteMapping: (id: string) => apiClient.delete(`/mappings/${id}`).then(res => res.data),
-  batchDeleteMappings: (ids: string[]) => apiClient.post<{ deleted_count: number }>('/mappings/batch-delete', { ids }).then(res => res.data),
-  discoverRelationPath: (projectId: string, data: { source_table_id: string; target_table_id: string; max_hops?: number }) =>
-    apiClient.post<RelationPathResult>(`/mappings/discover-path?project_id=${projectId}`, data).then(res => res.data),
+  getMappings: (projectId: string) => invoke<FieldMapping[]>('get_mappings', { projectId }),
+  createMapping: (
+    projectId: string,
+    data: {
+      source_table_id: string
+      source_column_id: string
+      target_table_id: string
+      target_column_id: string
+    }
+  ) => invoke<FieldMapping>('create_mapping', { projectId, input: data }),
+  batchCreateMappings: (
+    projectId: string,
+    mappings: Array<{
+      source_table_id: string
+      source_column_id: string
+      target_table_id: string
+      target_column_id: string
+    }>
+  ) => invoke<FieldMapping[]>('batch_create_mappings', { projectId, mappings }),
+  deleteMapping: (id: string) => invoke<void>('delete_mapping', { id }),
+  batchDeleteMappings: (ids: string[]) =>
+    invoke<{ deleted_count: number }>('batch_delete_mappings', { ids }),
+  discoverRelationPath: (
+    projectId: string,
+    data: { source_table_id: string; target_table_id: string; max_hops?: number }
+  ) => invoke<RelationPathResult>('discover_relation_path', { projectId, input: data }),
 
   // DDL
-  parseDdlText: (data: { sql_text: string; dialect?: string }) => apiClient.post<ParsedTable[]>('/ddl/parse', data).then(res => res.data),
-  parseDdlFile: (formData: FormData) => apiClient.post<ParsedTable[]>('/ddl/parse-file', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }).then(res => res.data),
-  importDdlTables: (projectId: string, tables: ParsedTable[], canvasId?: string) => apiClient.post<{ tables: TableMeta[]; summary: { tables_created: number; tables_updated: number; columns_added: number; columns_updated: number; mappings_preserved: number; message: string } }>('/ddl/import', {
-    project_id: projectId,
-    tables,
-    canvas_id: canvasId
-  }).then(res => res.data),
+  parseDdlText: (data: { sql_text: string; dialect?: string }) =>
+    invoke<ParsedTable[]>('parse_ddl_text', { input: data }),
+  parseDdlFile: async (formData: FormData): Promise<ParsedTable[]> => {
+    const file = formData.get('file') as File | null
+    const dialect = formData.get('dialect') as string | null
+    const content = file ? await file.text() : ''
+    return invoke<ParsedTable[]>('parse_ddl_file', {
+      content,
+      dialect: dialect || undefined,
+    })
+  },
+  importDdlTables: (projectId: string, tables: ParsedTable[], canvasId?: string) =>
+    invoke<{
+      tables: TableMeta[]
+      summary: {
+        tables_created: number
+        tables_updated: number
+        columns_added: number
+        columns_updated: number
+        mappings_preserved: number
+        message: string
+      }
+    }>('import_ddl_tables', {
+      projectId,
+      tables,
+      canvasId: canvasId || undefined,
+    }),
 
-  // DB Connection
-  testDbConnection: (data: any) => apiClient.post<{ success: boolean; message: string }>('/connections/test', data).then(res => res.data),
-  listDbTables: (data: any) => apiClient.post<DbTableSummary[]>('/connections/tables', data).then(res => res.data),
-  importDbTables: (projectId: string, connection: any, selectedTables?: string[], canvasId?: string) => apiClient.post<{ tables: TableMeta[]; summary: { tables_created: number; tables_updated: number; columns_added: number; columns_updated: number; mappings_preserved: number; message: string } }>('/connections/import', {
-    project_id: projectId,
-    connection,
-    selected_tables: selectedTables,
-    canvas_id: canvasId
-  }).then(res => res.data),
+  // DB Connection (Reserved for Stage 4 ODBC integration)
+  testDbConnection: async (_data: any): Promise<{ success: boolean; message: string }> => {
+    return {
+      success: false,
+      message: '数据库直连服务已计划在后续阶段接入，当前请优先使用 DDL 脚本解析导入。',
+    }
+  },
+  listDbTables: async (_data: any): Promise<DbTableSummary[]> => {
+    return []
+  },
+  importDbTables: async (
+    _projectId: string,
+    _connection: any,
+    _selectedTables?: string[],
+    _canvasId?: string
+  ) => {
+    return {
+      tables: [],
+      summary: {
+        tables_created: 0,
+        tables_updated: 0,
+        columns_added: 0,
+        columns_updated: 0,
+        mappings_preserved: 0,
+        message: '请优先使用离线 DDL 脚本解析导入',
+      },
+    }
+  },
 
   // Export / Backup
-  exportExcel: (projectId: string, projectName: string = '项目') => {
-    const dateStr = new Date().toISOString().slice(0, 10)
-    return downloadFileStream(`/export/excel/${projectId}`, `${projectName}_字段血缘映射表_${dateStr}.xlsx`)
+  exportExcel: async (projectId: string, projectName: string = '项目'): Promise<void> => {
+    const loading = ElMessage.info({
+      message: '正在准备导出 Excel 文件...',
+      duration: 0,
+    })
+    try {
+      const dataUrl = await invoke<string>('export_excel', {
+        projectId,
+        projectName,
+      })
+      const dateStr = new Date().toISOString().slice(0, 10)
+      const fileName = `${projectName}_字段血缘映射表_${dateStr}.xlsx`
+
+      const link = document.createElement('a')
+      link.style.display = 'none'
+      link.href = dataUrl
+      link.setAttribute('download', fileName)
+      document.body.appendChild(link)
+      link.click()
+
+      setTimeout(() => {
+        document.body.removeChild(link)
+      }, 300)
+
+      loading.close()
+      ElMessage.success('Excel 导出成功')
+    } catch (err: any) {
+      loading.close()
+      ElMessage.error('导出失败: ' + (err || '未知异常'))
+      throw err
+    }
   },
-  exportProjectJson: (projectId: string, projectName: string = '项目') => {
-    const dateStr = new Date().toISOString().slice(0, 10)
-    return downloadJsonFile(`/export/json/${projectId}`, `${projectName}_备份快照_${dateStr}.json`)
+
+  exportProjectJson: async (projectId: string, projectName: string = '项目'): Promise<void> => {
+    const loading = ElMessage.info({
+      message: '正在生成 JSON 备份快照...',
+      duration: 0,
+    })
+    try {
+      const jsonStr = await invoke<string>('export_project_json', { projectId })
+      const dateStr = new Date().toISOString().slice(0, 10)
+      const fileName = `${projectName}_备份快照_${dateStr}.json`
+
+      const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' })
+      const blobUrl = window.URL.createObjectURL(blob)
+
+      const link = document.createElement('a')
+      link.style.display = 'none'
+      link.href = blobUrl
+      link.setAttribute('download', fileName)
+      document.body.appendChild(link)
+      link.click()
+
+      setTimeout(() => {
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(blobUrl)
+      }, 300)
+
+      loading.close()
+      ElMessage.success('JSON 备份快照导出成功')
+    } catch (err: any) {
+      loading.close()
+      ElMessage.error('导出失败: ' + (err || '未知异常'))
+      throw err
+    }
   },
-  getExcelExportUrl: (projectId: string) => `/api/export/excel/${projectId}`,
-  getJsonExportUrl: (projectId: string) => `/api/export/json/${projectId}`,
-  restoreProjectJson: (formData: FormData) => apiClient.post<Project>('/export/restore-json', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }).then(res => res.data),
+
+  getExcelExportUrl: (projectId: string) => `/export/excel/${projectId}`,
+  getJsonExportUrl: (projectId: string) => `/export/json/${projectId}`,
+
+  restoreProjectJson: async (formData: FormData): Promise<Project> => {
+    const file = formData.get('file') as File | null
+    if (!file) {
+      throw new Error('未选择备份文件')
+    }
+    const jsonContent = await file.text()
+    return invoke<Project>('restore_project_json', { jsonContent })
+  },
 }
