@@ -256,7 +256,7 @@ const confirmImportTables = async () => {
 <style scoped>
 .canvas-tabs-bar {
   height: 38px;
-  background: #f8fafc;
+  background: var(--cl-surface-subtle);
   border-bottom: 1px solid var(--cl-border);
   display: flex;
   align-items: center;
@@ -298,17 +298,17 @@ const confirmImportTables = async () => {
   transition: all 0.15s ease;
   white-space: nowrap;
   border-bottom: 2px solid transparent;
-  border-right: 1px solid rgba(226, 232, 240, 0.6);
+  border-right: 1px solid var(--cl-border);
   position: relative;
 }
 
 .canvas-tab:hover {
-  background: rgba(241, 245, 249, 0.8);
+  background: var(--cl-surface-hover);
   color: var(--cl-text-primary);
 }
 
 .canvas-tab.is-active {
-  background: #ffffff;
+  background: var(--cl-surface);
   color: var(--cl-primary);
   font-weight: 600;
   border-bottom-color: var(--cl-primary);
@@ -328,7 +328,7 @@ const confirmImportTables = async () => {
 .tab-badge {
   font-family: var(--cl-font-mono);
   font-size: 10px;
-  background: #f1f5f9;
+  background: var(--cl-surface-hover);
   color: var(--cl-text-muted);
   padding: 1px 5px;
   border-radius: 4px;
@@ -364,7 +364,7 @@ const confirmImportTables = async () => {
 }
 
 .action-icon:hover {
-  background: #e2e8f0;
+  background: var(--cl-surface-hover);
   color: var(--cl-text-primary);
 }
 
@@ -391,7 +391,7 @@ const confirmImportTables = async () => {
 }
 
 .btn-new-tab:hover {
-  background: #ffffff;
+  background: var(--cl-surface-hover);
   color: var(--cl-primary);
   border-color: var(--cl-primary);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
@@ -421,7 +421,7 @@ const confirmImportTables = async () => {
   align-items: center;
   gap: 5px;
   border-radius: 5px;
-  background: #ffffff;
+  background: var(--cl-surface);
   border: 1px solid var(--cl-border);
   color: var(--cl-text-secondary);
 }

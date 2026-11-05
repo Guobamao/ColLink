@@ -40,7 +40,7 @@
         @edge-click="handleEdgeClick"
       >
         <!-- Background Grid Pattern -->
-        <Background :gap="20" color="#e2e8f0" />
+        <Background :gap="20" :color="themeStore.isDark ? '#1e293b' : '#cbd5e1'" />
 
         <!-- Controls: Zoom In/Out, Fit View, Lock -->
         <Controls position="bottom-right" />
@@ -48,10 +48,10 @@
         <!-- MiniMap Component -->
         <MiniMap
           v-if="showMiniMap"
-          node-stroke-color="#3b82f6"
-          node-color="#dbeafe"
+          :node-stroke-color="themeStore.isDark ? '#60a5fa' : '#3b82f6'"
+          :node-color="themeStore.isDark ? '#141e30' : '#dbeafe'"
           :node-border-radius="3"
-          mask-color="rgba(241, 245, 249, 0.6)"
+          :mask-color="themeStore.isDark ? 'rgba(11, 17, 32, 0.75)' : 'rgba(241, 245, 249, 0.6)'"
           class="canvas-minimap"
         />
 
@@ -136,11 +136,13 @@ import SmartObstacleEdge from '@/components/canvas/SmartObstacleEdge.vue'
 
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
+import { useThemeStore } from '@/stores/themeStore'
 
 const { fitView, updateNodeInternals } = useVueFlow()
 
 const projectStore = useProjectStore()
 const canvasStore = useCanvasStore()
+const themeStore = useThemeStore()
 canvasStore.registerUpdateNodeInternals(updateNodeInternals)
 
 const statusTipText = computed(() => {

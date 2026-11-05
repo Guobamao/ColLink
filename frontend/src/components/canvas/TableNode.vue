@@ -474,7 +474,7 @@ const confirmDelete = () => {
 
 .card-header {
   padding: 10px 12px;
-  background: #f8fafc;
+  background: var(--cl-surface-subtle);
   border-top-left-radius: 7px;
   border-top-right-radius: 7px;
   border-bottom: 1px solid var(--cl-border);
@@ -548,7 +548,7 @@ const confirmDelete = () => {
   padding: 1px 6px;
   height: 18px;
   line-height: 16px;
-  background: #f1f5f9;
+  background: var(--cl-surface-hover);
   color: var(--cl-text-secondary);
   border: 1px solid var(--cl-border);
   border-radius: 4px;
@@ -570,13 +570,13 @@ const confirmDelete = () => {
 }
 
 .action-btn:hover {
-  background: #e2e8f0;
+  background: var(--cl-surface-hover);
   color: var(--cl-text-primary);
 }
 
 .search-bar {
   padding: 6px 10px;
-  background: #ffffff;
+  background: var(--cl-surface);
   border-bottom: 1px solid var(--cl-border);
   display: flex;
   align-items: center;
@@ -596,7 +596,7 @@ const confirmDelete = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
+  background: var(--cl-surface-subtle);
   border: 1px solid var(--cl-border);
   border-radius: 4px;
   color: var(--cl-text-muted);
@@ -651,7 +651,7 @@ const confirmDelete = () => {
 }
 
 .search-input:focus {
-  background: #ffffff;
+  background: var(--cl-surface);
   border-color: var(--cl-primary);
   box-shadow: 0 0 0 1px var(--cl-primary);
 }
@@ -689,12 +689,12 @@ const confirmDelete = () => {
 }
 
 .column-item:hover {
-  background: #f8fafc;
+  background: var(--cl-surface-hover);
 }
 
 /* Subtle accent for columns that have mappings */
 .column-item.has-mapping {
-  background: #f8faff;
+  background: var(--cl-primary-light);
   border-left-color: var(--cl-primary);
 }
 
@@ -797,7 +797,7 @@ const confirmDelete = () => {
   border-radius: 3px;
   white-space: nowrap;
   font-weight: 500;
-  background: #f1f5f9;
+  background: var(--cl-surface-subtle);
   color: var(--cl-text-secondary);
   border: 1px solid var(--cl-border);
 }
@@ -944,4 +944,35 @@ const confirmDelete = () => {
   font-size: 13px;
   padding: 8px 14px;
 }
+
+:global(html.dark) .type-num {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #fcd34d !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+:global(html.dark) .type-str {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #93c5fd !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+:global(html.dark) .type-date {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #6ee7b7 !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+:global(html.dark) .type-other {
+  background: rgba(148, 163, 184, 0.15) !important;
+  color: #cbd5e1 !important;
+  border-color: rgba(148, 163, 184, 0.3) !important;
+}
+
+:global(html.dark) .pk-badge {
+  color: #fbbf24 !important;
+  background: rgba(245, 158, 11, 0.2) !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
 </style>

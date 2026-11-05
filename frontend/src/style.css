@@ -3,7 +3,7 @@
   --cl-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
   --cl-font-mono: "JetBrains Mono", "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
 
-  /* Palette Tokens */
+  /* Palette Tokens (Light Default) */
   --cl-canvas-bg: #f8fafc;
   --cl-surface: #ffffff;
   --cl-surface-subtle: #f8fafc;
@@ -57,6 +57,61 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Dark Theme Tokens */
+html.dark {
+  color-scheme: dark;
+
+  --cl-canvas-bg: #0b1120;
+  --cl-surface: #1e293b;
+  --cl-surface-subtle: #141e30;
+  --cl-surface-hover: #334155;
+
+  --cl-border: #334155;
+  --cl-border-strong: #475569;
+  --cl-border-active: #60a5fa;
+
+  --cl-text-primary: #f8fafc;
+  --cl-text-secondary: #cbd5e1;
+  --cl-text-muted: #94a3b8;
+  --cl-text-faint: #64748b;
+
+  --cl-primary: #3b82f6;
+  --cl-primary-hover: #60a5fa;
+  --cl-primary-light: rgba(59, 130, 246, 0.18);
+  --cl-primary-border: #1d4ed8;
+
+  --cl-accent-glow: #60a5fa;
+  --cl-accent-glow-subtle: rgba(96, 165, 250, 0.25);
+
+  --cl-success: #10b981;
+  --cl-success-light: rgba(16, 185, 129, 0.18);
+  --cl-warning: #f59e0b;
+  --cl-warning-light: rgba(245, 158, 11, 0.18);
+  --cl-danger: #ef4444;
+  --cl-danger-light: rgba(239, 68, 68, 0.18);
+
+  /* Deep Contrast Shadows */
+  --cl-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --cl-shadow-card: 0 4px 14px -2px rgba(0, 0, 0, 0.55), 0 2px 6px -1px rgba(0, 0, 0, 0.4);
+  --cl-shadow-card-hover: 0 12px 28px -4px rgba(0, 0, 0, 0.75), 0 4px 12px -2px rgba(0, 0, 0, 0.5);
+  --cl-shadow-popup: 0 16px 36px -4px rgba(0, 0, 0, 0.8), 0 6px 16px -2px rgba(0, 0, 0, 0.6);
+
+  /* Element Plus Harmonization in Dark */
+  --el-bg-color: #1e293b;
+  --el-bg-color-page: #0b1120;
+  --el-bg-color-overlay: #1e293b;
+  --el-text-color-primary: #f8fafc;
+  --el-text-color-regular: #cbd5e1;
+  --el-text-color-secondary: #94a3b8;
+  --el-border-color: #334155;
+  --el-border-color-light: #334155;
+  --el-border-color-lighter: #1e293b;
+  --el-fill-color-blank: #1e293b;
+  --el-fill-color: #334155;
+  --el-fill-color-light: #141e30;
+  --el-fill-color-lighter: #0f172a;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -69,6 +124,7 @@ body {
   overflow: hidden;
   background-color: var(--cl-canvas-bg);
   color: var(--cl-text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 /* Custom Scrollbars */
@@ -90,11 +146,20 @@ body {
   background: #94a3b8;
 }
 
+html.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
 /* Global UI Polish for Element Plus Dialogs & Drawers */
 .el-dialog {
   border-radius: 10px !important;
   box-shadow: var(--cl-shadow-popup) !important;
   border: 1px solid var(--cl-border) !important;
+  background: var(--cl-surface) !important;
   overflow: hidden;
 }
 
@@ -102,7 +167,7 @@ body {
   padding: 16px 20px !important;
   margin: 0 !important;
   border-bottom: 1px solid var(--cl-border) !important;
-  background: #ffffff !important;
+  background: var(--cl-surface) !important;
 }
 
 .el-dialog__title {
@@ -115,12 +180,19 @@ body {
 .el-dialog__body {
   padding: 20px !important;
   color: var(--cl-text-secondary) !important;
+  background: var(--cl-surface) !important;
 }
 
 .el-dialog__footer {
   padding: 14px 20px !important;
   border-top: 1px solid var(--cl-border) !important;
-  background: #fafafa !important;
+  background: var(--cl-surface-subtle) !important;
+}
+
+.el-drawer {
+  background: var(--cl-surface) !important;
+  color: var(--cl-text-primary) !important;
+  border-left: 1px solid var(--cl-border) !important;
 }
 
 .el-drawer__header {
@@ -128,12 +200,20 @@ body {
   margin-bottom: 0 !important;
   border-bottom: 1px solid var(--cl-border) !important;
   color: var(--cl-text-primary) !important;
+  background: var(--cl-surface) !important;
+}
+
+.el-drawer__body {
+  background: var(--cl-surface) !important;
+  color: var(--cl-text-secondary) !important;
 }
 
 .el-table {
-  --el-table-header-bg-color: #f8fafc !important;
+  --el-table-header-bg-color: var(--cl-surface-subtle) !important;
   --el-table-header-text-color: var(--cl-text-secondary) !important;
   --el-table-border-color: var(--cl-border) !important;
+  --el-table-tr-bg-color: var(--cl-surface) !important;
+  --el-table-bg-color: var(--cl-surface) !important;
   font-size: 12px !important;
 }
 
@@ -151,6 +231,7 @@ body {
 .el-input__wrapper,
 .el-select__wrapper {
   box-shadow: 0 0 0 1px var(--cl-border) inset !important;
+  background-color: var(--cl-surface) !important;
   transition: all 0.15s ease !important;
 }
 
@@ -164,3 +245,22 @@ body {
   box-shadow: 0 0 0 1.5px var(--cl-primary) inset !important;
 }
 
+.el-input__inner {
+  color: var(--cl-text-primary) !important;
+}
+
+.el-dropdown-menu {
+  background-color: var(--cl-surface) !important;
+  border: 1px solid var(--cl-border) !important;
+  box-shadow: var(--cl-shadow-popup) !important;
+}
+
+.el-dropdown-menu__item {
+  color: var(--cl-text-primary) !important;
+}
+
+.el-dropdown-menu__item:hover,
+.el-dropdown-menu__item:focus {
+  background-color: var(--cl-surface-hover) !important;
+  color: var(--cl-primary) !important;
+}

@@ -194,14 +194,44 @@
           </el-dropdown-menu>
         </template>
       </el-dropdown>
+
+      <div class="divider"></div>
+
+      <!-- Theme Switcher -->
+      <el-dropdown trigger="click" @command="handleThemeCommand">
+        <button class="btn-theme-toggle" :title="'切换主题风格 (当前: ' + themeLabel + ')'">
+          <el-icon v-if="themeStore.isDark"><Moon /></el-icon>
+          <el-icon v-else><Sunny /></el-icon>
+        </button>
+        <template #dropdown>
+          <el-dropdown-menu class="toolbar-dropdown-menu">
+            <el-dropdown-item command="light">
+              <el-icon><Sunny /></el-icon>
+              <span class="menu-text">浅色模式</span>
+              <el-icon v-if="themeStore.mode === 'light'" class="check-icon"><Check /></el-icon>
+            </el-dropdown-item>
+            <el-dropdown-item command="dark">
+              <el-icon><Moon /></el-icon>
+              <span class="menu-text">深色模式</span>
+              <el-icon v-if="themeStore.mode === 'dark'" class="check-icon"><Check /></el-icon>
+            </el-dropdown-item>
+            <el-dropdown-item command="auto" divided>
+              <el-icon><Monitor /></el-icon>
+              <span class="menu-text">跟随系统</span>
+              <el-icon v-if="themeStore.mode === 'auto'" class="check-icon"><Check /></el-icon>
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
+import { useThemeStore } from '@/stores/themeStore'
 import { api } from '@/api'
 import { ElMessage } from 'element-plus'
 import {
@@ -221,6 +251,10 @@ import {
   TakeawayBox,
   CircleClose,
   Search,
+  Moon,
+  Sunny,
+  Monitor,
+  Check,
 } from '@element-plus/icons-vue'
 
 const emit = defineEmits([
@@ -238,6 +272,20 @@ const emit = defineEmits([
 
 const projectStore = useProjectStore()
 const canvasStore = useCanvasStore()
+const themeStore = useThemeStore()
+
+const themeLabel = computed(() => {
+  if (themeStore.mode === 'dark') return '深色模式'
+  if (themeStore.mode === 'light') return '浅色模式'
+  return '跟随系统 (' + (themeStore.isDark ? '深色' : '浅色') + ')'
+})
+
+const handleThemeCommand = (cmd: string) => {
+  if (cmd === 'light' || cmd === 'dark' || cmd === 'auto') {
+    themeStore.setMode(cmd as any)
+    ElMessage.success(`已切换为${cmd === 'dark' ? '深色模式' : cmd === 'light' ? '浅色模式' : '跟随系统'}`)
+  }
+}
 
 const searchQuery = ref('')
 const searchRef = ref<any>(null)
@@ -727,6 +775,34 @@ const handleExportCommand = (cmd: string) => {
   font-weight: 600;
   font-family: var(--cl-font-mono);
 }
+
+.btn-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 6px;
+  border: 1px solid var(--cl-border);
+  background: var(--cl-surface);
+  color: var(--cl-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-theme-toggle:hover {
+  background: var(--cl-surface-hover);
+  color: var(--cl-primary);
+  border-color: var(--cl-border-active);
+}
+
+.check-icon {
+  margin-left: auto;
+  color: var(--cl-primary);
+  font-size: 13px;
+}
+
 </style>
 
 <style>
