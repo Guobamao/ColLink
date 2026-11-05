@@ -1,61 +1,74 @@
 <template>
-  <div class="canvas-tabs-bar">
+  <div class="h-8 px-3 bg-surface-subtle/80 border-b border-border flex items-center justify-between text-xs shrink-0 select-none">
     <!-- Left: Canvas Views Tabs List -->
-    <div class="tabs-scroll-container">
+    <div class="flex items-center gap-0.5 overflow-x-auto max-w-[calc(100%-240px)] h-full scrollbar-none">
       <div
         v-for="c in canvasStore.canvases"
         :key="c.id"
-        class="canvas-tab"
-        :class="{ 'is-active': canvasStore.currentCanvasId === c.id }"
+        class="group relative h-8 px-2.5 flex items-center gap-1.5 text-xs cursor-pointer transition-colors border-r border-border/40"
+        :class="canvasStore.currentCanvasId === c.id
+          ? 'bg-surface text-primary font-medium border-t-2 border-t-primary shadow-2xs'
+          : 'text-muted hover:text-primary-text hover:bg-surface/50'"
         @click="canvasStore.switchCanvas(c.id)"
         @dblclick="handleRename(c)"
       >
-        <el-icon class="tab-icon"><DataBoard /></el-icon>
-        <span class="tab-title" :title="`双击重命名: ${c.name}`">{{ c.name }}</span>
-        <span class="tab-badge" :title="`当前视图包含 ${c.table_count || 0} 张表`">
+        <LayoutDashboard class="w-3.5 h-3.5 shrink-0 opacity-70" />
+        <span class="max-w-[130px] truncate" :title="`双击重命名: ${c.name}`">{{ c.name }}</span>
+        <span
+          class="px-1 py-0.2 text-[10px] font-mono rounded"
+          :class="canvasStore.currentCanvasId === c.id ? 'bg-primary-light text-primary font-semibold' : 'bg-surface-hover text-muted'"
+          :title="`当前视图包含 ${c.table_count || 0} 张表`"
+        >
           {{ c.table_count || 0 }}
         </span>
 
-        <!-- Tab Actions: Edit / Close -->
-        <span class="tab-actions" @click.stop>
-          <el-icon
-            class="action-icon edit-icon"
+        <!-- Tab Actions: Edit / Close on hover -->
+        <div class="flex items-center gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop>
+          <button
+            type="button"
+            class="p-0.5 rounded hover:bg-surface-hover text-muted hover:text-primary-text"
             title="重命名画布视图"
             @click="handleRename(c)"
           >
-            <Edit />
-          </el-icon>
-          <el-icon
+            <Edit3 class="w-3 h-3" />
+          </button>
+          <button
             v-if="canvasStore.canvases.length > 1"
-            class="action-icon close-icon"
+            type="button"
+            class="p-0.5 rounded hover:bg-red-500/10 text-muted hover:text-red-500"
             title="关闭并删除此画布视图"
             @click="handleDelete(c)"
           >
-            <Close />
-          </el-icon>
-        </span>
+            <X class="w-3 h-3" />
+          </button>
+        </div>
       </div>
 
       <!-- + New Canvas Button -->
-      <button class="btn-new-tab" title="新建业务视图画布" @click="handleCreateCanvas">
-        <el-icon><Plus /></el-icon>
-        <span>新建视图</span>
+      <button
+        type="button"
+        class="h-6 px-1.5 rounded flex items-center gap-1 text-[11px] text-muted hover:text-primary-text hover:bg-surface border border-dashed border-border hover:border-primary/50 transition-colors ml-1.5 shrink-0"
+        title="新建业务视图画布"
+        @click="handleCreateCanvas"
+      >
+        <Plus class="w-3 h-3" />
+        <span>新建</span>
       </button>
     </div>
 
     <!-- Right: Pool Summary & Import Button -->
-    <div class="tabs-right-actions">
-      <span class="pool-stat-label">
-        项目表库共 <strong>{{ projectStore.currentProject?.tables?.length || 0 }}</strong> 张表
+    <div class="flex items-center gap-3 shrink-0">
+      <span class="text-[11px] text-muted">
+        项目表库共 <strong class="text-primary-text font-mono font-medium">{{ projectStore.currentProject?.tables?.length || 0 }}</strong> 张
       </span>
-      <el-button
-        size="small"
-        class="btn-import-pool"
+      <button
+        type="button"
+        class="h-6 px-2 rounded-md bg-surface hover:bg-surface-hover border border-border text-primary-text flex items-center gap-1.5 text-[11px] font-medium transition-colors shadow-2xs"
         @click="openImportDialog"
       >
-        <el-icon><FolderAdd /></el-icon>
-        <span>从表库引入</span>
-      </el-button>
+        <Layers class="w-3.5 h-3.5 text-primary" />
+        <span>引入数据表</span>
+      </button>
     </div>
 
     <!-- Dialog: Import Tables from Project Pool -->
@@ -65,20 +78,20 @@
       width="680px"
       destroy-on-close
     >
-      <div class="import-dialog-content">
-        <p class="dialog-desc">
-          将当前项目「<strong>{{ projectStore.currentProject?.name }}</strong>」中尚未加入当前视图的公共表引入画布中参与连线。
+      <div class="flex flex-col gap-3">
+        <p class="text-xs text-muted m-0 leading-relaxed">
+          将当前项目「<strong class="text-primary-text">{{ projectStore.currentProject?.name }}</strong>」中尚未加入当前视图的公共表引入画布中参与连线。
         </p>
-        <div class="dialog-search-bar">
+        <div class="flex justify-start">
           <el-input
             v-model="searchPoolKeyword"
             placeholder="按英文表名或中文注释过滤..."
             clearable
             size="small"
-            class="pool-search-input"
+            class="w-72"
           >
             <template #prefix>
-              <el-icon><Search /></el-icon>
+              <Search class="w-3.5 h-3.5 text-muted" />
             </template>
           </el-input>
         </div>
@@ -100,18 +113,18 @@
           />
           <el-table-column prop="table_name" label="表英文名" min-width="160">
             <template #default="{ row }">
-              <span class="pool-tbl-name">{{ row.table_name }}</span>
+              <span class="font-mono font-medium text-primary-text">{{ row.table_name }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="table_comment" label="中文业务注释" min-width="160">
             <template #default="{ row }">
-              <span v-if="row.table_comment" class="pool-tbl-comment">{{ row.table_comment }}</span>
-              <span v-else class="text-muted">无注释</span>
+              <span v-if="row.table_comment" class="text-muted">{{ row.table_comment }}</span>
+              <span v-else class="text-muted/60">无注释</span>
             </template>
           </el-table-column>
           <el-table-column label="字段数" width="75" align="center">
             <template #default="{ row }">
-              <span class="pool-col-count">{{ row.columns?.length || 0 }}</span>
+              <span class="font-mono text-muted">{{ row.columns?.length || 0 }}</span>
             </template>
           </el-table-column>
           <el-table-column label="视图状态" width="105" align="center">
@@ -128,11 +141,11 @@
       </div>
 
       <template #footer>
-        <div class="dialog-footer">
-          <span class="selected-hint">
-            已勾选 <strong style="color: var(--cl-primary)">{{ selectedTableIds.length }}</strong> 张新数据表
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-muted">
+            已勾选 <strong class="text-primary font-mono">{{ selectedTableIds.length }}</strong> 张新数据表
           </span>
-          <div class="footer-btn-group">
+          <div class="flex items-center gap-2">
             <el-button @click="importDialogVisible = false">取消</el-button>
             <el-button
               type="primary"
@@ -153,7 +166,14 @@ import { ref, computed } from 'vue'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useProjectStore } from '@/stores/projectStore'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { DataBoard, Plus, Edit, Close, FolderAdd, Search } from '@element-plus/icons-vue'
+import {
+  LayoutDashboard,
+  Plus,
+  Edit3,
+  X,
+  Layers,
+  Search,
+} from 'lucide-vue-next'
 import type { TableMeta } from '@/types'
 
 const canvasStore = useCanvasStore()
@@ -254,243 +274,15 @@ const confirmImportTables = async () => {
 </script>
 
 <style scoped>
-.canvas-tabs-bar {
-  height: 38px;
-  background: var(--cl-surface-subtle);
-  border-bottom: 1px solid var(--cl-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
-  box-sizing: border-box;
-  user-select: none;
-  z-index: 40;
-}
-
-.tabs-scroll-container {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  overflow-x: auto;
-  max-width: calc(100% - 240px);
-  height: 100%;
-}
-
-.tabs-scroll-container::-webkit-scrollbar {
-  height: 2px;
-}
-
-.tabs-scroll-container::-webkit-scrollbar-thumb {
-  background: var(--cl-border-strong);
-  border-radius: 2px;
-}
-
-.canvas-tab {
-  height: 37px;
-  padding: 0 12px;
-  background: transparent;
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 12px;
-  color: var(--cl-text-muted);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-  border-bottom: 2px solid transparent;
-  border-right: 1px solid var(--cl-border);
-  position: relative;
-}
-
-.canvas-tab:hover {
-  background: var(--cl-surface-hover);
+.text-primary-text {
   color: var(--cl-text-primary);
 }
 
-.canvas-tab.is-active {
-  background: var(--cl-surface);
-  color: var(--cl-primary);
-  font-weight: 600;
-  border-bottom-color: var(--cl-primary);
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
-
-.tab-icon {
-  font-size: 13px;
-}
-
-.tab-title {
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tab-badge {
-  font-family: var(--cl-font-mono);
-  font-size: 10px;
-  background: var(--cl-surface-hover);
-  color: var(--cl-text-muted);
-  padding: 1px 5px;
-  border-radius: 4px;
-  line-height: 1.2;
-}
-
-.canvas-tab.is-active .tab-badge {
-  background: var(--cl-primary-light);
-  color: var(--cl-primary);
-  font-weight: 600;
-}
-
-.tab-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: 2px;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
-.canvas-tab:hover .tab-actions,
-.canvas-tab.is-active .tab-actions {
-  opacity: 1;
-}
-
-.action-icon {
-  font-size: 11px;
-  padding: 2px;
-  border-radius: 3px;
-  color: var(--cl-text-faint);
-  transition: all 0.15s ease;
-}
-
-.action-icon:hover {
-  background: var(--cl-surface-hover);
-  color: var(--cl-text-primary);
-}
-
-.close-icon:hover {
-  color: var(--cl-danger);
-  background: var(--cl-danger-light);
-}
-
-.btn-new-tab {
-  height: 24px;
-  padding: 0 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: transparent;
-  border: 1px dashed var(--cl-border-strong);
-  border-radius: 4px;
-  color: var(--cl-text-muted);
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  margin-left: 6px;
-  white-space: nowrap;
-}
-
-.btn-new-tab:hover {
-  background: var(--cl-surface-hover);
-  color: var(--cl-primary);
-  border-color: var(--cl-primary);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
-}
-
-.tabs-right-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.pool-stat-label {
-  font-size: 11px;
-  color: var(--cl-text-muted);
-}
-
-.pool-stat-label strong {
-  font-family: var(--cl-font-mono);
-  color: var(--cl-text-primary);
-}
-
-.btn-import-pool {
-  font-size: 12px;
-  height: 26px;
-  padding: 0 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border-radius: 5px;
-  background: var(--cl-surface);
-  border: 1px solid var(--cl-border);
-  color: var(--cl-text-secondary);
-}
-
-.btn-import-pool:hover {
-  background: var(--cl-surface-hover);
-  color: var(--cl-primary);
-  border-color: var(--cl-border-strong);
-}
-
-.import-dialog-content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.dialog-desc {
-  font-size: 13px;
-  color: var(--cl-text-muted);
-  margin: 0;
-  line-height: 1.5;
-}
-
-.dialog-search-bar {
-  display: flex;
-  justify-content: flex-start;
-}
-
-.pool-search-input {
-  width: 260px;
-}
-
-.pool-tbl-name {
-  font-family: var(--cl-font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--cl-text-primary);
-}
-
-.pool-tbl-comment {
-  font-size: 12px;
-  color: var(--cl-text-muted);
-}
-
-.pool-col-count {
-  font-family: var(--cl-font-mono);
-  font-size: 11px;
-  color: var(--cl-text-secondary);
-}
-
-.text-muted {
-  color: var(--cl-text-faint);
-  font-size: 12px;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.selected-hint {
-  font-size: 12px;
-  color: var(--cl-text-muted);
-}
-
-.footer-btn-group {
-  display: flex;
-  gap: 10px;
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 </style>

@@ -379,7 +379,7 @@ const handleExportImage = async () => {
 .canvas-wrapper {
   flex: 1;
   width: 100%;
-  height: calc(100vh - 52px - 38px);
+  height: calc(100vh - 40px - 32px);
   position: relative;
 }
 
