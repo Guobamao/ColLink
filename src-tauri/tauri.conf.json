@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "ColLink - 数据血缘与字段映射平台",
         "width": 1440,
         "height": 900,
