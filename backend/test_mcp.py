@@ -18,6 +18,7 @@ from app.mcp.server import (
     collink_list_mappings,
     collink_get_field_lineage,
     collink_auto_map_fields,
+    collink_find_relation_path,
     collink_audit_unmapped_fields,
     collink_generate_etl_sql,
     get_projects_resource,
@@ -88,6 +89,13 @@ def run_tests():
     if len(tables) >= 2:
         auto_res = collink_auto_map_fields(p_id, tables[0]["table_name"], tables[1]["table_name"], apply_mappings=False)
         print(f"Auto mapping {tables[0]['table_name']} -> {tables[1]['table_name']}: {auto_res.get('suggested_count')} suggested pairs")
+
+        # 9.5 Test Relation Path Discovery
+        path_res = collink_find_relation_path(p_id, tables[0]["table_name"], tables[1]["table_name"], max_hops=4)
+        print(f"Relation paths between {tables[0]['table_name']} and {tables[1]['table_name']}: {path_res.get('paths_found')} paths found.")
+        for idx, pth in enumerate(path_res.get("paths", [])[:2]):
+            print(f"  Path {idx+1} ({pth['hops']} hops, fully_explicit: {pth['is_fully_explicit']}): {pth['summary_title']}")
+            print(f"    SQL Preview: {pth['sql_snippet'].splitlines()[3] if len(pth['sql_snippet'].splitlines()) > 3 else ''}")
 
     # 10. Test Resources
     res_projects = get_projects_resource()

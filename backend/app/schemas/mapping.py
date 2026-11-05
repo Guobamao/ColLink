@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Any
 from pydantic import BaseModel
 from app.schemas.table import TableOut, ColumnOut
 
@@ -44,3 +44,9 @@ class BatchMappingCreate(BaseModel):
 
 class BatchDeleteRequest(BaseModel):
     ids: list[str]
+
+
+class PathDiscoveryRequest(BaseModel):
+    source_table_id: str
+    target_table_id: str
+    max_hops: Optional[int] = 4

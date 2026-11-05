@@ -8,6 +8,7 @@
       @open-backup-dialog="openBackupDialog"
       @open-mapping-drawer="openMappingDrawer"
       @open-auto-mapping="openAutoMappingDialog"
+      @open-relation-path="openRelationPathDrawer"
       @fit-view="handleFitView"
       @export-image="handleExportImage"
       @focus-table="handleFocusTable"
@@ -57,7 +58,7 @@
         <!-- MiniMap Fold/Unfold Toggle Button -->
         <div
           class="minimap-toggle-btn"
-          :class="{ 'is-active': showMiniMap }"
+          :class="{ 'is-active': showMiniMap, 'is-collapsed': !showMiniMap }"
           :title="showMiniMap ? '收起鹰眼缩略图' : '展开鹰眼缩略图'"
           @click="showMiniMap = !showMiniMap"
         >
@@ -101,6 +102,7 @@
     <ProjectDialog ref="projectDialogRef" />
     <BackupDialog ref="backupDialogRef" />
     <MappingDrawer ref="mappingDrawerRef" />
+    <RelationPathDrawer ref="relationPathDrawerRef" />
   </div>
 </template>
 
@@ -129,15 +131,17 @@ import AutoMappingDialog from '@/components/canvas/AutoMappingDialog.vue'
 import ProjectDialog from '@/components/dialogs/ProjectDialog.vue'
 import BackupDialog from '@/components/dialogs/BackupDialog.vue'
 import MappingDrawer from '@/components/canvas/MappingDrawer.vue'
+import RelationPathDrawer from '@/components/canvas/RelationPathDrawer.vue'
 import SmartObstacleEdge from '@/components/canvas/SmartObstacleEdge.vue'
 
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 
-const { fitView } = useVueFlow()
+const { fitView, updateNodeInternals } = useVueFlow()
 
 const projectStore = useProjectStore()
 const canvasStore = useCanvasStore()
+canvasStore.registerUpdateNodeInternals(updateNodeInternals)
 
 const statusTipText = computed(() => {
   if (canvasStore.highlightedNodeIds.size > 0) {
@@ -157,6 +161,7 @@ const autoMappingDialogRef = ref<InstanceType<typeof AutoMappingDialog> | null>(
 const projectDialogRef = ref<InstanceType<typeof ProjectDialog> | null>(null)
 const backupDialogRef = ref<InstanceType<typeof BackupDialog> | null>(null)
 const mappingDrawerRef = ref<InstanceType<typeof MappingDrawer> | null>(null)
+const relationPathDrawerRef = ref<InstanceType<typeof RelationPathDrawer> | null>(null)
 
 // Register custom node & edge components
 const nodeTypes = {
@@ -169,6 +174,9 @@ const edgeTypes = {
 }
 
 onMounted(async () => {
+  window.addEventListener('collink:open-relation-path', (e: any) => {
+    openRelationPathDrawer(e.detail?.sourceTableId)
+  })
   await projectStore.fetchProjects()
   if (projectStore.currentProject) {
     await canvasStore.fetchCanvases(projectStore.currentProject.id)
@@ -252,6 +260,10 @@ const openBackupDialog = () => {
 const openMappingDrawer = () => {
   if (!checkProjectSelected()) return
   mappingDrawerRef.value?.open()
+}
+const openRelationPathDrawer = (srcId?: string, tgtId?: string) => {
+  if (!checkProjectSelected()) return
+  relationPathDrawerRef.value?.open(srcId, tgtId)
 }
 
 // Full Canvas High-Res 2x PNG Export (SVG Serialization & Offscreen Canvas)
@@ -377,8 +389,10 @@ const handleExportImage = async () => {
 
 /* Vue Flow Controls Aesthetic Upgrade */
 :deep(.vue-flow__controls) {
-  bottom: 20px !important;
-  right: 20px !important;
+  bottom: 16px !important;
+  right: 16px !important;
+  margin: 0 !important;
+  padding: 0 !important;
   background: #ffffff !important;
   border: 1px solid var(--cl-border) !important;
   border-radius: 6px !important;
@@ -386,11 +400,15 @@ const handleExportImage = async () => {
   overflow: hidden !important;
   display: flex !important;
   flex-direction: column !important;
+  z-index: 10 !important;
 }
 
 :deep(.vue-flow__controls-button) {
   width: 32px !important;
   height: 32px !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  margin: 0 !important;
   border: none !important;
   border-bottom: 1px solid var(--cl-border) !important;
   background: transparent !important;
@@ -469,27 +487,30 @@ const handleExportImage = async () => {
 
 /* MiniMap Container */
 :deep(.canvas-minimap) {
-  bottom: 20px !important;
-  right: 64px !important;
-  width: 190px !important;
-  height: 125px !important;
+  bottom: 16px !important;
+  right: 60px !important;
+  margin: 0 !important;
+  width: 200px !important;
+  height: 130px !important;
   background: #ffffff !important;
   border: 1px solid var(--cl-border) !important;
   border-radius: 6px !important;
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
   overflow: hidden !important;
+  z-index: 9 !important;
 }
 
 /* MiniMap Toggle Button */
 .minimap-toggle-btn {
   position: absolute;
-  bottom: 156px;
-  right: 64px;
+  bottom: 154px;
+  right: 60px;
   z-index: 10;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
   background: #ffffff;
   border: 1px solid var(--cl-border);
   border-radius: 4px;
@@ -498,18 +519,29 @@ const handleExportImage = async () => {
   font-weight: 500;
   color: var(--cl-text-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+}
+
+.minimap-toggle-btn.is-collapsed {
+  bottom: 16px;
+  right: 60px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
 }
 
 .minimap-toggle-btn:hover {
   background: #ffffff;
   color: var(--cl-primary);
   border-color: var(--cl-border-active);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
 }
 
 .minimap-toggle-btn.is-active {
   color: var(--cl-primary);
+  font-weight: 600;
 }
 
 /* Edge and Node Layering */

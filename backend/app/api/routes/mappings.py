@@ -5,7 +5,8 @@ from app.core.database import get_db
 from app.models.mapping import FieldMapping
 from app.models.table import TableMeta
 from app.models.column import ColumnMeta
-from app.schemas.mapping import MappingCreate, MappingOut, MappingDetailOut, BatchMappingCreate, BatchDeleteRequest
+from app.schemas.mapping import MappingCreate, MappingOut, MappingDetailOut, BatchMappingCreate, BatchDeleteRequest, PathDiscoveryRequest
+from app.services.path_discovery import PathDiscoveryService
 
 router = APIRouter()
 
@@ -117,4 +118,30 @@ def batch_delete_mappings(data: BatchDeleteRequest, db: Session = Depends(get_db
     deleted = db.query(FieldMapping).filter(FieldMapping.id.in_(data.ids)).delete(synchronize_session=False)
     db.commit()
     return {"deleted_count": deleted}
+
+
+@router.post("/discover-path")
+def discover_relation_path(
+    project_id: str,
+    data: PathDiscoveryRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    自动探查起点表与目标表之间的关联路径 (支持多跳中继表、已建血缘与语义推断)。
+    """
+    paths = PathDiscoveryService.discover_paths(
+        db=db,
+        project_id=project_id,
+        source_table_id=data.source_table_id,
+        target_table_id=data.target_table_id,
+        max_hops=data.max_hops or 4
+    )
+    return {
+        "project_id": project_id,
+        "source_table_id": data.source_table_id,
+        "target_table_id": data.target_table_id,
+        "paths_count": len(paths),
+        "paths": paths
+    }
+
 

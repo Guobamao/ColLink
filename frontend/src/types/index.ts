@@ -85,3 +85,48 @@ export interface CanvasDetail extends CanvasView {
   tables: CanvasTableMeta[]
   mappings: FieldMapping[]
 }
+
+export interface PathStepTable {
+  id: string
+  table_name: string
+  table_comment: string
+}
+
+export interface PathStepColumn {
+  id: string
+  column_name: string
+  data_type: string
+  column_comment: string
+}
+
+export interface PathStep {
+  step_index: number
+  relation_type: 'EXPLICIT' | 'INFERRED'
+  match_reason: string
+  confidence: number
+  from_table: PathStepTable
+  from_column: PathStepColumn
+  to_table: PathStepTable
+  to_column: PathStepColumn
+  step_label: string
+}
+
+export interface RelationPath {
+  path_id: string
+  summary_title: string
+  hops: number
+  is_fully_explicit: boolean
+  avg_confidence: number
+  involved_table_ids: string[]
+  intermediate_table_ids: string[]
+  steps: PathStep[]
+  sql_snippet: string
+}
+
+export interface RelationPathResult {
+  paths_count: number
+  source_table: PathStepTable
+  target_table: PathStepTable
+  paths: RelationPath[]
+}
+

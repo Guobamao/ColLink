@@ -225,21 +225,26 @@ def launch_browser(url: str) -> None:
             "--no-first-run",
             "--no-default-browser-check",
             "--disable-http-cache",
+            "--disable-background-timer-throttling",
+            "--disable-backgrounding-occluded-windows",
+            "--disable-renderer-backgrounding",
+            "--disable-features=CalculateNativeWinOcclusion,msSleepingTabs",
             f"--app={url}",
             "--window-size=1440,900",
         ]
         logging.info(f"Running browser command: {' '.join(cmd)}")
         try:
-            subprocess.Popen(cmd)
-            logging.info("Browser subprocess launched successfully.")
+            proc = subprocess.Popen(cmd)
+            logging.info(f"Browser subprocess launched successfully (PID: {proc.pid}).")
             # Trigger native window icon injection in background
             threading.Thread(target=apply_window_icon, daemon=True).start()
-            return
+            return proc
         except Exception as e:
             logging.error(f"Failed to launch {browser_exe}: {e}", exc_info=True)
 
     logging.info("Falling back to default system browser.")
     webbrowser.open(url)
+    return None
 
 
 def main():
@@ -272,7 +277,7 @@ def main():
         logging.info(f"API server ready at {server_url}. Launching browser window...")
         print(f"[ColLink] API ready at {server_url}. Opening workspace...", flush=True)
 
-        launch_browser(server_url)
+        browser_proc = launch_browser(server_url)
 
         # Initialize lifecycle state
         start_time = time.time()
@@ -294,17 +299,26 @@ def main():
                     print("[ColLink] Client window closed. Shutting down server...", flush=True)
                     break
 
-            # Check 2: Active client lost heartbeat for > 20 seconds
-            if APP_STATE.get("has_connected"):
-                if now - APP_STATE["last_heartbeat"] > 20.0:
-                    logging.info("Heartbeat lost for > 20s. Exiting...")
-                    print("[ColLink] Heartbeat timeout (>20s). Shutting down server...", flush=True)
+            # Check 2: Browser process monitoring
+            if browser_proc is not None:
+                if browser_proc.poll() is not None:
+                    logging.info(f"Browser window closed (PID {browser_proc.pid} exited with code {browser_proc.returncode}). Shutting down server...")
+                    print("[ColLink] Browser window closed. Shutting down server...", flush=True)
                     break
             else:
-                # Check 3: Initial connection timeout (90 seconds grace period)
-                if now - start_time > 90.0:
-                    logging.warning("No client connected within 90s grace period. Exiting...")
-                    print("[ColLink] Initial connection timeout. No client connected within 90s.", flush=True)
+                # Check 2b: Fallback browser mode (webbrowser.open)
+                # Only exit after prolonged inactivity (> 30 minutes)
+                if APP_STATE.get("has_connected"):
+                    if now - APP_STATE["last_heartbeat"] > 1800.0:
+                        logging.info("Heartbeat lost for > 30 minutes in fallback mode. Exiting...")
+                        print("[ColLink] Heartbeat timeout (>30m). Shutting down server...", flush=True)
+                        break
+
+            # Check 3: Initial connection timeout (120 seconds grace period)
+            if not APP_STATE.get("has_connected"):
+                if now - start_time > 120.0:
+                    logging.warning("No client connected within 120s grace period. Exiting...")
+                    print("[ColLink] Initial connection timeout. No client connected within 120s.", flush=True)
                     break
 
         server.should_exit = True

@@ -21,8 +21,10 @@ from app.models.project import Project
 from app.models.table import TableMeta
 from app.models.column import ColumnMeta
 from app.models.mapping import FieldMapping
-from app.models.canvas import CanvasView
+from sqlalchemy import func, or_
+from app.models.canvas import CanvasView, CanvasNodeLayout
 from app.services.ddl_parser import DdlParser
+from app.services.path_discovery import PathDiscoveryService
 
 # Initialize MCP Server
 mcp_server = MCPServer(
@@ -77,6 +79,81 @@ def collink_list_canvases(project_id: str) -> List[Dict[str, Any]]:
                 "table_ids": table_ids
             })
         return results
+
+
+@mcp_server.tool(
+    name="collink_create_canvas",
+    description="在指定项目下创建新的业务主题视图（画布）。支持指定视图名称，以及可选关联初始数据表（表名或表ID列表）。"
+)
+def collink_create_canvas(
+    project_id: str,
+    canvas_name: str,
+    table_names: Optional[List[str]] = None
+) -> Dict[str, Any]:
+    with SessionLocal() as db:
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            return {"error": f"项目 {project_id} 不存在"}
+
+        max_order = (
+            db.query(func.max(CanvasView.sort_order))
+            .filter(CanvasView.project_id == project_id)
+            .scalar()
+            or 0
+        )
+        canvas = CanvasView(
+            project_id=project_id,
+            name=canvas_name.strip() or "新建业务视图",
+            sort_order=max_order + 1
+        )
+        db.add(canvas)
+        db.flush()
+
+        added_tables = []
+        if table_names:
+            tables = (
+                db.query(TableMeta)
+                .filter(
+                    TableMeta.project_id == project_id,
+                    or_(
+                        TableMeta.table_name.in_(table_names),
+                        TableMeta.id.in_(table_names)
+                    )
+                )
+                .all()
+            )
+            start_x, start_y = 100.0, 100.0
+            x_gap, y_gap = 380.0, 280.0
+            cols = 3
+            for idx, tbl in enumerate(tables):
+                gx = idx % cols
+                gy = idx // cols
+                layout = CanvasNodeLayout(
+                    canvas_id=canvas.id,
+                    table_id=tbl.id,
+                    position_x=start_x + gx * x_gap,
+                    position_y=start_y + gy * y_gap,
+                    color_tag="blue"
+                )
+                db.add(layout)
+                added_tables.append({
+                    "table_id": tbl.id,
+                    "table_name": tbl.table_name,
+                    "table_comment": tbl.table_comment
+                })
+
+        db.commit()
+        db.refresh(canvas)
+
+        return {
+            "canvas_id": canvas.id,
+            "canvas_name": canvas.name,
+            "project_id": canvas.project_id,
+            "sort_order": canvas.sort_order,
+            "table_count": len(added_tables),
+            "tables": added_tables,
+            "message": f"成功创建业务视图「{canvas.name}」"
+        }
 
 
 # ==============================================================================
@@ -499,6 +576,44 @@ def collink_auto_map_fields(
 # ==============================================================================
 # 4. Data Quality & Audit (质量审计与覆盖率检查)
 # ==============================================================================
+
+@mcp_server.tool(
+    name="collink_find_relation_path",
+    description="自动计算与探查两张表之间的关联路径（如 A.ID -> B.Uid -> C.Qid），严格基于已有字段血缘映射连线，输出多跳步骤与可执行的 SQL JOIN 语句。"
+)
+def collink_find_relation_path(
+    project_id: str,
+    source_table: str,
+    target_table: str,
+    max_hops: int = 4
+) -> Dict[str, Any]:
+    with SessionLocal() as db:
+        s_tbl = db.query(TableMeta).filter(
+            TableMeta.project_id == project_id,
+            or_(TableMeta.table_name.ilike(source_table), TableMeta.id == source_table)
+        ).first()
+        t_tbl = db.query(TableMeta).filter(
+            TableMeta.project_id == project_id,
+            or_(TableMeta.table_name.ilike(target_table), TableMeta.id == target_table)
+        ).first()
+        if not s_tbl or not t_tbl:
+            return {"error": f"未找到指定的数据表: {source_table} 或 {target_table}"}
+
+        paths = PathDiscoveryService.discover_paths(
+            db=db,
+            project_id=project_id,
+            source_table_id=s_tbl.id,
+            target_table_id=t_tbl.id,
+            max_hops=max_hops
+        )
+        return {
+            "project_id": project_id,
+            "source_table": s_tbl.table_name,
+            "target_table": t_tbl.table_name,
+            "paths_found": len(paths),
+            "paths": paths
+        }
+
 
 @mcp_server.tool(
     name="collink_audit_unmapped_fields",

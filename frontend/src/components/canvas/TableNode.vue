@@ -5,7 +5,9 @@
       'is-dimmed': isDimmed,
       'is-highlighted': isHighlighted,
       'is-focused': isFocused,
+      'is-picking-mode': !!canvasStore.pickingTableRole,
     }"
+    @click="handleCardClick"
     @wheel.stop
   >
     <!-- Card Header with Top Brand Accent -->
@@ -38,6 +40,10 @@
               <el-dropdown-item command="highlight">
                 <el-icon><Search /></el-icon>
                 <span>高亮上下游血缘</span>
+              </el-dropdown-item>
+              <el-dropdown-item command="relation-path">
+                <el-icon><Guide /></el-icon>
+                <span>探查关联路径</span>
               </el-dropdown-item>
               <el-dropdown-item command="edit">
                 <el-icon><Edit /></el-icon>
@@ -94,7 +100,12 @@
     </div>
 
     <!-- Column List (nowheel + @wheel.stop prevents canvas zooming) -->
-    <div class="column-list nowheel" @wheel.stop>
+    <div
+      ref="columnListRef"
+      class="column-list nowheel"
+      @wheel.stop
+      @scroll="handleColumnListScroll"
+    >
       <div
         v-for="col in filteredColumns"
         :id="`col_item_${col.id}`"
@@ -121,14 +132,6 @@
           :position="Position.Left"
           class="field-handle left-handle left-source"
           title="左侧拖拽/输出锚点"
-        />
-        <!-- Legacy left fallback -->
-        <Handle
-          :id="`target_${col.id}`"
-          type="target"
-          :position="Position.Left"
-          class="field-handle left-handle"
-          style="display: none;"
         />
 
         <div class="col-content">
@@ -174,14 +177,6 @@
           class="field-handle right-handle right-source"
           title="右侧拖拽/输出锚点"
         />
-        <!-- Legacy right fallback -->
-        <Handle
-          :id="`source_${col.id}`"
-          type="source"
-          :position="Position.Right"
-          class="field-handle right-handle"
-          style="display: none;"
-        />
       </div>
 
       <div v-if="filteredColumns.length === 0" class="empty-tip">
@@ -214,13 +209,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { Handle, Position } from '@vue-flow/core'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { Handle, Position, useVueFlow } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useProjectStore } from '@/stores/projectStore'
 import { api } from '@/api'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Search, Edit, Delete, CircleClose, Link, Right, MoreFilled, Filter, Remove } from '@element-plus/icons-vue'
+import { Search, Edit, Delete, CircleClose, Link, Right, MoreFilled, Filter, Remove, Guide } from '@element-plus/icons-vue'
 import type { ColumnMeta } from '@/types'
 
 const props = defineProps<{
@@ -236,6 +231,19 @@ const props = defineProps<{
 
 const canvasStore = useCanvasStore()
 const projectStore = useProjectStore()
+const { updateNodeInternals } = useVueFlow()
+
+const columnListRef = ref<HTMLElement | null>(null)
+let scrollRafId: number | null = null
+
+// When user scrolls column list, notify Vue Flow to update handle positions in real time
+const handleColumnListScroll = () => {
+  if (scrollRafId !== null) return
+  scrollRafId = requestAnimationFrame(() => {
+    updateNodeInternals(props.id)
+    scrollRafId = null
+  })
+}
 
 const searchKeyword = ref('')
 const onlyMapped = ref(false)
@@ -298,6 +306,19 @@ const hiddenCount = computed(() => {
   return (props.data.columns || []).length - filteredColumns.value.length
 })
 
+// Automatically re-measure handle positions when filtered columns change or node mounts
+watch(filteredColumns, () => {
+  nextTick(() => {
+    updateNodeInternals(props.id)
+  })
+})
+
+onMounted(() => {
+  nextTick(() => {
+    updateNodeInternals(props.id)
+  })
+})
+
 const getTypeClass = (typeStr: string = '') => {
   const upper = typeStr.toUpperCase()
   if (upper.includes('INT') || upper.includes('NUMBER')) return 'type-num'
@@ -312,6 +333,12 @@ const isPrimaryKey = (col: any) => {
   return name === 'ID' || name === `${props.data.tableName?.toUpperCase()}_ID` || comment.includes('主键') || comment.includes('唯一标识')
 }
 
+const handleCardClick = () => {
+  if (canvasStore.pickingTableRole) {
+    canvasStore.triggerTablePicked(props.data.tableId, props.data.tableName)
+  }
+}
+
 const handleCommand = (cmd: string) => {
   if (cmd === 'highlight') {
     if (isHighlighted.value && canvasStore.highlightedNodeIds.size > 0) {
@@ -319,6 +346,8 @@ const handleCommand = (cmd: string) => {
     } else {
       canvasStore.highlightLineage(props.data.tableId)
     }
+  } else if (cmd === 'relation-path') {
+    window.dispatchEvent(new CustomEvent('collink:open-relation-path', { detail: { sourceTableId: props.data.tableId } }))
   } else if (cmd === 'edit') {
     editForm.value = {
       tableName: props.data.tableName,
@@ -409,6 +438,17 @@ const confirmDelete = () => {
 .table-card-node.is-highlighted {
   border-color: var(--cl-primary);
   box-shadow: 0 0 0 2.5px var(--cl-primary-border), var(--cl-shadow-card-hover);
+}
+
+.table-card-node.is-picking-mode {
+  cursor: crosshair !important;
+  border-style: dashed;
+}
+
+.table-card-node.is-picking-mode:hover {
+  outline: 2px solid var(--cl-primary);
+  box-shadow: 0 0 16px rgba(37, 99, 235, 0.25);
+  transform: translateY(-2px);
 }
 
 @keyframes focus-pulse {

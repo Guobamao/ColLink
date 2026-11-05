@@ -7,15 +7,40 @@ import { onMounted, onUnmounted } from 'vue'
 import WorkspaceView from '@/views/WorkspaceView.vue'
 
 let heartbeatTimer: any = null
+let lastHeartbeat = Date.now()
+
+const sendHeartbeat = () => {
+  lastHeartbeat = Date.now()
+  fetch('/api/heartbeat', { method: 'POST' }).catch(() => {})
+}
+
+const handleUserActivity = () => {
+  // Throttle user activity pings to at most once every 5s
+  if (Date.now() - lastHeartbeat > 5000) {
+    sendHeartbeat()
+  }
+}
+
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible') {
+    sendHeartbeat()
+  }
+}
 
 onMounted(() => {
-  // Initial heartbeat
-  fetch('/api/heartbeat', { method: 'POST' }).catch(() => {})
+  // Immediate initial heartbeat
+  sendHeartbeat()
 
-  // Heartbeat ping every 4s
-  heartbeatTimer = setInterval(() => {
-    fetch('/api/heartbeat', { method: 'POST' }).catch(() => {})
-  }, 4000)
+  // Regular heartbeat ping
+  heartbeatTimer = setInterval(sendHeartbeat, 5000)
+
+  // Wakeup & window focus listeners
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  window.addEventListener('focus', sendHeartbeat)
+
+  // User activity triggers (e.g. returning to window after idle)
+  window.addEventListener('pointerdown', handleUserActivity, { passive: true })
+  window.addEventListener('keydown', handleUserActivity, { passive: true })
 
   // Listen for window close
   window.addEventListener('beforeunload', handleBeforeUnload)
@@ -23,6 +48,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (heartbeatTimer) clearInterval(heartbeatTimer)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  window.removeEventListener('focus', sendHeartbeat)
+  window.removeEventListener('pointerdown', handleUserActivity)
+  window.removeEventListener('keydown', handleUserActivity)
   window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 

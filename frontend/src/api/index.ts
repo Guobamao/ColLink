@@ -1,11 +1,23 @@
 import axios from 'axios'
-import type { Project, TableMeta, FieldMapping, ParsedTable, DbTableSummary, CanvasView, CanvasDetail } from '@/types'
+import type { Project, TableMeta, FieldMapping, ParsedTable, DbTableSummary, CanvasView, CanvasDetail, RelationPathResult } from '@/types'
 import { downloadFileStream, downloadJsonFile } from '@/utils/download'
 
 const apiClient = axios.create({
   baseURL: '/api',
   timeout: 30000,
 })
+
+apiClient.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.data?.detail) {
+      error.message = typeof error.response.data.detail === 'string'
+        ? error.response.data.detail
+        : JSON.stringify(error.response.data.detail)
+    }
+    return Promise.reject(error)
+  }
+)
 
 export const api = {
   // Projects
@@ -40,6 +52,8 @@ export const api = {
     apiClient.post<FieldMapping[]>(`/mappings/batch?project_id=${projectId}`, { mappings }).then(res => res.data),
   deleteMapping: (id: string) => apiClient.delete(`/mappings/${id}`).then(res => res.data),
   batchDeleteMappings: (ids: string[]) => apiClient.post<{ deleted_count: number }>('/mappings/batch-delete', { ids }).then(res => res.data),
+  discoverRelationPath: (projectId: string, data: { source_table_id: string; target_table_id: string; max_hops?: number }) =>
+    apiClient.post<RelationPathResult>(`/mappings/discover-path?project_id=${projectId}`, data).then(res => res.data),
 
   // DDL
   parseDdlText: (data: { sql_text: string; dialect?: string }) => apiClient.post<ParsedTable[]>('/ddl/parse', data).then(res => res.data),

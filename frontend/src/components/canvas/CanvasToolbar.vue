@@ -142,6 +142,12 @@
         <span>智能连线</span>
       </el-button>
 
+      <!-- 关联路径探查 -->
+      <el-button class="btn-subtle btn-compact" title="计算两表间多跳关联路径与生成 SQL JOIN" @click="emit('open-relation-path')">
+        <el-icon><Guide /></el-icon>
+        <span>路径探查</span>
+      </el-button>
+
       <!-- Clear Lineage Highlight Filter -->
       <el-button
         v-if="canvasStore.highlightedNodeIds.size > 0"
@@ -206,6 +212,7 @@ import {
   DocumentAdd,
   Connection,
   MagicStick,
+  Guide,
   Aim,
   Link,
   Download,
@@ -223,6 +230,7 @@ const emit = defineEmits([
   'open-backup-dialog',
   'open-mapping-drawer',
   'open-auto-mapping',
+  'open-relation-path',
   'fit-view',
   'export-image',
   'focus-table',

@@ -41,8 +41,8 @@ function isSegmentIntersectingBox(x1: number, y1: number, x2: number, y2: number
   const maxY = Math.max(y1, y2)
 
   // Horizontal segment
-  if (Math.abs(y1 - y2) < 0.5) {
-    const y = y1
+  if (Math.abs(y1 - y2) < 1.0) {
+    const y = (y1 + y2) / 2
     if (y >= box.top && y <= box.bottom) {
       if (Math.max(minX, box.left) < Math.min(maxX, box.right)) {
         return true
@@ -50,8 +50,8 @@ function isSegmentIntersectingBox(x1: number, y1: number, x2: number, y2: number
     }
   }
   // Vertical segment
-  else if (Math.abs(x1 - x2) < 0.5) {
-    const x = x1
+  else if (Math.abs(x1 - x2) < 1.0) {
+    const x = (x1 + x2) / 2
     if (x >= box.left && x <= box.right) {
       if (Math.max(minY, box.top) < Math.min(maxY, box.bottom)) {
         return true
@@ -155,14 +155,13 @@ const edgePath = computed(() => {
   }
 
   const MARGIN = 16
-  const STUB = 24
 
   // Collect obstacles (bounding boxes of all other table cards)
   const allNodes = getNodes.value || []
   const obstacles: Rect[] = []
   for (let i = 0; i < allNodes.length; i++) {
     const n = allNodes[i]
-    if (n.id === props.source || n.id === props.target) continue
+    if (n.id === props.source || n.id === props.target || n.hidden) continue
     const x = n.position.x
     const y = n.position.y
     const w = (n as any).dimensions?.width || 320
@@ -185,13 +184,17 @@ const edgePath = computed(() => {
   const pSrc: Point = { x: props.sourceX, y: props.sourceY }
   const pTgt: Point = { x: props.targetX, y: props.targetY }
 
+  // Adaptive stub distance based on node gap to avoid crossing over when cards are close
+  const gap = Math.abs(props.targetX - props.sourceX)
+  const STUB = Math.min(24, Math.max(8, gap / 3))
+
   const pStart: Point = {
-    x: props.sourcePosition === Position.Left ? props.sourceX - STUB : props.sourceX + STUB,
-    y: props.sourceY,
+    x: props.sourcePosition === Position.Left ? props.sourceX - STUB : props.sourcePosition === Position.Right ? props.sourceX + STUB : props.sourceX,
+    y: props.sourcePosition === Position.Top ? props.sourceY - STUB : props.sourcePosition === Position.Bottom ? props.sourceY + STUB : props.sourceY,
   }
   const pEnd: Point = {
-    x: props.targetPosition === Position.Left ? props.targetX - STUB : props.targetX + STUB,
-    y: props.targetY,
+    x: props.targetPosition === Position.Left ? props.targetX - STUB : props.targetPosition === Position.Right ? props.targetX + STUB : props.targetX,
+    y: props.targetPosition === Position.Top ? props.targetY - STUB : props.targetPosition === Position.Bottom ? props.targetY + STUB : props.targetY,
   }
 
   let rawPoints: Point[] = []

@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import type { Node, Edge, Connection } from '@vue-flow/core'
 import { computeDagLayeredLayout } from '@/utils/dagLayout'
 import { api } from '@/api'
-import type { TableMeta, FieldMapping, CanvasView, CanvasTableMeta } from '@/types'
+import type { TableMeta, FieldMapping, CanvasView, CanvasTableMeta, RelationPath } from '@/types'
 import { ElMessage } from 'element-plus'
 
 export type HistoryAction =
@@ -50,6 +50,8 @@ export const useCanvasStore = defineStore('canvas', () => {
   const selectedEdgeId = ref<string | null>(null)
   const highlightedNodeIds = ref<Set<string>>(new Set())
   const highlightedEdgeIds = ref<Set<string>>(new Set())
+  const activeRelationPath = ref<RelationPath | null>(null)
+  const pickingTableRole = ref<'source' | 'target' | null>(null)
 
   // Undo / Redo History Stack (max 30 steps)
   const historyStack = ref<HistoryAction[]>([])
@@ -81,6 +83,21 @@ export const useCanvasStore = defineStore('canvas', () => {
   const associatedColumnIds = ref<Set<string>>(new Set())
 
   let savePositionTimer: any = null
+  let updateNodeInternalsFn: ((nodeIds: string | string[]) => void) | null = null
+
+  const registerUpdateNodeInternals = (fn: (nodeIds: string | string[]) => void) => {
+    updateNodeInternalsFn = fn
+  }
+
+  const triggerUpdateNodeInternals = (nodeIds?: string | string[]) => {
+    if (updateNodeInternalsFn) {
+      if (nodeIds) {
+        updateNodeInternalsFn(nodeIds)
+      } else {
+        updateNodeInternalsFn(nodes.value.map(n => n.id))
+      }
+    }
+  }
 
   const persistPositions = async (updates: Array<{ id: string; pos_x: number; pos_y: number }>) => {
     if (updates.length === 0) return
@@ -223,6 +240,9 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     // Compute initial shortest path handles
     updateEdgeHandles()
+    setTimeout(() => {
+      triggerUpdateNodeInternals()
+    }, 100)
   }
 
   // Handle node dragging: dynamically update handles in real-time throttled by rAF
@@ -347,7 +367,14 @@ export const useCanvasStore = defineStore('canvas', () => {
           }
         }
       })
+      triggerUpdateNodeInternals()
     }, 60)
+
+    // Re-sync edge positions once smooth scroll settles
+    setTimeout(() => {
+      updateEdgeHandles()
+      triggerUpdateNodeInternals()
+    }, 350)
   }
 
   // Create connection from field handle drag
@@ -386,6 +413,12 @@ export const useCanvasStore = defineStore('canvas', () => {
         return
       }
 
+      const srcNode = nodes.value.find(n => n.id === params.source)
+      const tgtNode = nodes.value.find(n => n.id === params.target)
+      const srcCol = srcNode?.data?.columns?.find((c: any) => c.id === sourceColumnId)
+      const tgtCol = tgtNode?.data?.columns?.find((c: any) => c.id === targetColumnId)
+      const label = `${srcNode?.data?.tableName || ''}.${srcCol?.column_name || ''} → ${tgtNode?.data?.tableName || ''}.${tgtCol?.column_name || ''}`
+
       const newEdge: Edge = {
         id: edgeId,
         source: params.source,
@@ -401,6 +434,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           sourceColumnId,
           targetTableId,
           targetColumnId,
+          label,
         },
         style: {
           stroke: '#3b82f6',
@@ -410,6 +444,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       edges.value.push(newEdge)
       updateEdgeHandles()
+      triggerUpdateNodeInternals([params.source, params.target])
       selectColumn(sourceColumnId)
 
       pushHistory({
@@ -845,6 +880,77 @@ export const useCanvasStore = defineStore('canvas', () => {
     highlightedEdgeIds.value.clear()
   }
 
+  // Relation Path Discovery highlights
+  const highlightRelationPath = (path: RelationPath | null) => {
+    if (!path) {
+      clearRelationPathHighlight()
+      return
+    }
+
+    activeRelationPath.value = path
+    const targetNodeIds = new Set(path.involved_table_ids.map(id => `table_${id}`))
+    highlightedNodeIds.value = targetNodeIds
+
+    const targetEdgeIds = new Set<string>()
+    path.steps.forEach(step => {
+      const fromTableId = step.from_table.id
+      const fromColId = step.from_column.id
+      const toTableId = step.to_table.id
+      const toColId = step.to_column.id
+
+      edges.value.forEach(e => {
+        const d = e.data
+        if (!d) return
+        const matchForward = (d.sourceTableId === fromTableId && d.sourceColumnId === fromColId && d.targetTableId === toTableId && d.targetColumnId === toColId)
+        const matchBackward = (d.sourceTableId === toTableId && d.sourceColumnId === toColId && d.targetTableId === fromTableId && d.targetColumnId === fromColId)
+        if (matchForward || matchBackward) {
+          targetEdgeIds.add(e.id)
+          e.hidden = false
+          e.animated = true
+          e.style = {
+            stroke: '#2563eb',
+            strokeWidth: 3,
+          }
+        }
+      })
+    })
+
+    highlightedEdgeIds.value = targetEdgeIds
+  }
+
+  const clearRelationPathHighlight = () => {
+    activeRelationPath.value = null
+    highlightedNodeIds.value.clear()
+    highlightedEdgeIds.value.clear()
+    if (!activeColumnId.value) {
+      edges.value.forEach(e => {
+        e.hidden = true
+        e.animated = false
+      })
+    }
+  }
+
+  let onTablePickedCallback: ((role: 'source' | 'target', tableId: string, tableName: string) => void) | null = null
+
+  const startPickingTable = (role: 'source' | 'target', callback: (role: 'source' | 'target', tableId: string, tableName: string) => void) => {
+    pickingTableRole.value = role
+    onTablePickedCallback = callback
+  }
+
+  const cancelPickingTable = () => {
+    pickingTableRole.value = null
+    onTablePickedCallback = null
+  }
+
+  const triggerTablePicked = (tableId: string, tableName: string) => {
+    if (pickingTableRole.value && onTablePickedCallback) {
+      const role = pickingTableRole.value
+      const cb = onTablePickedCallback
+      cancelPickingTable()
+      cb(role, tableId, tableName)
+    }
+  }
+
   // Focus table for quick search
   const focusTable = (tableId: string) => {
     focusedTableId.value = tableId
@@ -993,5 +1099,14 @@ export const useCanvasStore = defineStore('canvas', () => {
     applyAutoLayout,
     highlightLineage,
     clearHighlight,
+    activeRelationPath,
+    pickingTableRole,
+    startPickingTable,
+    cancelPickingTable,
+    triggerTablePicked,
+    registerUpdateNodeInternals,
+    triggerUpdateNodeInternals,
+    highlightRelationPath,
+    clearRelationPathHighlight,
   }
 })
