@@ -1,43 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   /* Font Families */
   --cl-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
   --cl-font-mono: "JetBrains Mono", "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
 
-  /* Palette Tokens (Light Default) */
-  --cl-canvas-bg: #f8fafc;
+  /* Palette Tokens (Zinc Light) */
+  --cl-canvas-bg: #fafafa;
   --cl-surface: #ffffff;
-  --cl-surface-subtle: #f8fafc;
-  --cl-surface-hover: #f1f5f9;
+  --cl-surface-subtle: #f4f4f5;
+  --cl-surface-hover: #e4e4e7;
   
-  --cl-border: #e2e8f0;
-  --cl-border-strong: #cbd5e1;
-  --cl-border-active: #93c5fd;
+  --cl-border: #e4e4e7;
+  --cl-border-strong: #d4d4d8;
+  --cl-border-active: #3b82f6;
 
-  --cl-text-primary: #0f172a;
-  --cl-text-secondary: #334155;
-  --cl-text-muted: #64748b;
-  --cl-text-faint: #94a3b8;
+  --cl-text-primary: #18181b;
+  --cl-text-secondary: #27272a;
+  --cl-text-muted: #71717a;
+  --cl-text-faint: #a1a1aa;
 
-  --cl-primary: #1d4ed8;
-  --cl-primary-hover: #1e40af;
+  --cl-primary: #2563eb;
+  --cl-primary-hover: #1d4ed8;
   --cl-primary-light: #eff6ff;
   --cl-primary-border: #bfdbfe;
 
   --cl-accent-glow: #3b82f6;
   --cl-accent-glow-subtle: rgba(59, 130, 246, 0.15);
 
-  --cl-success: #059669;
+  --cl-success: #10b981;
   --cl-success-light: #ecfdf5;
-  --cl-warning: #d97706;
+  --cl-warning: #f59e0b;
   --cl-warning-light: #fffbeb;
-  --cl-danger: #dc2626;
+  --cl-danger: #ef4444;
   --cl-danger-light: #fef2f2;
 
   /* Shadows */
-  --cl-shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
-  --cl-shadow-card: 0 2px 8px -1px rgba(15, 23, 42, 0.06), 0 1px 3px -1px rgba(15, 23, 42, 0.04);
-  --cl-shadow-card-hover: 0 10px 25px -4px rgba(15, 23, 42, 0.09), 0 4px 8px -2px rgba(15, 23, 42, 0.04);
-  --cl-shadow-popup: 0 12px 32px -4px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+  --cl-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --cl-shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --cl-shadow-card-hover: 0 6px 16px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+  --cl-shadow-popup: 0 12px 30px -4px rgba(0, 0, 0, 0.12), 0 4px 10px -2px rgba(0, 0, 0, 0.06);
 
   /* Element Plus Theme Harmonization */
   --el-color-primary: var(--cl-primary);
@@ -57,59 +61,59 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Dark Theme Tokens */
+/* Dark Theme Tokens (Linear / Supabase Deep Zinc) */
 html.dark {
   color-scheme: dark;
 
-  --cl-canvas-bg: #0b1120;
-  --cl-surface: #1e293b;
-  --cl-surface-subtle: #141e30;
-  --cl-surface-hover: #334155;
+  --cl-canvas-bg: #09090b;
+  --cl-surface: #121215;
+  --cl-surface-subtle: #18181b;
+  --cl-surface-hover: #27272a;
 
-  --cl-border: #334155;
-  --cl-border-strong: #475569;
+  --cl-border: #27272a;
+  --cl-border-strong: #3f3f46;
   --cl-border-active: #60a5fa;
 
-  --cl-text-primary: #f8fafc;
-  --cl-text-secondary: #cbd5e1;
-  --cl-text-muted: #94a3b8;
-  --cl-text-faint: #64748b;
+  --cl-text-primary: #fafafa;
+  --cl-text-secondary: #e4e4e7;
+  --cl-text-muted: #a1a1aa;
+  --cl-text-faint: #71717a;
 
   --cl-primary: #3b82f6;
   --cl-primary-hover: #60a5fa;
-  --cl-primary-light: rgba(59, 130, 246, 0.18);
-  --cl-primary-border: #1d4ed8;
+  --cl-primary-light: rgba(59, 130, 246, 0.15);
+  --cl-primary-border: rgba(59, 130, 246, 0.35);
 
   --cl-accent-glow: #60a5fa;
   --cl-accent-glow-subtle: rgba(96, 165, 250, 0.25);
 
   --cl-success: #10b981;
-  --cl-success-light: rgba(16, 185, 129, 0.18);
+  --cl-success-light: rgba(16, 185, 129, 0.15);
   --cl-warning: #f59e0b;
-  --cl-warning-light: rgba(245, 158, 11, 0.18);
+  --cl-warning-light: rgba(245, 158, 11, 0.15);
   --cl-danger: #ef4444;
-  --cl-danger-light: rgba(239, 68, 68, 0.18);
+  --cl-danger-light: rgba(239, 68, 68, 0.15);
 
   /* Deep Contrast Shadows */
-  --cl-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
-  --cl-shadow-card: 0 4px 14px -2px rgba(0, 0, 0, 0.55), 0 2px 6px -1px rgba(0, 0, 0, 0.4);
-  --cl-shadow-card-hover: 0 12px 28px -4px rgba(0, 0, 0, 0.75), 0 4px 12px -2px rgba(0, 0, 0, 0.5);
-  --cl-shadow-popup: 0 16px 36px -4px rgba(0, 0, 0, 0.8), 0 6px 16px -2px rgba(0, 0, 0, 0.6);
+  --cl-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
+  --cl-shadow-card: 0 4px 14px -2px rgba(0, 0, 0, 0.65), 0 2px 6px -1px rgba(0, 0, 0, 0.5);
+  --cl-shadow-card-hover: 0 12px 28px -4px rgba(0, 0, 0, 0.85), 0 4px 12px -2px rgba(0, 0, 0, 0.6);
+  --cl-shadow-popup: 0 16px 36px -4px rgba(0, 0, 0, 0.9), 0 6px 16px -2px rgba(0, 0, 0, 0.7);
 
   /* Element Plus Harmonization in Dark */
-  --el-bg-color: #1e293b;
-  --el-bg-color-page: #0b1120;
-  --el-bg-color-overlay: #1e293b;
-  --el-text-color-primary: #f8fafc;
-  --el-text-color-regular: #cbd5e1;
-  --el-text-color-secondary: #94a3b8;
-  --el-border-color: #334155;
-  --el-border-color-light: #334155;
-  --el-border-color-lighter: #1e293b;
-  --el-fill-color-blank: #1e293b;
-  --el-fill-color: #334155;
-  --el-fill-color-light: #141e30;
-  --el-fill-color-lighter: #0f172a;
+  --el-bg-color: #121215;
+  --el-bg-color-page: #09090b;
+  --el-bg-color-overlay: #18181b;
+  --el-text-color-primary: #fafafa;
+  --el-text-color-regular: #e4e4e7;
+  --el-text-color-secondary: #a1a1aa;
+  --el-border-color: #27272a;
+  --el-border-color-light: #27272a;
+  --el-border-color-lighter: #18181b;
+  --el-fill-color-blank: #121215;
+  --el-fill-color: #27272a;
+  --el-fill-color-light: #18181b;
+  --el-fill-color-lighter: #121215;
 }
 
 * {
@@ -147,11 +151,11 @@ body {
 }
 
 html.dark ::-webkit-scrollbar-thumb {
-  background: #475569;
+  background: #3f3f46;
 }
 
 html.dark ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #52525b;
 }
 
 /* Global UI Polish for Element Plus Dialogs & Drawers */
@@ -171,7 +175,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 }
 
 .el-dialog__title {
-  font-size: 15px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
   color: var(--cl-text-primary) !important;
   letter-spacing: -0.01em;
@@ -184,7 +188,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 }
 
 .el-dialog__footer {
-  padding: 14px 20px !important;
+  padding: 12px 20px !important;
   border-top: 1px solid var(--cl-border) !important;
   background: var(--cl-surface-subtle) !important;
 }
