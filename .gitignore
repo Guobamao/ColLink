@@ -1,20 +1,6 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-backend/.venv/
-.venv/
-venv/
-ENV/
-env/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-backend/data_field_mapper.db
+# Rust / Tauri
+src-tauri/target/
+**/target/
 
 # Node & Frontend
 node_modules/
@@ -24,6 +10,11 @@ frontend/dist/
 .vite/
 frontend/.vite/
 *.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
 
 # Logs
 logs/
@@ -44,6 +35,5 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Edge App Profile
-edge_profile/
-backend/data/edge_profile/
+# Legacy Python Backup
+.legacy_backend/
