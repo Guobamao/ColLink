@@ -61,40 +61,21 @@
 
     <!-- Center: Global Quick Search & Canvas Operations -->
     <div class="toolbar-section center-section">
-      <!-- Quick Table / Column Search (Ctrl+K) -->
-      <div class="search-box">
-        <el-autocomplete
-          ref="searchRef"
-          v-model="searchQuery"
-          :fetch-suggestions="querySearch"
-          placeholder="快速找表 / 字段..."
-          clearable
-          size="default"
-          class="global-search-input"
-          :trigger-on-focus="true"
-          @select="handleSearchSelect"
-        >
-          <template #prefix>
-            <el-icon class="search-prefix-icon"><Search /></el-icon>
-          </template>
-          <template #suffix>
-            <span class="search-shortcut-badge">Ctrl K</span>
-          </template>
-          <template #default="{ item }">
-            <div class="search-result-item">
-              <div class="item-main">
-                <span class="item-tbl-name">[{{ item.tableName }}]</span>
-                <span v-if="item.tableComment" class="item-tbl-comment">{{ item.tableComment }}</span>
-                <span class="item-col-count">{{ item.columnCount }} 列</span>
-              </div>
-              <div v-if="item.matchedColumn" class="item-sub-col">
-                匹配字段: <span class="highlight-matched">{{ item.matchedColumn.column_name }}</span>
-                <span v-if="item.matchedColumn.column_comment"> ({{ item.matchedColumn.column_comment }})</span>
-              </div>
-            </div>
-          </template>
-        </el-autocomplete>
-      </div>
+            <!-- Quick Command Palette Trigger (Ctrl+K) -->
+      <button
+        type="button"
+        class="group flex items-center justify-between w-64 h-8 px-2.5 rounded-lg border border-border bg-surface-subtle hover:bg-surface-hover text-muted hover:text-primary-text transition-all duration-150 cursor-pointer shadow-sm text-xs"
+        title="唤起全局命令中心 (快捷键: Ctrl+K)"
+        @click="emit('open-command-palette')"
+      >
+        <div class="flex items-center gap-2">
+          <Search class="w-3.5 h-3.5 text-muted group-hover:text-primary" />
+          <span class="text-xs text-muted">快速找表、字段或指令...</span>
+        </div>
+        <kbd class="px-1.5 py-0.5 text-[10px] font-mono rounded bg-surface border border-border text-muted">
+          ⌘K
+        </kbd>
+      </button>
 
       <div class="divider"></div>
 
@@ -268,6 +249,7 @@ const emit = defineEmits([
   'fit-view',
   'export-image',
   'focus-table',
+  'open-command-palette',
 ])
 
 const projectStore = useProjectStore()

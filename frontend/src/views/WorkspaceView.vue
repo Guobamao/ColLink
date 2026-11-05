@@ -12,6 +12,7 @@
       @fit-view="handleFitView"
       @export-image="handleExportImage"
       @focus-table="handleFocusTable"
+      @open-command-palette="commandPaletteRef?.open()"
     />
 
     <!-- Multi-Canvas / Subject View Tabs -->
@@ -103,6 +104,23 @@
     <BackupDialog ref="backupDialogRef" />
     <MappingDrawer ref="mappingDrawerRef" />
     <RelationPathDrawer ref="relationPathDrawerRef" />
+
+    <!-- Modern Command Palette (Ctrl+K) -->
+    <CommandPalette
+      ref="commandPaletteRef"
+      @open-ddl-dialog="openDdlDialog"
+      @open-db-dialog="openDbDialog"
+      @open-project-dialog="openProjectDialog"
+      @open-backup-dialog="openBackupDialog"
+      @open-mapping-drawer="openMappingDrawer"
+      @open-auto-mapping="openAutoMappingDialog"
+      @open-relation-path="openRelationPathDrawer"
+      @fit-view="handleFitView"
+      @auto-layout="handleAutoLayout"
+      @export-excel="handleExportExcel"
+      @export-image="handleExportImage"
+      @focus-table="handleFocusTable"
+    />
   </div>
 </template>
 
@@ -132,6 +150,8 @@ import ProjectDialog from '@/components/dialogs/ProjectDialog.vue'
 import BackupDialog from '@/components/dialogs/BackupDialog.vue'
 import MappingDrawer from '@/components/canvas/MappingDrawer.vue'
 import RelationPathDrawer from '@/components/canvas/RelationPathDrawer.vue'
+import CommandPalette from '@/components/common/CommandPalette.vue'
+import { api } from '@/api'
 import SmartObstacleEdge from '@/components/canvas/SmartObstacleEdge.vue'
 
 import { useProjectStore } from '@/stores/projectStore'
@@ -164,6 +184,7 @@ const projectDialogRef = ref<InstanceType<typeof ProjectDialog> | null>(null)
 const backupDialogRef = ref<InstanceType<typeof BackupDialog> | null>(null)
 const mappingDrawerRef = ref<InstanceType<typeof MappingDrawer> | null>(null)
 const relationPathDrawerRef = ref<InstanceType<typeof RelationPathDrawer> | null>(null)
+const commandPaletteRef = ref<InstanceType<typeof CommandPalette> | null>(null)
 
 // Register custom node & edge components
 const nodeTypes = {
@@ -187,6 +208,20 @@ onMounted(async () => {
     }, 200)
   }
 })
+
+
+const handleAutoLayout = async () => {
+  await canvasStore.applyAutoLayout('LR')
+  setTimeout(handleFitView, 100)
+}
+
+const handleExportExcel = async () => {
+  if (!projectStore.currentProject) {
+    ElMessage.warning('当前无可用项目')
+    return
+  }
+  await api.exportExcel(projectStore.currentProject.id, projectStore.currentProject.name)
+}
 
 const handleFitView = () => {
   fitView({ padding: 0.2, duration: 400 })
