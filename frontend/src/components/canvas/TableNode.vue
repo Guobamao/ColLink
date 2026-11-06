@@ -346,6 +346,9 @@ watch(filteredColumns, () => {
 onMounted(() => {
   nextTick(() => {
     updateNodeInternals(props.id)
+    setTimeout(() => {
+      updateNodeInternals(props.id)
+    }, 100)
   })
 })
 

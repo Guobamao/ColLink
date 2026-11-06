@@ -109,42 +109,45 @@ const edgePath = computed(() => {
 
   // Case 1: Standard Left-to-Right Flow (source on Right, target on Left)
   if (props.sourcePosition === Position.Right && props.targetPosition === Position.Left) {
-    // If target is to the right of source
-    if (dx > 20) {
-      // Check if any obstacle is directly blocking between source and target
+    if (dx > 0) {
+      // Adjacent columns (gap <= 220px): pure, clean direct S-curve
+      if (dx <= 220) {
+        const tangent = Math.max(45, Math.min(180, dx * 0.45))
+        const cp1x = sx + tangent + fanOffset
+        const cp1y = sy
+        const cp2x = tx - tangent - fanOffset
+        const cp2y = ty
+        return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+      }
+
+      // Cross-layer columns: check if any intermediary node actually blocks the line
       const blockingObstacles = obstacles.filter(obs => {
-        // Horizontally inside the span
-        if (obs.right <= sx || obs.left >= tx) return false
-        // Check if direct line intersects or passes directly through the card body
+        if (obs.centerX <= sx + 60 || obs.centerX >= tx - 60) return false
         const ratio = (obs.centerX - sx) / dx
+        if (ratio <= 0.1 || ratio >= 0.9) return false
         const expectedY = sy + ratio * dy
         return expectedY >= obs.top && expectedY <= obs.bottom
       })
 
-      // If no obstacle directly blocks, generate a pure, elegant S-curve
       if (blockingObstacles.length === 0) {
         const tangent = Math.max(50, Math.min(220, dx * 0.45))
         const cp1x = sx + tangent + fanOffset
         const cp1y = sy
         const cp2x = tx - tangent - fanOffset
         const cp2y = ty
-
         return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
       } else {
-        // Obstacle detected! (e.g. cross-layer line from Col 0 to Col 2 passing Col 1)
-        // Find best safe corridor above or below the blocking obstacle group
         const minTop = Math.min(...blockingObstacles.map(o => o.top))
         const maxBottom = Math.max(...blockingObstacles.map(o => o.bottom))
         const midObsX = blockingObstacles.reduce((acc, o) => acc + o.centerX, 0) / blockingObstacles.length
         const avgY = (sy + ty) / 2
 
-        const distToTop = Math.abs(minTop - 20 - avgY)
-        const distToBottom = Math.abs(maxBottom + 20 - avgY)
+        const distToTop = Math.abs(minTop - 16 - avgY)
+        const distToBottom = Math.abs(maxBottom + 16 - avgY)
         const safeY = distToTop <= distToBottom
-          ? minTop - 22 - Math.abs(fanOffset)
-          : maxBottom + 22 + Math.abs(fanOffset)
+          ? minTop - 20 - Math.abs(fanOffset)
+          : maxBottom + 20 + Math.abs(fanOffset)
 
-        // Smooth 2-segment cubic Bézier curve via intermediate waypoint (midObsX, safeY)
         const t1 = Math.max(30, Math.min(140, (midObsX - sx) * 0.5))
         const t2 = Math.max(30, Math.min(140, (tx - midObsX) * 0.5))
 
@@ -153,45 +156,82 @@ const edgePath = computed(() => {
           `C ${(midObsX + t2).toFixed(1)} ${safeY.toFixed(1)}, ${(tx - t2).toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
       }
     } else {
-      // Reversed: target is to the left of source -> loop around top/bottom
-      const loopAbove = Math.min(sy, ty) - 40 - Math.abs(fanOffset)
-      const t = Math.max(40, Math.abs(dx) * 0.4)
-      return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${(sx + t).toFixed(1)} ${sy.toFixed(1)}, ${(sx + t).toFixed(1)} ${loopAbove.toFixed(1)}, ${((sx + tx) / 2).toFixed(1)} ${loopAbove.toFixed(1)} S ${(tx - t).toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+      // Target is slightly to the left: smooth graceful S-curve
+      const tangent = Math.max(45, Math.abs(dx) * 0.4)
+      return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${(sx + tangent).toFixed(1)} ${sy.toFixed(1)}, ${(tx - tangent).toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
     }
   }
 
   // Case 2: Right-to-Left Flow (source on Left, target on Right)
   if (props.sourcePosition === Position.Left && props.targetPosition === Position.Right) {
-    if (dx < -20) {
-      const tangent = Math.max(50, Math.min(220, Math.abs(dx) * 0.45))
-      const cp1x = sx - tangent - fanOffset
-      const cp1y = sy
-      const cp2x = tx + tangent + fanOffset
-      const cp2y = ty
+    if (dx < 0) {
+      if (Math.abs(dx) <= 220) {
+        const tangent = Math.max(45, Math.min(180, Math.abs(dx) * 0.45))
+        const cp1x = sx - tangent - fanOffset
+        const cp1y = sy
+        const cp2x = tx + tangent + fanOffset
+        const cp2y = ty
+        return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+      }
 
-      return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+      const blockingObstacles = obstacles.filter(obs => {
+        if (obs.centerX <= tx + 60 || obs.centerX >= sx - 60) return false
+        const ratio = (obs.centerX - tx) / Math.abs(dx)
+        if (ratio <= 0.1 || ratio >= 0.9) return false
+        const expectedY = ty + ratio * (sy - ty)
+        return expectedY >= obs.top && expectedY <= obs.bottom
+      })
+
+      if (blockingObstacles.length === 0) {
+        const tangent = Math.max(50, Math.min(220, Math.abs(dx) * 0.45))
+        const cp1x = sx - tangent - fanOffset
+        const cp1y = sy
+        const cp2x = tx + tangent + fanOffset
+        const cp2y = ty
+        return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+      } else {
+        const minTop = Math.min(...blockingObstacles.map(o => o.top))
+        const maxBottom = Math.max(...blockingObstacles.map(o => o.bottom))
+        const midObsX = blockingObstacles.reduce((acc, o) => acc + o.centerX, 0) / blockingObstacles.length
+        const avgY = (sy + ty) / 2
+
+        const distToTop = Math.abs(minTop - 16 - avgY)
+        const distToBottom = Math.abs(maxBottom + 16 - avgY)
+        const safeY = distToTop <= distToBottom
+          ? minTop - 20 - Math.abs(fanOffset)
+          : maxBottom + 20 + Math.abs(fanOffset)
+
+        const t1 = Math.max(30, Math.min(140, (sx - midObsX) * 0.5))
+        const t2 = Math.max(30, Math.min(140, (midObsX - tx) * 0.5))
+
+        return `M ${sx.toFixed(1)} ${sy.toFixed(1)} ` +
+          `C ${(sx - t1).toFixed(1)} ${sy.toFixed(1)}, ${(midObsX + t1).toFixed(1)} ${safeY.toFixed(1)}, ${midObsX.toFixed(1)} ${safeY.toFixed(1)} ` +
+          `C ${(midObsX - t2).toFixed(1)} ${safeY.toFixed(1)}, ${(tx + t2).toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+      }
     } else {
-      const loopAbove = Math.min(sy, ty) - 40 - Math.abs(fanOffset)
-      const t = Math.max(40, Math.abs(dx) * 0.4)
-      return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${(sx - t).toFixed(1)} ${sy.toFixed(1)}, ${(sx - t).toFixed(1)} ${loopAbove.toFixed(1)}, ${((sx + tx) / 2).toFixed(1)} ${loopAbove.toFixed(1)} S ${(tx + t).toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+      const tangent = Math.max(45, Math.abs(dx) * 0.4)
+      return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${(sx - tangent).toFixed(1)} ${sy.toFixed(1)}, ${(tx + tangent).toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
     }
   }
 
-  // Case 3: Both handles on Right side (Outer right C-curve)
+  // Case 3: Both handles on Right side (Outer right C-curve for same-column tables)
   if (props.sourcePosition === Position.Right && props.targetPosition === Position.Right) {
-    const maxRight = Math.max(sx, tx) + Math.max(60, Math.min(150, Math.abs(dy) * 0.35)) + Math.abs(fanOffset)
-    return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${maxRight.toFixed(1)} ${sy.toFixed(1)}, ${maxRight.toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+    const tangent = Math.max(45, Math.min(120, Math.abs(dy) * 0.35)) + Math.abs(fanOffset)
+    const cpX = Math.max(sx, tx) + tangent
+    return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cpX.toFixed(1)} ${sy.toFixed(1)}, ${cpX.toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
   }
 
-  // Case 4: Both handles on Left side (Outer left C-curve)
+  // Case 4: Both handles on Left side (Outer left C-curve for same-column tables)
   if (props.sourcePosition === Position.Left && props.targetPosition === Position.Left) {
-    const minLeft = Math.min(sx, tx) - Math.max(60, Math.min(150, Math.abs(dy) * 0.35)) - Math.abs(fanOffset)
-    return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${minLeft.toFixed(1)} ${sy.toFixed(1)}, ${minLeft.toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+    const tangent = Math.max(45, Math.min(120, Math.abs(dy) * 0.35)) + Math.abs(fanOffset)
+    const cpX = Math.min(sx, tx) - tangent
+    return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cpX.toFixed(1)} ${sy.toFixed(1)}, ${cpX.toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
   }
 
-  // Fallback: Default graceful S-curve
-  const t = Math.max(50, Math.abs(dx) * 0.4)
-  return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${(sx + t).toFixed(1)} ${sy.toFixed(1)}, ${(tx - t).toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+  // Fallback: graceful direct Bézier curve
+  const tangent = Math.max(45, Math.abs(dx) * 0.4)
+  const dir = dx >= 0 ? 1 : -1
+  return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${(sx + tangent * dir).toFixed(1)} ${sy.toFixed(1)}, ${(tx - tangent * dir).toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
 })
 </script>
 

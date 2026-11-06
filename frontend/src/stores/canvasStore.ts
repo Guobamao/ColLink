@@ -137,30 +137,27 @@ export const useCanvasStore = defineStore('canvas', () => {
         const srcW = (srcNode as any).dimensions?.width || sw
         const tgtW = (tgtNode as any).dimensions?.width || tw
 
+        const srcCenterX = sx + srcW / 2
+        const tgtCenterX = tx + tgtW / 2
+        const dx = tgtCenterX - srcCenterX
+
         let newSrcSide: 'left' | 'right' = 'right'
         let newTgtSide: 'left' | 'right' = 'left'
 
-        // Case A: Target node is strictly to the right of source node
-        if (tx > sx + srcW + 20) {
+        // If target node is clearly to the right of source node
+        if (dx > 30) {
           newSrcSide = 'right'
           newTgtSide = 'left'
         }
-        // Case B: Target node is strictly to the left of source node
-        else if (tx + tgtW + 20 < sx) {
+        // If target node is clearly to the left of source node
+        else if (dx < -30) {
           newSrcSide = 'left'
           newTgtSide = 'right'
         }
-        // Case C: Horizontally overlapping or vertically aligned (C-shape outer detour)
+        // Vertically stacked in the same column (clean right-side C-curve)
         else {
-          const srcCenterX = sx + srcW / 2
-          const tgtCenterX = tx + tgtW / 2
-          if (srcCenterX <= tgtCenterX) {
-            newSrcSide = 'right'
-            newTgtSide = 'right'
-          } else {
-            newSrcSide = 'left'
-            newTgtSide = 'left'
-          }
+          newSrcSide = 'right'
+          newTgtSide = 'right'
         }
 
         const newSrcHandle = `source_${srcColId}_${newSrcSide}`
@@ -240,6 +237,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     // Compute initial shortest path handles
     updateEdgeHandles()
+    triggerUpdateNodeInternals()
     setTimeout(() => {
       triggerUpdateNodeInternals()
     }, 100)
@@ -258,6 +256,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     if (nodeDragRafId !== null) return
     nodeDragRafId = requestAnimationFrame(() => {
       updateEdgeHandles()
+    triggerUpdateNodeInternals()
       nodeDragRafId = null
     })
   }
@@ -269,6 +268,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       nodeDragRafId = null
     }
     updateEdgeHandles()
+    triggerUpdateNodeInternals()
 
     if (e?.node) {
       const startPos = dragStartPosMap.get(e.node.id)
@@ -356,6 +356,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     associatedColumnIds.value = matchedCols
     updateEdgeHandles()
+    triggerUpdateNodeInternals()
 
     // Auto-scroll associated table cards so the matched column is smoothly brought into view
     setTimeout(() => {
@@ -373,6 +374,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     // Re-sync edge positions once smooth scroll settles
     setTimeout(() => {
       updateEdgeHandles()
+    triggerUpdateNodeInternals()
       triggerUpdateNodeInternals()
     }, 350)
   }
@@ -444,6 +446,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       edges.value.push(newEdge)
       updateEdgeHandles()
+    triggerUpdateNodeInternals()
       triggerUpdateNodeInternals([params.source, params.target])
       selectColumn(sourceColumnId)
 
@@ -519,6 +522,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       }
 
       updateEdgeHandles()
+    triggerUpdateNodeInternals()
 
       if (historyMappings.length > 0) {
         pushHistory({
@@ -612,6 +616,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         })
 
         updateEdgeHandles()
+    triggerUpdateNodeInternals()
 
         if (progress < 1.0) {
           requestAnimationFrame(tick)
@@ -691,6 +696,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     })
 
     updateEdgeHandles()
+    triggerUpdateNodeInternals()
 
     // 6. Batch persist to backend
     try {
@@ -712,6 +718,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         await api.batchDeleteMappings(ids)
         edges.value = edges.value.filter(e => !ids.includes(e.data?.mappingId))
         updateEdgeHandles()
+    triggerUpdateNodeInternals()
         redoStack.value.push(action)
         ElMessage.info('已撤销新建连线')
       } else if (action.type === 'REMOVE_MAPPINGS') {
@@ -738,6 +745,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           })
         }
         updateEdgeHandles()
+    triggerUpdateNodeInternals()
         redoStack.value.push(action)
         ElMessage.info('已撤销删除连线')
       } else if (action.type === 'MOVE_NODE') {
@@ -746,6 +754,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           node.position = { ...action.prevPos }
           await persistPositions([{ id: action.tableId, pos_x: action.prevPos.x, pos_y: action.prevPos.y }])
           updateEdgeHandles()
+    triggerUpdateNodeInternals()
         }
         redoStack.value.push(action)
         ElMessage.info('已撤销卡片移动')
@@ -758,6 +767,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         await animateNodePositions(targets, 350)
         await persistPositions(action.prevPositions.map(p => ({ id: p.id, pos_x: p.pos.x, pos_y: p.pos.y })))
         updateEdgeHandles()
+    triggerUpdateNodeInternals()
         redoStack.value.push(action)
         ElMessage.info('已撤销自动排版')
       }
@@ -795,6 +805,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           })
         }
         updateEdgeHandles()
+    triggerUpdateNodeInternals()
         historyStack.value.push(action)
         ElMessage.info('已重做新建连线')
       } else if (action.type === 'REMOVE_MAPPINGS') {
@@ -802,6 +813,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         await api.batchDeleteMappings(ids)
         edges.value = edges.value.filter(e => !ids.includes(e.data?.mappingId))
         updateEdgeHandles()
+    triggerUpdateNodeInternals()
         historyStack.value.push(action)
         ElMessage.info('已重做删除连线')
       } else if (action.type === 'MOVE_NODE') {
@@ -810,6 +822,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           node.position = { ...action.newPos }
           await persistPositions([{ id: action.tableId, pos_x: action.newPos.x, pos_y: action.newPos.y }])
           updateEdgeHandles()
+    triggerUpdateNodeInternals()
         }
         historyStack.value.push(action)
         ElMessage.info('已重做卡片移动')
@@ -822,6 +835,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         await animateNodePositions(targets, 350)
         await persistPositions(action.newPositions.map(p => ({ id: p.id, pos_x: p.pos.x, pos_y: p.pos.y })))
         updateEdgeHandles()
+    triggerUpdateNodeInternals()
         historyStack.value.push(action)
         ElMessage.info('已重做自动排版')
       }
@@ -1039,6 +1053,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       nodes.value = nodes.value.filter(n => n.data.tableId !== tableId)
       edges.value = edges.value.filter(e => e.data.sourceTableId !== tableId && e.data.targetTableId !== tableId)
       updateEdgeHandles()
+    triggerUpdateNodeInternals()
       ElMessage.success('已从当前画布移出')
     } catch (e: any) {
       ElMessage.error('移出表失败: ' + (e.message || '网络错误'))
