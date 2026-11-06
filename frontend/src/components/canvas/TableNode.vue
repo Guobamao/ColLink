@@ -1,6 +1,6 @@
 <template>
   <div
-    class="table-card-node nowheel w-80 rounded-lg bg-surface border border-border shadow-card select-none flex flex-col font-sans transition-[border-color,box-shadow,opacity] duration-150"
+    class="table-card-node nowheel w-80 rounded-lg bg-surface dark:bg-[#1b2232] border border-border dark:border-[#475569] shadow-card select-none flex flex-col font-sans transition-[border-color,box-shadow,opacity] duration-150"
     :class="{
       'opacity-40 grayscale-[60%]': isDimmed,
       'border-primary ring-2 ring-primary/30 shadow-card-hover': isHighlighted,
@@ -10,20 +10,20 @@
     @click="handleCardClick"
     @wheel.stop
   >
-    <!-- Card Header -->
-    <div class="h-9 px-2.5 bg-surface-subtle border-b border-border rounded-t-[7px] flex items-center justify-between gap-2">
+    <!-- Card Header (Vivid Blue Accent in Dark Mode) -->
+    <div class="h-9 px-2.5 bg-surface-subtle dark:bg-[#1d4ed8] border-b border-border dark:border-[#2563eb] rounded-t-[7px] flex items-center justify-between gap-2">
       <!-- Left: Table Icon & Title -->
       <div class="flex items-center gap-2 min-w-0 flex-1">
-        <div class="w-5 h-5 rounded flex items-center justify-center bg-primary/10 text-primary border border-primary/20 shrink-0">
+        <div class="w-5 h-5 rounded flex items-center justify-center bg-primary/10 dark:bg-white/20 text-primary dark:text-white border border-primary/20 dark:border-white/30 shrink-0">
           <Table2 class="w-3.5 h-3.5" />
         </div>
         <div class="flex flex-col min-w-0">
           <div class="flex items-center gap-1.5">
-            <span class="font-mono font-bold text-xs text-primary-text truncate" :title="data.tableName">
+            <span class="font-mono font-bold text-xs text-primary-text dark:text-white truncate" :title="data.tableName">
               {{ data.tableName }}
             </span>
           </div>
-          <span v-if="data.tableComment" class="text-[11px] text-muted font-medium truncate leading-tight -mt-0.5" :title="data.tableComment">
+          <span v-if="data.tableComment" class="text-[11px] text-muted dark:text-blue-100 font-medium truncate leading-tight -mt-0.5" :title="data.tableComment">
             {{ data.tableComment }}
           </span>
         </div>
@@ -31,13 +31,13 @@
 
       <!-- Right: Column Count & Dropdown Actions -->
       <div class="flex items-center gap-1 shrink-0">
-        <span class="px-1.5 py-0.2 text-[11px] font-mono rounded bg-surface-hover border border-border text-muted">
-          {{ data.columns?.length || 0 }}
+        <span class="px-1.5 py-0.2 text-[11px] font-mono rounded bg-surface-hover dark:bg-blue-800 dark:text-blue-100 dark:border-blue-600 border border-border text-muted font-medium">
+          {{ data.columns?.length || 0 }} 列
         </span>
         <el-dropdown trigger="click" @command="handleCommand">
           <button
             type="button"
-            class="w-5 h-5 flex items-center justify-center rounded text-muted hover:text-primary-text hover:bg-surface border border-transparent hover:border-border transition-colors"
+            class="w-5 h-5 flex items-center justify-center rounded text-muted dark:text-white/80 hover:text-primary-text dark:hover:text-white hover:bg-surface dark:hover:bg-blue-700 border border-transparent hover:border-border transition-colors"
             title="更多操作"
           >
             <MoreHorizontal class="w-3.5 h-3.5" />
@@ -155,7 +155,7 @@
 
         <!-- Column Left: Name, PK Badge, Comment -->
         <div class="flex items-center gap-1.5 min-w-0 pr-2 flex-1">
-          <span v-if="isPrimaryKey(col)" class="px-1.5 py-0.2 text-[10px] font-mono font-bold rounded bg-amber-500/20 text-amber-700 dark:bg-amber-400/30 dark:text-amber-200 border border-amber-500/40 dark:border-amber-400/60 shrink-0 leading-none shadow-2xs">
+          <span v-if="isPrimaryKey(col)" class="px-1.5 py-0.2 text-[10px] font-mono font-bold rounded bg-amber-500/20 text-amber-700 dark:bg-amber-400 dark:text-slate-900 border border-amber-500/40 dark:border-amber-300 shrink-0 leading-none shadow-2xs">
             PK
           </span>
           <span class="font-mono text-xs text-primary-text truncate font-semibold">
