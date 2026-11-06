@@ -485,16 +485,6 @@ const handleExportImage = async () => {
   position: relative;
 }
 
-/* High-Contrast Canvas Hand Cursors (Crisp dark outline & shadow for light & dark modes) */
-:deep(.vue-flow__pane) {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M9 11V4.5a1.5 1.5 0 0 1 3 0V10M12 10V3.5a1.5 1.5 0 0 1 3 0V10M15 10V5.5a1.5 1.5 0 0 1 3 0V11M6 13V8.5a1.5 1.5 0 0 1 3 0V12m9-1v2.5a6 6 0 0 1-6 6h-2a6 6 0 0 1-4.24-1.76l-2.5-2.5a1.5 1.5 0 0 1 2.12-2.12L7 13.5' fill='%23ffffff' stroke='%2309090b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 10 10, grab !important;
-}
-
-:deep(.vue-flow__pane.dragging),
-:deep(.vue-flow__pane:active) {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 13.5a1.5 1.5 0 0 1 1.5-1.5h9a1.5 1.5 0 0 1 1.5 1.5V15a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5v-1.5zM8 12V9a1.5 1.5 0 0 1 3 0v3m0 0V8.5a1.5 1.5 0 0 1 3 0V12m0 0V9.5a1.5 1.5 0 0 1 3 0V12' fill='%23ffffff' stroke='%2309090b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 10 10, grabbing !important;
-}
-
 :deep(.vue-flow__viewport) {
   transform-style: flat;
 }
@@ -697,13 +687,17 @@ const handleExportImage = async () => {
   border-color: var(--cl-border-active) !important;
 }
 
+/* High-Contrast Canvas Hand Cursors (High visibility on both light and dark backgrounds) */
+:deep(.vue-flow__pane),
 :deep(.canvas-minimap .vue-flow__minimap-mask) {
-  cursor: grab;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%231e293b' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0'/%3E%3Cpath d='M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2'/%3E%3Cpath d='M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8'/%3E%3Cpath d='M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15'/%3E%3C/svg%3E") 10 10, grab !important;
 }
 
+:deep(.vue-flow__pane.dragging),
+:deep(.vue-flow__pane:active),
 :deep(.canvas-minimap.dragging .vue-flow__minimap-mask),
 :deep(.canvas-minimap .vue-flow__minimap-mask:active) {
-  cursor: grabbing;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%231e293b' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 11.5V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v1.4'/%3E%3Cpath d='M14 10.5V8a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2'/%3E%3Cpath d='M10 10.5V9a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v3'/%3E%3Cpath d='M18 11a2 2 0 1 1 4 0v4a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 16'/%3E%3C/svg%3E") 10 10, grabbing !important;
 }
 
 :deep(.canvas-minimap .vue-flow__minimap-node) {

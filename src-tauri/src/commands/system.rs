@@ -8,11 +8,8 @@ pub struct AppInfo {
     pub app_version: String,
 }
 
-fn clean_path(p: PathBuf) -> String {
-    let s = std::fs::canonicalize(&p)
-        .unwrap_or(p)
-        .to_string_lossy()
-        .to_string();
+fn normalize_clean_path(path: &std::path::Path) -> String {
+    let s = path.to_string_lossy().to_string();
     if let Some(stripped) = s.strip_prefix(r"\\?\") {
         stripped.to_string()
     } else {
@@ -23,7 +20,7 @@ fn clean_path(p: PathBuf) -> String {
 #[tauri::command]
 pub fn get_app_info() -> Result<AppInfo, String> {
     let db_path = crate::db::get_db_path();
-    let full_db_path = clean_path(db_path);
+    let full_db_path = std::fs::canonicalize(&db_path).unwrap_or(db_path);
 
     let exe_dir = std::env::current_exe()
         .ok()
@@ -31,11 +28,11 @@ pub fn get_app_info() -> Result<AppInfo, String> {
         .unwrap_or_else(|| PathBuf::from("."));
 
     let mcp_path = exe_dir.join("collink-mcp.exe");
-    let full_mcp_path = clean_path(mcp_path);
+    let full_mcp_path = std::fs::canonicalize(&mcp_path).unwrap_or(mcp_path);
 
     Ok(AppInfo {
-        db_path: full_db_path,
-        mcp_path: full_mcp_path,
+        db_path: normalize_clean_path(&full_db_path),
+        mcp_path: normalize_clean_path(&full_mcp_path),
         app_version: "1.0.0".to_string(),
     })
 }
@@ -45,20 +42,15 @@ pub fn open_path_in_explorer(path: String) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
         use std::process::Command;
-        let clean_target = if let Some(stripped) = path.strip_prefix(r"\\?\") {
-            stripped
-        } else {
-            &path
-        };
-        let p = PathBuf::from(clean_target);
+        let p = PathBuf::from(&path);
         if p.is_file() {
             let _ = Command::new("explorer")
-                .args(["/select,", clean_target])
+                .args(["/select,", &path])
                 .spawn()
                 .map_err(|e| e.to_string())?;
         } else {
             let _ = Command::new("explorer")
-                .arg(clean_target)
+                .arg(&path)
                 .spawn()
                 .map_err(|e| e.to_string())?;
         }

@@ -21,8 +21,8 @@
 
         <div class="flex items-center gap-1.5 text-xs text-primary-text font-semibold">
           <Settings class="w-3.5 h-3.5 text-primary" />
-          <span>设置</span>
-          <span class="text-[10px] text-muted font-normal ml-0.5">Preferences</span>
+          <span>系统设置</span>
+          <span class="text-[10px] text-muted font-normal ml-1">Settings</span>
         </div>
       </div>
 
@@ -61,9 +61,9 @@
     <!-- Main Content Area: Split Sidebar & Settings Panel -->
     <div class="flex-1 flex min-h-0 overflow-hidden">
       <!-- Left Sidebar Navigation -->
-      <div class="w-52 border-r border-border bg-surface-subtle/40 p-2.5 flex flex-col gap-1 shrink-0 overflow-y-auto">
-        <div class="px-2 py-1 text-[10px] font-semibold text-muted uppercase tracking-wider">
-          选项
+      <div class="w-56 border-r border-border bg-surface-subtle/40 p-3 flex flex-col gap-1 shrink-0 overflow-y-auto">
+        <div class="px-2 py-1.5 text-[10px] font-semibold text-muted tracking-wider uppercase">
+          设置分类
         </div>
 
         <button
@@ -79,7 +79,10 @@
           @click="activeTab = item.id"
         >
           <component :is="item.icon" class="w-4 h-4 shrink-0" :class="activeTab === item.id ? 'text-primary' : 'text-muted'" />
-          <span class="leading-tight">{{ item.label }}</span>
+          <div class="flex flex-col min-w-0">
+            <span class="leading-tight">{{ item.label }}</span>
+            <span class="text-[10px] text-muted truncate mt-0.5">{{ item.subLabel }}</span>
+          </div>
         </button>
 
         <div class="mt-auto pt-3 border-t border-border">
@@ -98,51 +101,53 @@
           <div v-if="activeTab === 'appearance'" class="space-y-6">
             <div>
               <h2 class="text-base font-bold text-primary-text">外观与主题</h2>
-              <p class="text-xs text-muted mt-0.5">界面色彩、显示缩放与画板网格样式</p>
+              <p class="text-xs text-muted mt-0.5">自定义界面视觉风格、主题强调色与画布背景表现</p>
             </div>
 
             <!-- 1.1 主题模式 -->
             <div class="p-4 rounded-xl border border-border bg-surface shadow-2xs space-y-3">
-              <div>
-                <h3 class="text-xs font-semibold text-primary-text">色彩模式</h3>
-                <p class="text-[11px] text-muted mt-0.5">切换界面明暗主题风格</p>
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-xs font-semibold text-primary-text">显示模式</h3>
+                  <p class="text-[11px] text-muted mt-0.5">选择浅色、深色或随系统自动切换</p>
+                </div>
               </div>
 
               <div class="grid grid-cols-3 gap-3 pt-1">
                 <button
                   type="button"
-                  class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border text-xs font-medium transition-all cursor-pointer"
+                  class="flex flex-col items-center justify-center gap-2 p-3.5 rounded-lg border text-xs font-medium transition-all cursor-pointer"
                   :class="[
                     themeStore.mode === 'light'
-                      ? 'border-primary bg-primary-light/30 text-primary ring-1 ring-primary/40 font-semibold'
+                      ? 'border-primary bg-primary-light/30 text-primary ring-1 ring-primary/40'
                       : 'border-border bg-surface hover:bg-surface-hover text-muted hover:text-primary-text'
                   ]"
                   @click="themeStore.setMode('light', $event)"
                 >
                   <Sun class="w-5 h-5 text-amber-500" />
-                  <span>浅色</span>
+                  <span>浅色模式</span>
                 </button>
 
                 <button
                   type="button"
-                  class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border text-xs font-medium transition-all cursor-pointer"
+                  class="flex flex-col items-center justify-center gap-2 p-3.5 rounded-lg border text-xs font-medium transition-all cursor-pointer"
                   :class="[
                     themeStore.mode === 'dark'
-                      ? 'border-primary bg-primary-light/30 text-primary ring-1 ring-primary/40 font-semibold'
+                      ? 'border-primary bg-primary-light/30 text-primary ring-1 ring-primary/40'
                       : 'border-border bg-surface hover:bg-surface-hover text-muted hover:text-primary-text'
                   ]"
                   @click="themeStore.setMode('dark', $event)"
                 >
                   <Moon class="w-5 h-5 text-indigo-400" />
-                  <span>深色</span>
+                  <span>深色模式</span>
                 </button>
 
                 <button
                   type="button"
-                  class="flex flex-col items-center justify-center gap-2 p-3 rounded-lg border text-xs font-medium transition-all cursor-pointer"
+                  class="flex flex-col items-center justify-center gap-2 p-3.5 rounded-lg border text-xs font-medium transition-all cursor-pointer"
                   :class="[
                     themeStore.mode === 'auto'
-                      ? 'border-primary bg-primary-light/30 text-primary ring-1 ring-primary/40 font-semibold'
+                      ? 'border-primary bg-primary-light/30 text-primary ring-1 ring-primary/40'
                       : 'border-border bg-surface hover:bg-surface-hover text-muted hover:text-primary-text'
                   ]"
                   @click="themeStore.setMode('auto', $event)"
@@ -153,56 +158,26 @@
               </div>
             </div>
 
-            <!-- 1.2 界面缩放比例 (UI Scale) -->
-            <div class="p-4 rounded-xl border border-border bg-surface shadow-2xs space-y-3">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h3 class="text-xs font-semibold text-primary-text">界面缩放比例</h3>
-                  <p class="text-[11px] text-muted mt-0.5">调节全局文字与控件大小，适配不同分辨率显示屏</p>
-                </div>
-                <span class="text-xs font-mono font-semibold text-primary px-2 py-0.5 rounded bg-primary-light/50 border border-primary/20">
-                  当前: {{ Math.round(themeStore.uiScale * 100) }}%
-                </span>
-              </div>
-
-              <div class="grid grid-cols-5 gap-2 pt-1">
-                <button
-                  v-for="scale in UI_SCALES"
-                  :key="scale.value"
-                  type="button"
-                  class="flex flex-col items-center justify-center gap-1 p-2.5 rounded-lg border text-xs transition-all cursor-pointer text-center"
-                  :class="[
-                    themeStore.uiScale === scale.value
-                      ? 'border-primary bg-primary-light/30 text-primary font-semibold ring-1 ring-primary/40'
-                      : 'border-border bg-surface hover:bg-surface-hover text-muted hover:text-primary-text'
-                  ]"
-                  @click="themeStore.setUiScale(scale.value)"
-                >
-                  <span class="font-mono text-xs font-bold leading-tight">{{ scale.label }}</span>
-                  <span class="text-[10px] text-muted leading-tight">{{ scale.desc }}</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- 1.3 全站品牌强调色 -->
+            <!-- 1.2 主题强调色 (同步控制画布连线与交互) -->
             <div class="p-4 rounded-xl border border-border bg-surface shadow-2xs space-y-3">
               <div class="flex items-center justify-between">
                 <div>
                   <h3 class="text-xs font-semibold text-primary-text">主题强调色</h3>
-                  <p class="text-[11px] text-muted mt-0.5">应用于按钮、聚焦边框及画布连线与箭头</p>
+                  <p class="text-[11px] text-muted mt-0.5">控制全站按钮焦点、边框以及画板连线高亮与脉冲动效</p>
                 </div>
+                <!-- Preview Tag -->
                 <div class="flex items-center gap-1.5 px-2 py-0.5 rounded border border-primary bg-primary-light/50 text-primary text-[11px] font-medium">
-                  <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                  <span>{{ themeStore.currentAccent.name }}</span>
+                  <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                  <span>当前强调色</span>
                 </div>
               </div>
 
-              <div class="grid grid-cols-4 gap-2 pt-1">
+              <div class="grid grid-cols-4 gap-2.5 pt-1">
                 <button
                   v-for="color in ACCENT_COLORS"
                   :key="color.id"
                   type="button"
-                  class="flex items-center gap-2.5 p-2 rounded-lg border text-xs transition-all cursor-pointer text-left"
+                  class="flex items-center gap-2.5 p-2 rounded-lg border text-xs transition-all cursor-pointer text-left group"
                   :class="[
                     themeStore.accentColorId === color.id
                       ? 'border-primary bg-primary-light/20 ring-1 ring-primary/30 font-medium'
@@ -224,17 +199,17 @@
               </div>
             </div>
 
-            <!-- 1.4 画布底纹网格 -->
+            <!-- 1.3 画布底纹网格 -->
             <div class="p-4 rounded-xl border border-border bg-surface shadow-2xs space-y-3">
               <div>
-                <h3 class="text-xs font-semibold text-primary-text">画布底纹网格</h3>
-                <p class="text-[11px] text-muted mt-0.5">主画板背景的排布样式</p>
+                <h3 class="text-xs font-semibold text-primary-text">画板背景网格</h3>
+                <p class="text-[11px] text-muted mt-0.5">设置画板工作区的背景纹理样式</p>
               </div>
 
               <div class="grid grid-cols-2 gap-3 pt-1">
                 <button
                   type="button"
-                  class="flex items-center gap-3 p-3 rounded-lg border text-xs transition-all cursor-pointer text-left"
+                  class="flex items-center gap-3 p-3 rounded-lg border text-xs transition-all cursor-pointer"
                   :class="[
                     themeStore.gridPattern === 'dots'
                       ? 'border-primary bg-primary-light/20 text-primary font-medium ring-1 ring-primary/30'
@@ -242,7 +217,7 @@
                   ]"
                   @click="themeStore.setGridPattern('dots')"
                 >
-                  <div class="w-7 h-7 rounded border border-border bg-surface-subtle flex items-center justify-center shrink-0">
+                  <div class="w-8 h-8 rounded border border-border bg-surface-subtle flex items-center justify-center shrink-0">
                     <div class="grid grid-cols-2 gap-1">
                       <span class="w-1 h-1 rounded-full bg-muted"></span>
                       <span class="w-1 h-1 rounded-full bg-muted"></span>
@@ -250,15 +225,15 @@
                       <span class="w-1 h-1 rounded-full bg-muted"></span>
                     </div>
                   </div>
-                  <div class="flex flex-col">
+                  <div class="flex flex-col text-left">
                     <span class="text-xs text-primary-text font-medium">点阵网格 (Dots)</span>
-                    <span class="text-[10px] text-muted">简洁通透</span>
+                    <span class="text-[10px] text-muted">简洁通透，突出数据卡片</span>
                   </div>
                 </button>
 
                 <button
                   type="button"
-                  class="flex items-center gap-3 p-3 rounded-lg border text-xs transition-all cursor-pointer text-left"
+                  class="flex items-center gap-3 p-3 rounded-lg border text-xs transition-all cursor-pointer"
                   :class="[
                     themeStore.gridPattern === 'lines'
                       ? 'border-primary bg-primary-light/20 text-primary font-medium ring-1 ring-primary/30'
@@ -266,12 +241,12 @@
                   ]"
                   @click="themeStore.setGridPattern('lines')"
                 >
-                  <div class="w-7 h-7 rounded border border-border bg-surface-subtle flex items-center justify-center shrink-0">
-                    <div class="w-3.5 h-3.5 border border-dashed border-muted"></div>
+                  <div class="w-8 h-8 rounded border border-border bg-surface-subtle flex items-center justify-center shrink-0">
+                    <div class="w-4 h-4 border border-dashed border-muted"></div>
                   </div>
-                  <div class="flex flex-col">
+                  <div class="flex flex-col text-left">
                     <span class="text-xs text-primary-text font-medium">方格线条 (Lines)</span>
-                    <span class="text-[10px] text-muted">工程蓝图质感</span>
+                    <span class="text-[10px] text-muted">结构清晰，便于对齐排版</span>
                   </div>
                 </button>
               </div>
@@ -281,8 +256,8 @@
           <!-- TAB 2: MCP 协同与 AI (Model Context Protocol) -->
           <div v-if="activeTab === 'mcp'" class="space-y-6">
             <div>
-              <h2 class="text-base font-bold text-primary-text">MCP 协同与 AI</h2>
-              <p class="text-xs text-muted mt-0.5">通过标准 MCP 协议供 Claude Desktop、Cursor 等 AI 工具直接调用血缘分析能力</p>
+              <h2 class="text-base font-bold text-primary-text">MCP 协同</h2>
+              <p class="text-xs text-muted mt-0.5">接入 Claude Desktop、Cursor、Antigravity 等支持 MCP 协议的 AI 助手</p>
             </div>
 
             <!-- 2.1 服务核心路径与状态 -->
@@ -293,28 +268,28 @@
                     <Cpu class="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <h3 class="text-xs font-semibold text-primary-text">服务状态</h3>
-                    <p class="text-[11px] text-muted">标准 stdio 进程间通信通道</p>
+                    <h3 class="text-xs font-semibold text-primary-text">服务运行状态</h3>
+                    <p class="text-[11px] text-muted">基于 JSON-RPC 2.0 与标准输入输出 (stdio) 通信</p>
                   </div>
                 </div>
                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                  就绪
+                  服务就绪 (Ready)
                 </span>
               </div>
 
               <!-- Executable Path Box -->
               <div class="flex items-center gap-2 p-2 rounded-lg bg-surface-subtle border border-border">
                 <div class="flex flex-col min-w-0 flex-1">
-                  <span class="text-[10px] text-muted font-medium">服务可执行文件路径:</span>
-                  <span class="text-xs font-mono text-primary-text truncate select-all" :title="appInfo?.mcp_path">
-                    {{ appInfo?.mcp_path || '正在读取可执行路径...' }}
+                  <span class="text-[10px] text-muted font-medium">MCP 服务执行路径 (collink-mcp.exe):</span>
+                  <span class="text-xs font-mono text-primary-text truncate select-all" :title="cleanMcpPath">
+                    {{ cleanMcpPath || '正在读取可执行路径...' }}
                   </span>
                 </div>
                 <button
                   type="button"
                   class="px-2.5 py-1 text-xs rounded border border-border bg-surface hover:bg-surface-hover text-muted hover:text-primary-text transition-colors shrink-0 cursor-pointer flex items-center gap-1"
-                  @click="copyText(appInfo?.mcp_path || '', '已复制 MCP 路径')"
+                  @click="copyText(cleanMcpPath || '', 'MCP 服务路径已复制')"
                 >
                   <Copy class="w-3 h-3" />
                   <span>复制路径</span>
@@ -327,7 +302,7 @@
               <div class="flex items-center justify-between">
                 <div>
                   <h3 class="text-xs font-semibold text-primary-text">客户端接入配置</h3>
-                  <p class="text-[11px] text-muted mt-0.5">将生成的配置代码片段添加至对应客户端的配置文件中</p>
+                  <p class="text-[11px] text-muted mt-0.5">将生成的 JSON 片段直接粘贴至对应客户端的配置文件中</p>
                 </div>
                 <!-- Client Switcher Tabs -->
                 <div class="flex items-center p-0.5 rounded-lg bg-surface-subtle border border-border text-xs">
@@ -355,7 +330,7 @@
                   <button
                     type="button"
                     class="px-2.5 py-1 rounded border border-border bg-surface hover:bg-surface-hover text-primary-text text-[11px] transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                    @click="copyText(activeClientConfigJson, '配置已复制到剪贴板')"
+                    @click="copyText(activeClientConfigJson, 'JSON 配置代码已复制到剪贴板')"
                   >
                     <Copy class="w-3 h-3 text-muted" />
                     <span>复制配置</span>
@@ -367,8 +342,8 @@
             <!-- 2.3 内建 8 大 MCP 工具能力 -->
             <div class="p-4 rounded-xl border border-border bg-surface shadow-2xs space-y-3">
               <div>
-                <h3 class="text-xs font-semibold text-primary-text">内建工具清单 (8)</h3>
-                <p class="text-[11px] text-muted mt-0.5">AI 助手可直接调用的数据血缘自动化分析接口</p>
+                <h3 class="text-xs font-semibold text-primary-text">内置工具清单 (8 个 Tools)</h3>
+                <p class="text-[11px] text-muted mt-0.5">AI 助手接入后可调用的元数据检索与血缘分析工具</p>
               </div>
 
               <div class="grid grid-cols-2 gap-2.5">
@@ -387,18 +362,18 @@
             </div>
           </div>
 
-          <!-- TAB 3: 常规与偏好 (General & Canvas) -->
+          <!-- TAB 3: 常规设置 (General & Canvas) -->
           <div v-if="activeTab === 'general'" class="space-y-6">
             <div>
-              <h2 class="text-base font-bold text-primary-text">常规与偏好</h2>
-              <p class="text-xs text-muted mt-0.5">窗口生命周期与画板核心交互选项</p>
+              <h2 class="text-base font-bold text-primary-text">常规设置</h2>
+              <p class="text-xs text-muted mt-0.5">运行行为偏好与画板交互配置</p>
             </div>
 
             <!-- 3.1 窗口关闭行为 -->
             <div class="p-4 rounded-xl border border-border bg-surface shadow-2xs space-y-3">
               <div>
-                <h3 class="text-xs font-semibold text-primary-text">关闭窗口时的行为</h3>
-                <p class="text-[11px] text-muted mt-0.5">点击右上角关闭按钮或使用快捷键时的响应策略</p>
+                <h3 class="text-xs font-semibold text-primary-text">窗口关闭行为</h3>
+                <p class="text-[11px] text-muted mt-0.5">自定义点击右上角关闭按钮或快捷键关闭时的动作</p>
               </div>
 
               <div class="space-y-2">
@@ -406,7 +381,7 @@
                   class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
                   :class="[
                     closeToTray
-                      ? 'border-primary bg-primary-light/20 text-primary-text font-medium'
+                      ? 'border-primary bg-primary-light/20 text-primary-text'
                       : 'border-border bg-surface hover:bg-surface-hover text-muted'
                   ]"
                 >
@@ -418,8 +393,8 @@
                     @change="setCloseToTray(true)"
                   />
                   <div class="flex flex-col">
-                    <span class="text-xs font-medium text-primary-text">最小化至系统托盘继续在后台运行（推荐）</span>
-                    <span class="text-[11px] text-muted mt-0.5">双击托盘图标可快速唤醒主窗口</span>
+                    <span class="text-xs font-medium text-primary-text">最小化到系统托盘并在后台驻留（推荐）</span>
+                    <span class="text-[11px] text-muted mt-0.5">关闭窗口时不中断进程，可随时通过托盘图标快速唤起</span>
                   </div>
                 </label>
 
@@ -427,7 +402,7 @@
                   class="flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors"
                   :class="[
                     !closeToTray
-                      ? 'border-primary bg-primary-light/20 text-primary-text font-medium'
+                      ? 'border-primary bg-primary-light/20 text-primary-text'
                       : 'border-border bg-surface hover:bg-surface-hover text-muted'
                   ]"
                 >
@@ -440,7 +415,7 @@
                   />
                   <div class="flex flex-col">
                     <span class="text-xs font-medium text-primary-text">直接退出程序</span>
-                    <span class="text-[11px] text-muted mt-0.5">关闭主窗口时终止进程</span>
+                    <span class="text-[11px] text-muted mt-0.5">关闭窗口并结束所有进程，释放系统资源</span>
                   </div>
                 </label>
               </div>
@@ -449,8 +424,8 @@
             <!-- 3.2 画布左下角操作提示 -->
             <div class="p-4 rounded-xl border border-border bg-surface shadow-2xs flex items-center justify-between">
               <div>
-                <h3 class="text-xs font-semibold text-primary-text">画布左下角操作提示</h3>
-                <p class="text-[11px] text-muted mt-0.5">在主画板左下角常驻显示字段聚焦与脉冲连线提示胶囊</p>
+                <h3 class="text-xs font-semibold text-primary-text">画板操作提示</h3>
+                <p class="text-[11px] text-muted mt-0.5">在工作区左下角显示血缘聚焦、连线与脉冲快捷操作指引</p>
               </div>
 
               <button
@@ -469,8 +444,8 @@
             <!-- 3.3 默认连线算法 -->
             <div class="p-4 rounded-xl border border-border bg-surface shadow-2xs space-y-3">
               <div>
-                <h3 class="text-xs font-semibold text-primary-text">默认连线算法</h3>
-                <p class="text-[11px] text-muted mt-0.5">画板中字段映射关系的路径计算方式</p>
+                <h3 class="text-xs font-semibold text-primary-text">连线路由算法</h3>
+                <p class="text-[11px] text-muted mt-0.5">设置字段映射连线的折线避障或平滑曲线算法</p>
               </div>
 
               <div class="grid grid-cols-2 gap-3 pt-1">
@@ -479,7 +454,7 @@
                   class="flex items-start gap-3 p-3 rounded-lg border text-left transition-all cursor-pointer"
                   :class="[
                     defaultEdgeType === 'smartObstacle'
-                      ? 'border-primary bg-primary-light/20 ring-1 ring-primary/30 font-medium'
+                      ? 'border-primary bg-primary-light/20 ring-1 ring-primary/30'
                       : 'border-border bg-surface hover:bg-surface-hover'
                   ]"
                   @click="setDefaultEdgeType('smartObstacle')"
@@ -487,7 +462,7 @@
                   <Route class="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <div class="flex flex-col">
                     <span class="text-xs font-medium text-primary-text">智能避障折线 (Smart Obstacle)</span>
-                    <span class="text-[10px] text-muted mt-0.5">自动绕行中间数据表卡片</span>
+                    <span class="text-[10px] text-muted mt-0.5">自动绕行数据卡片，保持连线工整不穿插</span>
                   </div>
                 </button>
 
@@ -496,7 +471,7 @@
                   class="flex items-start gap-3 p-3 rounded-lg border text-left transition-all cursor-pointer"
                   :class="[
                     defaultEdgeType === 'smoothstep'
-                      ? 'border-primary bg-primary-light/20 ring-1 ring-primary/30 font-medium'
+                      ? 'border-primary bg-primary-light/20 ring-1 ring-primary/30'
                       : 'border-border bg-surface hover:bg-surface-hover'
                   ]"
                   @click="setDefaultEdgeType('smoothstep')"
@@ -504,25 +479,25 @@
                   <Sparkles class="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <div class="flex flex-col">
                     <span class="text-xs font-medium text-primary-text">平滑曲线 (Smoothstep)</span>
-                    <span class="text-[10px] text-muted mt-0.5">经典弧度连线，响应迅速</span>
+                    <span class="text-[10px] text-muted mt-0.5">顺滑弧线渲染，视觉流动感更强</span>
                   </div>
                 </button>
               </div>
             </div>
           </div>
 
-          <!-- TAB 4: 关于与数据存储 (About & Storage) -->
+          <!-- TAB 4: 关于与数据 (About & Storage) -->
           <div v-if="activeTab === 'about'" class="space-y-6">
             <div>
-              <h2 class="text-base font-bold text-primary-text">关于与数据存储</h2>
-              <p class="text-xs text-muted mt-0.5">运行环境与本地 SQLite 数据库文件</p>
+              <h2 class="text-base font-bold text-primary-text">关于与数据</h2>
+              <p class="text-xs text-muted mt-0.5">软件版本信息与本地数据文件管理</p>
             </div>
 
             <!-- 4.1 产品版本信息 -->
             <div class="p-5 rounded-xl border border-border bg-surface shadow-2xs flex items-center justify-between">
               <div class="flex items-center gap-3.5">
-                <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
-                  <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+                  <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <rect x="3" y="4" width="7" height="10" rx="1.5" stroke="currentColor" stroke-width="2"/>
                     <rect x="14" y="10" width="7" height="10" rx="1.5" stroke="currentColor" stroke-width="2"/>
                     <path d="M 10 9 C 12 9, 12 16, 14 16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -535,13 +510,13 @@
                       v1.0.0
                     </span>
                   </div>
-                  <p class="text-xs text-muted mt-0.5">数据血缘分析与字段映射设计平台</p>
+                  <p class="text-xs text-muted mt-1">数据血缘分析、字段映射拓扑与智能协同平台</p>
                 </div>
               </div>
 
               <div class="text-right text-[11px] text-muted">
-                <p>Tauri v2 · Vue 3 · SQLite</p>
-                <p class="mt-0.5 font-mono text-[10px]">Rust 2021 Edition</p>
+                <p>架构：Tauri v2 + Vue 3</p>
+                <p class="mt-0.5">内核：Rust 2021 Edition</p>
               </div>
             </div>
 
@@ -549,8 +524,8 @@
             <div class="p-4 rounded-xl border border-border bg-surface shadow-2xs space-y-3">
               <div class="flex items-center justify-between">
                 <div>
-                  <h3 class="text-xs font-semibold text-primary-text">本地数据库文件</h3>
-                  <p class="text-[11px] text-muted mt-0.5">元数据与项目信息保存在本地单文件 SQLite 数据库中</p>
+                  <h3 class="text-xs font-semibold text-primary-text">本地数据存储</h3>
+                  <p class="text-[11px] text-muted mt-0.5">项目空间、画板拓扑与字段映射保存在本地单文件 SQLite 数据库中</p>
                 </div>
                 <button
                   type="button"
@@ -563,13 +538,13 @@
               </div>
 
               <div class="flex items-center gap-2 p-2 rounded-lg bg-surface-subtle border border-border">
-                <span class="text-xs font-mono text-primary-text truncate select-all flex-1" :title="appInfo?.db_path">
-                  {{ appInfo?.db_path || '正在读取本地数据库物理路径...' }}
+                <span class="text-xs font-mono text-primary-text truncate select-all flex-1" :title="cleanDbPath">
+                  {{ cleanDbPath || '正在读取本地数据库物理路径...' }}
                 </span>
                 <button
                   type="button"
                   class="px-2 py-1 text-xs rounded border border-border bg-surface hover:bg-surface-hover text-muted hover:text-primary-text transition-colors shrink-0 cursor-pointer flex items-center gap-1"
-                  @click="copyText(appInfo?.db_path || '', '已复制数据库物理路径')"
+                  @click="copyText(cleanDbPath || '', '数据库路径已复制')"
                 >
                   <Copy class="w-3 h-3" />
                   <span>复制路径</span>
@@ -580,8 +555,8 @@
             <!-- 4.3 数据备份与迁移操作 -->
             <div class="p-4 rounded-xl border border-border bg-surface shadow-2xs flex items-center justify-between">
               <div>
-                <h3 class="text-xs font-semibold text-primary-text">项目数据备份与迁移</h3>
-                <p class="text-[11px] text-muted mt-0.5">导出当前项目全量结构拓扑为通用 JSON，或在不同环境之间恢复快照</p>
+                <h3 class="text-xs font-semibold text-primary-text">项目数据备份与恢复</h3>
+                <p class="text-[11px] text-muted mt-0.5">导出项目全量拓扑数据为 JSON 文件，或从备份快照导入</p>
               </div>
 
               <button
@@ -624,7 +599,7 @@ import {
   Archive,
 } from 'lucide-vue-next'
 import { invoke } from '@tauri-apps/api/core'
-import { useThemeStore, ACCENT_COLORS, UI_SCALES } from '@/stores/themeStore'
+import { useThemeStore, ACCENT_COLORS } from '@/stores/themeStore'
 import { api } from '@/api'
 import { toast } from '@/utils/toast'
 
@@ -680,14 +655,17 @@ const handleClose = async () => {
 const activeTab = ref<'appearance' | 'mcp' | 'general' | 'about'>('appearance')
 
 const navItems = [
-  { id: 'appearance', label: '外观与主题', icon: Palette },
-  { id: 'mcp', label: 'MCP 协同与 AI', icon: Cpu },
-  { id: 'general', label: '常规与偏好', icon: Sliders },
-  { id: 'about', label: '关于与数据', icon: Info },
+  { id: 'appearance', label: '外观与主题', subLabel: '主题模式、强调色与网格', icon: Palette },
+  { id: 'mcp', label: 'MCP 协同', subLabel: 'AI 编程助手接入配置', icon: Cpu },
+  { id: 'general', label: '常规设置', subLabel: '运行行为与画布偏好', icon: Sliders },
+  { id: 'about', label: '关于与数据', subLabel: '版本信息与存储路径', icon: Info },
 ]
 
 // System Info
 const appInfo = ref<{ db_path: string; mcp_path: string; app_version: string } | null>(null)
+
+const cleanDbPath = computed(() => (appInfo.value?.db_path || '').replace(/^\\\\\?\\/, ''))
+const cleanMcpPath = computed(() => (appInfo.value?.mcp_path || '').replace(/^\\\\\?\\/, ''))
 
 const loadAppInfo = async () => {
   try {
@@ -708,9 +686,10 @@ const copyText = async (text: string, successMsg: string) => {
 }
 
 const openDbDirectory = async () => {
-  if (appInfo.value?.db_path) {
+  const p = cleanDbPath.value || appInfo.value?.db_path
+  if (p) {
     try {
-      await api.openPathInExplorer(appInfo.value.db_path)
+      await api.openPathInExplorer(p)
     } catch (e) {
       toast.error('无法打开目录: ' + e)
     }
@@ -727,7 +706,8 @@ const mcpClients = [
 ]
 
 const activeClientConfigJson = computed(() => {
-  const exePath = appInfo.value?.mcp_path ? appInfo.value.mcp_path.replace(/\\/g, '\\\\') : 'C:\\\\path\\\\to\\\\collink-mcp.exe'
+  const rawPath = cleanMcpPath.value || appInfo.value?.mcp_path || 'C:\\path\\to\\collink-mcp.exe'
+  const exePath = rawPath.replace(/\\/g, '\\\\')
 
   if (activeMcpClient.value === 'claude') {
     return JSON.stringify(

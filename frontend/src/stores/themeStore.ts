@@ -3,15 +3,6 @@ import { ref, computed } from 'vue'
 
 export type ThemeMode = 'light' | 'dark' | 'auto'
 export type GridPattern = 'dots' | 'lines' | 'cross'
-export type UiScale = 0.85 | 0.9 | 1.0 | 1.1 | 1.25
-
-export const UI_SCALES: { value: UiScale; label: string; desc: string }[] = [
-  { value: 0.85, label: '85%', desc: '紧凑高密' },
-  { value: 0.9, label: '90%', desc: '小巧精致' },
-  { value: 1.0, label: '100%', desc: '标准推荐' },
-  { value: 1.1, label: '110%', desc: '舒适阅读' },
-  { value: 1.25, label: '125%', desc: '大字清晰' },
-]
 
 export interface AccentColorConfig {
   id: string
@@ -198,9 +189,6 @@ export const useThemeStore = defineStore('theme', () => {
   const savedPattern = (localStorage.getItem('collink-grid-pattern') as GridPattern) || 'dots'
   const gridPattern = ref<GridPattern>(savedPattern)
 
-  const savedScale = parseFloat(localStorage.getItem('collink-ui-scale') || '1.0') as UiScale
-  const uiScale = ref<UiScale>(savedScale)
-
   // System prefers dark query
   const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
   const systemPrefersDark = ref(mediaQuery.matches)
@@ -245,21 +233,6 @@ export const useThemeStore = defineStore('theme', () => {
     root.style.setProperty('--cl-primary-border', tokens.border)
     root.style.setProperty('--cl-accent-glow', tokens.glow)
     root.style.setProperty('--cl-border-active', tokens.primary)
-
-    // Apply UI scale
-    applyUiScale()
-  }
-
-  const applyUiScale = () => {
-    if (typeof document !== 'undefined') {
-      (document.documentElement.style as any).zoom = String(uiScale.value)
-    }
-  }
-
-  const setUiScale = (scale: UiScale) => {
-    uiScale.value = scale
-    localStorage.setItem('collink-ui-scale', String(scale))
-    applyUiScale()
   }
 
   const setAccentColor = (id: string) => {
@@ -368,8 +341,6 @@ export const useThemeStore = defineStore('theme', () => {
     accentColorId,
     currentAccent,
     gridPattern,
-    uiScale,
-    setUiScale,
     setMode,
     setAccentColor,
     setGridPattern,

@@ -366,7 +366,7 @@ const edgePath = computed(() => {
         markerHeight="6"
         orient="auto-start-reverse"
       >
-        <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--cl-primary)" />
+        <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#3B82F6" />
       </marker>
     </defs>
     <!-- Background hit area for easy clicking and hover -->
@@ -420,7 +420,7 @@ const edgePath = computed(() => {
 .smart-obstacle-edge-group:hover .smart-obstacle-edge {
   stroke: var(--cl-primary-hover);
   stroke-width: 3px;
-  filter: drop-shadow(0 0 5px var(--cl-primary));
+  filter: drop-shadow(0 0 6px var(--cl-accent-glow));
 }
 
 @keyframes edgeDashFlow {
