@@ -61,69 +61,59 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Dark Theme Tokens (Ultra-Luminous Slate Studio: #1e293b / #334155 / #64748b) */
+/* Dark Theme Tokens (Warm IDE Soft Charcoal: #1e1e1e / #252526 / #333333) */
 html.dark {
   color-scheme: dark;
 
-  --cl-canvas-bg: #1e293b;
-  --cl-surface: #334155;
-  --cl-surface-subtle: #475569;
-  --cl-surface-hover: #475569;
+  --cl-canvas-bg: #1e1e1e;
+  --cl-surface: #252526;
+  --cl-surface-subtle: #2d2d30;
+  --cl-surface-hover: #37373d;
 
-  --cl-border: #64748b;
-  --cl-border-strong: #94a3b8;
-  --cl-border-active: #38bdf8;
+  --cl-border: #333333;
+  --cl-border-strong: #3e3e42;
+  --cl-border-active: #007acc;
 
-  --cl-text-primary: #ffffff;
-  --cl-text-secondary: #ffffff;
-  --cl-text-muted: #f1f5f9;
-  --cl-text-faint: #cbd5e1;
+  --cl-text-primary: #e0e0e0;
+  --cl-text-secondary: #cccccc;
+  --cl-text-muted: #969696;
+  --cl-text-faint: #6e6e6e;
 
   --cl-primary: #3b82f6;
   --cl-primary-hover: #60a5fa;
-  --cl-primary-light: rgba(59, 130, 246, 0.3);
-  --cl-primary-border: rgba(96, 165, 250, 0.65);
+  --cl-primary-light: rgba(59, 130, 246, 0.16);
+  --cl-primary-border: rgba(59, 130, 246, 0.35);
 
-  --cl-accent-glow: #38bdf8;
-  --cl-accent-glow-subtle: rgba(56, 189, 248, 0.45);
+  --cl-accent-glow: #60a5fa;
+  --cl-accent-glow-subtle: rgba(96, 165, 250, 0.25);
 
   --cl-success: #10b981;
-  --cl-success-light: rgba(16, 185, 129, 0.3);
+  --cl-success-light: rgba(16, 185, 129, 0.15);
   --cl-warning: #f59e0b;
-  --cl-warning-light: rgba(245, 158, 11, 0.3);
+  --cl-warning-light: rgba(245, 158, 11, 0.15);
   --cl-danger: #ef4444;
-  --cl-danger-light: rgba(239, 68, 68, 0.3);
+  --cl-danger-light: rgba(239, 68, 68, 0.15);
 
-  /* High Contrast Elevation Shadows & Rim Lighting */
-  --cl-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.15);
-  --cl-shadow-card: 0 6px 24px -2px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.2);
-  --cl-shadow-card-hover: 0 14px 36px -4px rgba(0, 0, 0, 0.75), 0 0 0 2px rgba(56, 189, 248, 0.7), 0 0 24px -2px rgba(56, 189, 248, 0.4);
-  --cl-shadow-popup: 0 16px 40px -4px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.25);
+  /* Deep Contrast Shadows */
+  --cl-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --cl-shadow-card: 0 4px 14px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -1px rgba(0, 0, 0, 0.35);
+  --cl-shadow-card-hover: 0 10px 24px -4px rgba(0, 0, 0, 0.65), 0 4px 10px -2px rgba(0, 0, 0, 0.45);
+  --cl-shadow-popup: 0 16px 36px -4px rgba(0, 0, 0, 0.75), 0 6px 16px -2px rgba(0, 0, 0, 0.5);
 
   /* Element Plus Harmonization in Dark */
-  --el-bg-color: #334155;
-  --el-bg-color-page: #1e293b;
-  --el-bg-color-overlay: #475569;
-  --el-text-color-primary: #ffffff;
-  --el-text-color-regular: #ffffff;
-  --el-text-color-secondary: #f1f5f9;
-  --el-border-color: #64748b;
-  --el-border-color-light: #475569;
-  --el-border-color-lighter: #334155;
-  --el-fill-color-blank: #334155;
-  --el-fill-color: #475569;
-  --el-fill-color-light: #334155;
-  --el-fill-color-lighter: #1e293b;
-  --el-mask-color: rgba(0, 0, 0, 0.45);
-}
-
-/* Ensure any non-active or hidden Element Plus overlay never dims or covers the viewport */
-.el-overlay[style*="display: none"],
-.el-overlay.is-hidden {
-  display: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
+  --el-bg-color: #252526;
+  --el-bg-color-page: #1e1e1e;
+  --el-bg-color-overlay: #2d2d30;
+  --el-text-color-primary: #e0e0e0;
+  --el-text-color-regular: #cccccc;
+  --el-text-color-secondary: #969696;
+  --el-border-color: #333333;
+  --el-border-color-light: #333333;
+  --el-border-color-lighter: #2d2d30;
+  --el-fill-color-blank: #252526;
+  --el-fill-color: #333333;
+  --el-fill-color-light: #2d2d30;
+  --el-fill-color-lighter: #252526;
 }
 
 * {
@@ -175,11 +165,11 @@ body {
 }
 
 html.dark ::-webkit-scrollbar-thumb {
-  background: #334460;
+  background: #3e3e42;
 }
 
 html.dark ::-webkit-scrollbar-thumb:hover {
-  background: #475d82;
+  background: #4e4e52;
 }
 
 /* Global UI Polish for Element Plus Dialogs & Drawers */
@@ -376,4 +366,19 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 
 .el-notification__content {
   color: var(--cl-text-secondary) !important;
+}
+
+/* Theme Switch Circular Wave Transition */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
 }

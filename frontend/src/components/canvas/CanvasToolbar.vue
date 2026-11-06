@@ -209,48 +209,28 @@
 
       <div class="w-px h-3.5 bg-border mx-1"></div>
 
-      <!-- Theme Switcher -->
-      <el-dropdown trigger="click" @command="handleThemeCommand">
+      <!-- Theme Switcher (Cycle: Light -> Dark -> Auto) with Wave Transition -->
+      <el-tooltip
+        :content="themeTooltipText"
+        placement="bottom"
+        :show-after="200"
+      >
         <button
           type="button"
-          class="w-7 h-7 flex items-center justify-center rounded-md border border-border bg-surface hover:bg-surface-hover text-muted hover:text-primary-text transition-colors"
-          :title="'切换主题风格 (当前: ' + themeLabel + ')'"
+          class="w-7 h-7 flex items-center justify-center rounded-md border border-border bg-surface hover:bg-surface-hover text-muted hover:text-primary-text transition-colors relative cursor-pointer"
+          @click="handleThemeClick"
         >
-          <Moon v-if="themeStore.isDark" class="w-3.5 h-3.5" />
-          <Sun v-else class="w-3.5 h-3.5" />
+          <Sun v-if="themeStore.mode === 'light'" class="w-3.5 h-3.5 text-amber-500" />
+          <Moon v-else-if="themeStore.mode === 'dark'" class="w-3.5 h-3.5 text-sky-400" />
+          <div v-else class="relative flex items-center justify-center">
+            <Monitor class="w-3.5 h-3.5 text-primary" />
+            <span
+              class="absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ring-1 ring-surface"
+              :class="themeStore.isDark ? 'bg-sky-400' : 'bg-amber-500'"
+            ></span>
+          </div>
         </button>
-        <template #dropdown>
-          <el-dropdown-menu class="toolbar-dropdown-menu">
-            <el-dropdown-item command="light">
-              <div class="flex items-center justify-between w-28">
-                <div class="flex items-center gap-2">
-                  <Sun class="w-3.5 h-3.5" />
-                  <span class="text-xs">浅色模式</span>
-                </div>
-                <Check v-if="themeStore.mode === 'light'" class="w-3.5 h-3.5 text-primary" />
-              </div>
-            </el-dropdown-item>
-            <el-dropdown-item command="dark">
-              <div class="flex items-center justify-between w-28">
-                <div class="flex items-center gap-2">
-                  <Moon class="w-3.5 h-3.5" />
-                  <span class="text-xs">深色模式</span>
-                </div>
-                <Check v-if="themeStore.mode === 'dark'" class="w-3.5 h-3.5 text-primary" />
-              </div>
-            </el-dropdown-item>
-            <el-dropdown-item command="auto" divided>
-              <div class="flex items-center justify-between w-28">
-                <div class="flex items-center gap-2">
-                  <Monitor class="w-3.5 h-3.5" />
-                  <span class="text-xs">跟随系统</span>
-                </div>
-                <Check v-if="themeStore.mode === 'auto'" class="w-3.5 h-3.5 text-primary" />
-              </div>
-            </el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
+      </el-tooltip>
 
       <!-- Window Controls (Tauri Custom Titlebar) -->
       <div v-if="isTauri" class="flex items-center h-10 ml-1 select-none">
@@ -401,17 +381,19 @@ const handleHeaderDblClick = (e: MouseEvent) => {
   }
 }
 
-const themeLabel = computed(() => {
-  if (themeStore.mode === 'dark') return '深色模式'
-  if (themeStore.mode === 'light') return '浅色模式'
-  return '跟随系统 (' + (themeStore.isDark ? '深色' : '浅色') + ')'
+const themeTooltipText = computed(() => {
+  if (themeStore.mode === 'light') {
+    return '当前：浅色模式（点击切换为深色模式）'
+  }
+  if (themeStore.mode === 'dark') {
+    return '当前：深色模式（点击切换为跟随系统）'
+  }
+  const sysState = themeStore.isDark ? '深色' : '浅色'
+  return `当前：跟随系统 - ${sysState}（点击切换为浅色模式）`
 })
 
-const handleThemeCommand = (cmd: string) => {
-  if (cmd === 'light' || cmd === 'dark' || cmd === 'auto') {
-    themeStore.setMode(cmd as any)
-    ElMessage.success(`已切换为${cmd === 'dark' ? '深色模式' : cmd === 'light' ? '浅色模式' : '跟随系统'}`)
-  }
+const handleThemeClick = (e: MouseEvent) => {
+  themeStore.cycleTheme(e)
 }
 
 const onProjectChange = async (projectId: string) => {
