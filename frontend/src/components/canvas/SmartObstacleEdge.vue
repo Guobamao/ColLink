@@ -102,22 +102,58 @@ const edgePath = computed(() => {
 
   // Anti-bundling curvature modulation for adjacent parallel field lines
   const visibleEdges = edges.value.filter(e => !e.hidden)
+  const tgtHandle = (props as any).targetHandleId || currentEdge?.targetHandle
+  const srcHandle = (props as any).sourceHandleId || currentEdge?.sourceHandle
+
+  // Handle fan-out: When multiple edges connect to the same target handle or source handle,
+  // distribute their landing Y offsets slightly so they do not collapse into a single indistinguishable bar.
+  const sharingTargetEdges = tgtHandle
+    ? visibleEdges.filter(e => (e.targetHandle === tgtHandle || (e as any).targetHandleId === tgtHandle) && e.target === props.target)
+    : []
+  const targetK = sharingTargetEdges.findIndex(e => e.id === props.id)
+  const targetFanY = sharingTargetEdges.length > 1 && targetK >= 0
+    ? Math.max(-9, Math.min(9, (targetK - (sharingTargetEdges.length - 1) / 2) * 4))
+    : 0
+
+  const sharingSourceEdges = srcHandle
+    ? visibleEdges.filter(e => (e.sourceHandle === srcHandle || (e as any).sourceHandleId === srcHandle) && e.source === props.source)
+    : []
+  const sourceK = sharingSourceEdges.findIndex(e => e.id === props.id)
+  const sourceFanY = sharingSourceEdges.length > 1 && sourceK >= 0
+    ? Math.max(-9, Math.min(9, (sourceK - (sharingSourceEdges.length - 1) / 2) * 4))
+    : 0
+
+  const startY = sy + sourceFanY
+  const endY = ty + targetFanY
+
   const edgeIdx = visibleEdges.findIndex(e => e.id === props.id)
   const idx = edgeIdx >= 0 ? edgeIdx : Math.abs(props.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0))
-  // subtle tangent modulation factor (-18px ~ +18px)
-  const fanOffset = ((idx % 7) - 3) * 6
+  // subtle tangent modulation factor (-12px ~ +12px)
+  const fanOffset = ((idx % 7) - 3) * 4
+
+  // Adaptive tangent calculation avoiding exaggerated ballooning on large dy
+  const calcTangent = (distX: number, distY: number, maxT = 180) => {
+    const absX = Math.abs(distX)
+    const absY = Math.abs(distY)
+    const ratio = Math.max(0.32, Math.min(0.48, 0.45 - (absY / 1000) * 0.12))
+    return Math.max(45, Math.min(maxT, absX * ratio))
+  }
 
   // Case 1: Standard Left-to-Right Flow (source on Right, target on Left)
   if (props.sourcePosition === Position.Right && props.targetPosition === Position.Left) {
     if (dx > 0) {
       // Adjacent columns (gap <= 220px): pure, clean direct S-curve
       if (dx <= 220) {
-        const tangent = Math.max(45, Math.min(180, dx * 0.45))
+        const tangent = calcTangent(dx, dy)
         const cp1x = sx + tangent + fanOffset
-        const cp1y = sy
+        const cp1y = startY
         const cp2x = tx - tangent - fanOffset
-        const cp2y = ty
-        return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        const cp2y = endY
+        if (targetFanY === 0) {
+          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        } else {
+          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${(tx - 8).toFixed(1)} ${endY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        }
       }
 
       // Cross-layer columns: check if any intermediary node actually blocks the line
@@ -125,40 +161,48 @@ const edgePath = computed(() => {
         if (obs.centerX <= sx + 60 || obs.centerX >= tx - 60) return false
         const ratio = (obs.centerX - sx) / dx
         if (ratio <= 0.1 || ratio >= 0.9) return false
-        const expectedY = sy + ratio * dy
+        const expectedY = startY + ratio * (endY - startY)
         return expectedY >= obs.top && expectedY <= obs.bottom
       })
 
       if (blockingObstacles.length === 0) {
-        const tangent = Math.max(50, Math.min(220, dx * 0.45))
+        const tangent = calcTangent(dx, dy, 220)
         const cp1x = sx + tangent + fanOffset
-        const cp1y = sy
+        const cp1y = startY
         const cp2x = tx - tangent - fanOffset
-        const cp2y = ty
-        return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        const cp2y = endY
+        if (targetFanY === 0) {
+          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        } else {
+          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${(tx - 8).toFixed(1)} ${endY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        }
       } else {
         const minTop = Math.min(...blockingObstacles.map(o => o.top))
         const maxBottom = Math.max(...blockingObstacles.map(o => o.bottom))
-        const midObsX = blockingObstacles.reduce((acc, o) => acc + o.centerX, 0) / blockingObstacles.length
-        const avgY = (sy + ty) / 2
+        const obsLeft = Math.min(...blockingObstacles.map(o => o.left))
+        const obsRight = Math.max(...blockingObstacles.map(o => o.right))
+        const avgY = (startY + endY) / 2
 
-        const distToTop = Math.abs(minTop - 16 - avgY)
-        const distToBottom = Math.abs(maxBottom + 16 - avgY)
+        const distToTop = Math.abs(minTop - 24 - avgY)
+        const distToBottom = Math.abs(maxBottom + 24 - avgY)
         const safeY = distToTop <= distToBottom
-          ? minTop - 20 - Math.abs(fanOffset)
-          : maxBottom + 20 + Math.abs(fanOffset)
+          ? minTop - 32 - Math.abs(fanOffset)
+          : maxBottom + 32 + Math.abs(fanOffset)
 
-        const t1 = Math.max(30, Math.min(140, (midObsX - sx) * 0.5))
-        const t2 = Math.max(30, Math.min(140, (tx - midObsX) * 0.5))
+        const enterX = obsLeft - 20
+        const exitX = obsRight + 20
+        const tIn = Math.max(30, Math.min(100, (enterX - sx) * 0.45))
+        const tOut = Math.max(30, Math.min(100, (tx - exitX) * 0.45))
 
-        return `M ${sx.toFixed(1)} ${sy.toFixed(1)} ` +
-          `C ${(sx + t1).toFixed(1)} ${sy.toFixed(1)}, ${(midObsX - t1).toFixed(1)} ${safeY.toFixed(1)}, ${midObsX.toFixed(1)} ${safeY.toFixed(1)} ` +
-          `C ${(midObsX + t2).toFixed(1)} ${safeY.toFixed(1)}, ${(tx - t2).toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        return `M ${sx.toFixed(1)} ${startY.toFixed(1)} ` +
+          `C ${(sx + tIn).toFixed(1)} ${startY.toFixed(1)}, ${(enterX - tIn).toFixed(1)} ${safeY.toFixed(1)}, ${enterX.toFixed(1)} ${safeY.toFixed(1)} ` +
+          `L ${exitX.toFixed(1)} ${safeY.toFixed(1)} ` +
+          `C ${(exitX + tOut).toFixed(1)} ${safeY.toFixed(1)}, ${(tx - tOut).toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
       }
     } else {
       // Target is slightly to the left: smooth graceful S-curve
       const tangent = Math.max(45, Math.abs(dx) * 0.4)
-      return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${(sx + tangent).toFixed(1)} ${sy.toFixed(1)}, ${(tx - tangent).toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+      return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${(sx + tangent).toFixed(1)} ${startY.toFixed(1)}, ${(tx - tangent).toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
     }
   }
 
@@ -166,51 +210,63 @@ const edgePath = computed(() => {
   if (props.sourcePosition === Position.Left && props.targetPosition === Position.Right) {
     if (dx < 0) {
       if (Math.abs(dx) <= 220) {
-        const tangent = Math.max(45, Math.min(180, Math.abs(dx) * 0.45))
+        const tangent = calcTangent(dx, dy)
         const cp1x = sx - tangent - fanOffset
-        const cp1y = sy
+        const cp1y = startY
         const cp2x = tx + tangent + fanOffset
-        const cp2y = ty
-        return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        const cp2y = endY
+        if (targetFanY === 0) {
+          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        } else {
+          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${(tx + 8).toFixed(1)} ${endY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        }
       }
 
       const blockingObstacles = obstacles.filter(obs => {
         if (obs.centerX <= tx + 60 || obs.centerX >= sx - 60) return false
         const ratio = (obs.centerX - tx) / Math.abs(dx)
         if (ratio <= 0.1 || ratio >= 0.9) return false
-        const expectedY = ty + ratio * (sy - ty)
+        const expectedY = endY + ratio * (startY - endY)
         return expectedY >= obs.top && expectedY <= obs.bottom
       })
 
       if (blockingObstacles.length === 0) {
-        const tangent = Math.max(50, Math.min(220, Math.abs(dx) * 0.45))
+        const tangent = calcTangent(dx, dy, 220)
         const cp1x = sx - tangent - fanOffset
-        const cp1y = sy
+        const cp1y = startY
         const cp2x = tx + tangent + fanOffset
-        const cp2y = ty
-        return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        const cp2y = endY
+        if (targetFanY === 0) {
+          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        } else {
+          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${(tx + 8).toFixed(1)} ${endY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        }
       } else {
         const minTop = Math.min(...blockingObstacles.map(o => o.top))
         const maxBottom = Math.max(...blockingObstacles.map(o => o.bottom))
-        const midObsX = blockingObstacles.reduce((acc, o) => acc + o.centerX, 0) / blockingObstacles.length
-        const avgY = (sy + ty) / 2
+        const obsLeft = Math.min(...blockingObstacles.map(o => o.left))
+        const obsRight = Math.max(...blockingObstacles.map(o => o.right))
+        const avgY = (startY + endY) / 2
 
-        const distToTop = Math.abs(minTop - 16 - avgY)
-        const distToBottom = Math.abs(maxBottom + 16 - avgY)
+        const distToTop = Math.abs(minTop - 24 - avgY)
+        const distToBottom = Math.abs(maxBottom + 24 - avgY)
         const safeY = distToTop <= distToBottom
-          ? minTop - 20 - Math.abs(fanOffset)
-          : maxBottom + 20 + Math.abs(fanOffset)
+          ? minTop - 32 - Math.abs(fanOffset)
+          : maxBottom + 32 + Math.abs(fanOffset)
 
-        const t1 = Math.max(30, Math.min(140, (sx - midObsX) * 0.5))
-        const t2 = Math.max(30, Math.min(140, (midObsX - tx) * 0.5))
+        const enterX = obsRight + 20
+        const exitX = obsLeft - 20
+        const tIn = Math.max(30, Math.min(100, (sx - enterX) * 0.45))
+        const tOut = Math.max(30, Math.min(100, (exitX - tx) * 0.45))
 
-        return `M ${sx.toFixed(1)} ${sy.toFixed(1)} ` +
-          `C ${(sx - t1).toFixed(1)} ${sy.toFixed(1)}, ${(midObsX + t1).toFixed(1)} ${safeY.toFixed(1)}, ${midObsX.toFixed(1)} ${safeY.toFixed(1)} ` +
-          `C ${(midObsX - t2).toFixed(1)} ${safeY.toFixed(1)}, ${(tx + t2).toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        return `M ${sx.toFixed(1)} ${startY.toFixed(1)} ` +
+          `C ${(sx - tIn).toFixed(1)} ${startY.toFixed(1)}, ${(enterX + tIn).toFixed(1)} ${safeY.toFixed(1)}, ${enterX.toFixed(1)} ${safeY.toFixed(1)} ` +
+          `L ${exitX.toFixed(1)} ${safeY.toFixed(1)} ` +
+          `C ${(exitX - tOut).toFixed(1)} ${safeY.toFixed(1)}, ${(tx + tOut).toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
       }
     } else {
       const tangent = Math.max(45, Math.abs(dx) * 0.4)
-      return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${(sx - tangent).toFixed(1)} ${sy.toFixed(1)}, ${(tx + tangent).toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+      return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${(sx - tangent).toFixed(1)} ${startY.toFixed(1)}, ${(tx + tangent).toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
     }
   }
 
@@ -218,20 +274,20 @@ const edgePath = computed(() => {
   if (props.sourcePosition === Position.Right && props.targetPosition === Position.Right) {
     const tangent = Math.max(45, Math.min(120, Math.abs(dy) * 0.35)) + Math.abs(fanOffset)
     const cpX = Math.max(sx, tx) + tangent
-    return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cpX.toFixed(1)} ${sy.toFixed(1)}, ${cpX.toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+    return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cpX.toFixed(1)} ${startY.toFixed(1)}, ${cpX.toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
   }
 
   // Case 4: Both handles on Left side (Outer left C-curve for same-column tables)
   if (props.sourcePosition === Position.Left && props.targetPosition === Position.Left) {
     const tangent = Math.max(45, Math.min(120, Math.abs(dy) * 0.35)) + Math.abs(fanOffset)
     const cpX = Math.min(sx, tx) - tangent
-    return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cpX.toFixed(1)} ${sy.toFixed(1)}, ${cpX.toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+    return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cpX.toFixed(1)} ${startY.toFixed(1)}, ${cpX.toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
   }
 
   // Fallback: graceful direct Bézier curve
   const tangent = Math.max(45, Math.abs(dx) * 0.4)
   const dir = dx >= 0 ? 1 : -1
-  return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${(sx + tangent * dir).toFixed(1)} ${sy.toFixed(1)}, ${(tx - tangent * dir).toFixed(1)} ${ty.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+  return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${(sx + tangent * dir).toFixed(1)} ${startY.toFixed(1)}, ${(tx - tangent * dir).toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
 })
 </script>
 
@@ -314,10 +370,10 @@ const edgePath = computed(() => {
 .smart-bezier-edge {
   fill: none;
   stroke: #3b82f6;
-  stroke-width: 1.8px;
+  stroke-width: 1.6px;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.85;
+  opacity: 0.65;
   transition: stroke 0.2s ease, stroke-width 0.2s ease, opacity 0.2s ease, filter 0.2s ease;
   pointer-events: stroke;
 }
@@ -333,19 +389,21 @@ const edgePath = computed(() => {
 }
 
 :global(.dark) .smart-bezier-edge {
-  stroke: #38bdf8;
+  stroke: #60a5fa;
+  opacity: 0.65;
 }
 
 :global(.dark) .smart-bezier-edge.is-active,
 :global(.dark) .smart-obstacle-edge-group:hover .smart-bezier-edge {
   stroke: #38bdf8;
+  opacity: 1 !important;
 }
 
 /* Glow Aura underneath active line */
 .edge-glow-aura {
   stroke: rgba(37, 99, 235, 0.35);
-  stroke-width: 7px;
-  opacity: 0.8;
+  stroke-width: 6px;
+  opacity: 0.85;
   filter: blur(2px);
   pointer-events: none;
 }
@@ -357,13 +415,13 @@ const edgePath = computed(() => {
 /* Dimmed State when focusing on another field/edge */
 .smart-obstacle-edge-group.is-dimmed .smart-bezier-edge {
   stroke: #94a3b8;
-  opacity: 0.18 !important;
+  opacity: 0.12 !important;
   stroke-width: 1.2px;
 }
 
 :global(.dark) .smart-obstacle-edge-group.is-dimmed .smart-bezier-edge {
   stroke: #52525b;
-  opacity: 0.15 !important;
+  opacity: 0.12 !important;
 }
 
 @keyframes edgeFlowDash {

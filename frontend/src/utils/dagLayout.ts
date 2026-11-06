@@ -186,6 +186,23 @@ export function computeDagLayeredLayout(
     }
   }
 
+  // 3.1 Layer Compression / Span Minimization (ALAP backward sweep)
+  // Pull nodes closer to their dependents to eliminate cross-layer jumps where possible
+  const reversedTopo = [...topoOrder].reverse()
+  for (const u of reversedTopo) {
+    const successors = Array.from(acyclicAdj.get(u) || [])
+    if (successors.length > 0) {
+      const minSuccessorLayer = Math.min(...successors.map(s => nodeLayer.get(s)!))
+      const predecessors = Array.from(acyclicRevAdj.get(u) || [])
+      const maxPredecessorLayer = predecessors.length > 0
+        ? Math.max(...predecessors.map(p => nodeLayer.get(p)!))
+        : -1
+      if (minSuccessorLayer > maxPredecessorLayer + 1) {
+        nodeLayer.set(u, minSuccessorLayer - 1)
+      }
+    }
+  }
+
   // Separate completely isolated nodes (no relations at all)
   const isolatedNodes = nodes.filter(n => (inDegree.get(n.id) || 0) === 0 && (outDegree.get(n.id) || 0) === 0)
   const connectedNodes = nodes.filter(n => (inDegree.get(n.id) || 0) > 0 || (outDegree.get(n.id) || 0) > 0)

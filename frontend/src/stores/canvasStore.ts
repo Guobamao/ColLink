@@ -640,17 +640,85 @@ export const useCanvasStore = defineStore('canvas', () => {
       pos: { ...n.position },
     }))
 
-    // 2. Prepare nodes and edges for DAG computation
+    // 2. Prepare nodes and intelligently orient DAG edges from Master (PK / Root Entity) -> Detail (FK / Dependent)
+    // In database ER modeling, Master/Dimension entities are roots (Left, Layer 0), and dependent entities follow
     const dagNodes = nodes.value.map(n => ({
       id: n.id,
       columnsCount: n.data.columns ? n.data.columns.length : 0,
       data: n.data,
     }))
 
-    const dagEdges = edges.value.map(e => ({
-      source: e.source,
-      target: e.target,
-    }))
+    const isColPk = (col: any, tableName?: string) => {
+      if (!col) return false
+      if (col.is_primary_key) return true
+      const name = (col.column_name || '').toUpperCase()
+      const comment = col.column_comment || ''
+      if (name === 'ID') return true
+      if (tableName && name === `${tableName.toUpperCase()}_ID`) return true
+      if (comment.includes('主键') || comment.includes('唯一标识')) return true
+      return false
+    }
+
+    const nodeMap = new Map(nodes.value.map(n => [n.id, n]))
+    const masterScore = new Map<string, number>()
+
+    nodes.value.forEach(n => {
+      let score = 0
+      const cols = n.data?.columns || []
+      cols.forEach((c: any) => {
+        if (isColPk(c, n.data?.tableName)) score += 5
+      })
+      masterScore.set(n.id, score)
+    })
+
+    // Accumulate scores for tables whose columns are referenced by other tables
+    edges.value.forEach(e => {
+      const tgtNode = nodeMap.get(e.target)
+      const tgtCol = tgtNode?.data?.columns?.find((c: any) => c.id === e.data?.targetColumnId)
+      if (tgtCol && isColPk(tgtCol, tgtNode?.data?.tableName)) {
+        masterScore.set(e.target, (masterScore.get(e.target) || 0) + 4)
+      }
+      const srcNode = nodeMap.get(e.source)
+      const srcCol = srcNode?.data?.columns?.find((c: any) => c.id === e.data?.sourceColumnId)
+      if (srcCol && isColPk(srcCol, srcNode?.data?.tableName)) {
+        masterScore.set(e.source, (masterScore.get(e.source) || 0) + 4)
+      }
+    })
+
+    const dagEdges: Array<{ source: string; target: string }> = []
+    edges.value.forEach(e => {
+      const srcNode = nodeMap.get(e.source)
+      const tgtNode = nodeMap.get(e.target)
+      const srcCol = srcNode?.data?.columns?.find((c: any) => c.id === e.data?.sourceColumnId)
+      const tgtCol = tgtNode?.data?.columns?.find((c: any) => c.id === e.data?.targetColumnId)
+
+      const isSrcPk = isColPk(srcCol, srcNode?.data?.tableName)
+      const isTgtPk = isColPk(tgtCol, tgtNode?.data?.tableName)
+
+      let dagSrc = e.source
+      let dagTgt = e.target
+
+      if (isTgtPk && !isSrcPk) {
+        // Target is Master/PK (e.g. TEMPLATE), Source is Detail/FK (e.g. INSTANCE) -> Orient TEMPLATE -> INSTANCE
+        dagSrc = e.target
+        dagTgt = e.source
+      } else if (isSrcPk && !isTgtPk) {
+        dagSrc = e.source
+        dagTgt = e.target
+      } else {
+        const scoreSrc = masterScore.get(e.source) || 0
+        const scoreTgt = masterScore.get(e.target) || 0
+        if (scoreTgt > scoreSrc) {
+          dagSrc = e.target
+          dagTgt = e.source
+        } else {
+          dagSrc = e.source
+          dagTgt = e.target
+        }
+      }
+
+      dagEdges.push({ source: dagSrc, target: dagTgt })
+    })
 
     // 3. Compute Left-to-Right Layered Layout
     const { nodePositions } = computeDagLayeredLayout(dagNodes, dagEdges, {
