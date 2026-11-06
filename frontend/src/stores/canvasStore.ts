@@ -649,8 +649,8 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     // 3. Compute Left-to-Right Layered Layout
     const { nodePositions } = computeDagLayeredLayout(dagNodes, dagEdges, {
-      columnSpacing: 380, // 280px card + 100px corridor
-      rowSpacing: 60,
+      columnSpacing: 460, // 320px card + 140px corridor for smooth S-curves
+      rowSpacing: 48,
       startX: 80,
       startY: 80,
     })

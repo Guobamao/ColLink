@@ -32,7 +32,7 @@
         :default-edge-options="{ type: 'smartObstacle' }"
         :connection-mode="ConnectionMode.Loose"
         :connection-line-style="{ stroke: '#3b82f6', strokeWidth: 2 }"
-        :connection-line-type="'smoothstep'"
+        :connection-line-type="'bezier'"
         @node-drag-start="canvasStore.onNodeDragStart"
         @node-drag="canvasStore.onNodeDrag"
         @node-drag-stop="canvasStore.onNodeDragStop"
