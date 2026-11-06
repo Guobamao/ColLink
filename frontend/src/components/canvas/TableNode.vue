@@ -81,7 +81,7 @@
     </div>
 
     <!-- Search & Filter Bar -->
-    <div class="h-7 px-2 bg-surface border-b border-border flex items-center justify-between gap-1.5">
+    <div class="h-7 px-2 bg-[#19191c] border-b border-border flex items-center justify-between gap-1.5">
       <div class="flex items-center gap-1.5 flex-1 min-w-0">
         <Search class="w-3 h-3 text-muted shrink-0" />
         <input
@@ -356,15 +356,15 @@ const formatDataType = (typeStr: string = '') => {
 const getTypeBadgeClass = (typeStr: string = '') => {
   const upper = typeStr.toUpperCase()
   if (upper.includes('INT') || upper.includes('NUMBER') || upper.includes('FLOAT') || upper.includes('DECIMAL')) {
-    return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+    return 'bg-amber-500/12 text-amber-500 dark:text-amber-300 border-amber-500/25'
   }
   if (upper.includes('CHAR') || upper.includes('TEXT') || upper.includes('CLOB') || upper.includes('STRING')) {
-    return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+    return 'bg-sky-500/12 text-sky-500 dark:text-sky-300 border-sky-500/25'
   }
   if (upper.includes('DATE') || upper.includes('TIME') || upper.includes('TIMESTAMP')) {
-    return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+    return 'bg-emerald-500/12 text-emerald-500 dark:text-emerald-300 border-emerald-500/25'
   }
-  return 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20'
+  return 'bg-zinc-500/12 text-zinc-500 dark:text-zinc-300 border-zinc-500/25'
 }
 
 const isPrimaryKey = (col: any) => {
