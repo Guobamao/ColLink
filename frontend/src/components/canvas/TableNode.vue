@@ -155,7 +155,7 @@
 
         <!-- Column Left: Name, PK Badge, Comment -->
         <div class="flex items-center gap-1.5 min-w-0 pr-2 flex-1">
-          <span v-if="isPrimaryKey(col)" class="px-1 py-0.2 text-[10px] font-mono font-bold rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0 leading-none">
+          <span v-if="isPrimaryKey(col)" class="px-1 py-0.2 text-[10px] font-mono font-bold rounded bg-amber-500/15 text-amber-600 dark:bg-amber-400/20 dark:text-amber-300 border border-amber-500/30 dark:border-amber-400/40 shrink-0 leading-none">
             PK
           </span>
           <span class="font-mono text-xs text-primary-text truncate font-medium">
@@ -359,15 +359,15 @@ const formatDataType = (typeStr: string = '') => {
 const getTypeBadgeClass = (typeStr: string = '') => {
   const upper = typeStr.toUpperCase()
   if (upper.includes('INT') || upper.includes('NUMBER') || upper.includes('FLOAT') || upper.includes('DECIMAL')) {
-    return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+    return 'bg-amber-500/10 text-amber-600 dark:bg-amber-400/20 dark:text-amber-300 dark:border-amber-400/30 border-amber-500/20'
   }
   if (upper.includes('CHAR') || upper.includes('TEXT') || upper.includes('CLOB') || upper.includes('STRING')) {
-    return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+    return 'bg-blue-500/10 text-blue-600 dark:bg-sky-400/20 dark:text-sky-300 dark:border-sky-400/30 border-blue-500/20'
   }
   if (upper.includes('DATE') || upper.includes('TIME') || upper.includes('TIMESTAMP')) {
-    return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+    return 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/20 dark:text-emerald-300 dark:border-emerald-400/30 border-emerald-500/20'
   }
-  return 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20'
+  return 'bg-zinc-500/10 text-zinc-600 dark:bg-slate-700/50 dark:text-slate-300 dark:border-slate-600/40 border-zinc-500/20'
 }
 
 const isPrimaryKey = (col: any) => {

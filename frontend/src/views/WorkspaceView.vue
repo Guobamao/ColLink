@@ -41,7 +41,7 @@
         @edge-click="handleEdgeClick"
       >
         <!-- Background Grid Pattern -->
-        <Background :gap="20" :color="themeStore.isDark ? '#333333' : '#cbd5e1'" />
+        <Background :gap="20" :color="themeStore.isDark ? '#223049' : '#cbd5e1'" />
 
         <!-- Controls: Zoom In/Out, Fit View, Lock -->
         <Controls position="bottom-right" />
@@ -49,10 +49,10 @@
         <!-- MiniMap Component -->
         <MiniMap
           v-if="showMiniMap"
-          :node-stroke-color="themeStore.isDark ? '#007acc' : '#3b82f6'"
-          :node-color="themeStore.isDark ? '#2d2d30' : '#dbeafe'"
+          :node-stroke-color="themeStore.isDark ? '#38bdf8' : '#3b82f6'"
+          :node-color="themeStore.isDark ? '#1f2b42' : '#dbeafe'"
           :node-border-radius="3"
-          :mask-color="themeStore.isDark ? 'rgba(30, 30, 30, 0.75)' : 'rgba(241, 245, 249, 0.6)'"
+          :mask-color="themeStore.isDark ? 'rgba(11, 15, 25, 0.75)' : 'rgba(241, 245, 249, 0.6)'"
           class="canvas-minimap"
         />
 
