@@ -2,7 +2,7 @@
   <div
     class="table-card-node nowheel w-80 rounded-lg bg-surface dark:bg-[#334155] border-2 border-border dark:border-[#64748b] shadow-card select-none flex flex-col font-sans transition-[border-color,box-shadow,opacity] duration-150"
     :class="{
-      'opacity-40 grayscale-[60%]': isDimmed,
+      'opacity-85': isDimmed,
       'border-primary ring-2 ring-primary/30 shadow-card-hover': isHighlighted,
       'is-focused': isFocused,
       'cursor-crosshair border-dashed border-primary ring-2 ring-primary/40': !!canvasStore.pickingTableRole,
@@ -206,10 +206,12 @@
 
     <!-- Edit Dialog -->
     <el-dialog
+      v-if="editDialogVisible"
       v-model="editDialogVisible"
       title="修改表元信息"
       width="400px"
       append-to-body
+      destroy-on-close
       @mousedown.stop
     >
       <el-form :model="editForm" label-width="80px">

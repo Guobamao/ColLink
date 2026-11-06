@@ -114,6 +114,16 @@ html.dark {
   --el-fill-color: #475569;
   --el-fill-color-light: #334155;
   --el-fill-color-lighter: #1e293b;
+  --el-mask-color: rgba(0, 0, 0, 0.45);
+}
+
+/* Ensure any non-active or hidden Element Plus overlay never dims or covers the viewport */
+.el-overlay[style*="display: none"],
+.el-overlay.is-hidden {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 * {

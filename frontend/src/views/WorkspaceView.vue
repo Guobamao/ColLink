@@ -36,7 +36,7 @@
         @node-drag-start="canvasStore.onNodeDragStart"
         @node-drag="canvasStore.onNodeDrag"
         @node-drag-stop="canvasStore.onNodeDragStop"
-        @pane-click="canvasStore.selectColumn(null)"
+        @pane-click="handlePaneClick"
         @connect="handleConnect"
         @edge-click="handleEdgeClick"
       >
@@ -277,6 +277,11 @@ const handleImported = () => {
   setTimeout(() => {
     handleFitView()
   }, 200)
+}
+
+const handlePaneClick = () => {
+  canvasStore.selectColumn(null)
+  canvasStore.clearHighlight()
 }
 
 // Dialog openers
