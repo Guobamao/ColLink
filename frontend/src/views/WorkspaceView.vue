@@ -76,10 +76,20 @@
         </div>
 
         <!-- Floating Operational Tip Pill -->
-        <div class="canvas-floating-tip">
-          <Info class="tip-icon w-3.5 h-3.5" />
-          <span class="tip-text">{{ statusTipText }}</span>
-        </div>
+        <Transition name="fade-slide">
+          <div v-if="showFloatingTip" class="canvas-floating-tip">
+            <Info class="tip-icon w-3.5 h-3.5 shrink-0" />
+            <span class="tip-text">{{ statusTipText }}</span>
+            <button
+              type="button"
+              class="tip-close-btn"
+              title="关闭提示"
+              @click.stop="closeFloatingTip"
+            >
+              <X class="w-3 h-3" />
+            </button>
+          </div>
+        </Transition>
 
         <!-- Custom Empty State overlay if no tables -->
         <div v-if="canvasStore.nodes.length === 0" class="canvas-empty-state">
@@ -144,7 +154,7 @@ import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
 import { exportCanvasAsImage } from '@/utils/exportImage'
 import { toast, confirmDialog } from '@/utils/toast'
-import { Eye, EyeOff, Info, FileCode, Database } from 'lucide-vue-next'
+import { Eye, EyeOff, Info, FileCode, Database, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui'
 
 // Styles for Vue Flow
@@ -190,6 +200,12 @@ const statusTipText = computed(() => {
 
 const canvasWrapperRef = ref<HTMLElement | null>(null)
 const showMiniMap = ref(true)
+const showFloatingTip = ref(localStorage.getItem('collink_show_floating_tip') !== 'false')
+
+const closeFloatingTip = () => {
+  showFloatingTip.value = false
+  localStorage.setItem('collink_show_floating_tip', 'false')
+}
 const ddlDialogRef = ref<InstanceType<typeof DdlImportDialog> | null>(null)
 const dbDialogRef = ref<InstanceType<typeof DbConnectDialog> | null>(null)
 const autoMappingDialogRef = ref<InstanceType<typeof AutoMappingDialog> | null>(null)
@@ -481,14 +497,15 @@ const handleExportImage = async () => {
   z-index: 10;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   background: var(--cl-surface);
   border: 1px solid var(--cl-border);
   border-radius: 20px;
-  padding: 5px 14px;
+  padding: 5px 8px 5px 12px;
   box-shadow: var(--cl-shadow-card);
   user-select: none;
-  pointer-events: none;
+  pointer-events: auto;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .tip-icon {
@@ -504,6 +521,37 @@ const handleExportImage = async () => {
   color: var(--cl-text-secondary);
   font-weight: 500;
   letter-spacing: 0.01em;
+}
+
+.tip-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: var(--cl-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: 2px;
+}
+
+.tip-close-btn:hover {
+  background: var(--cl-surface-hover);
+  color: var(--cl-text-primary);
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(6px);
 }
 
 /* Vue Flow Controls Aesthetic Upgrade */

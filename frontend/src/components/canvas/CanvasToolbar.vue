@@ -22,18 +22,81 @@
 
       <!-- Project Switcher & Manager -->
       <div class="flex items-center gap-1">
-        <Select
-          :model-value="projectStore.currentProject?.id"
-          placeholder="选择项目空间..."
-          size="sm"
-          wrapper-class="w-36"
-          :options="projectStore.projects.map(p => ({ label: p.name, value: p.id }))"
-          @change="onProjectChange"
-        >
-          <template #prefix>
-            <FolderGit2 class="w-3.5 h-3.5 text-muted shrink-0" />
+        <Dropdown align="start" content-class="w-64 p-1.5 shadow-popup">
+          <template #trigger>
+            <button
+              type="button"
+              class="group flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text transition-all duration-150 cursor-pointer shadow-2xs max-w-[200px]"
+              title="切换或管理项目空间"
+            >
+              <FolderGit2 class="w-3.5 h-3.5 text-primary shrink-0" />
+              <span class="truncate text-xs font-medium font-sans flex-1 text-left">
+                {{ projectStore.currentProject?.name || '选择项目空间...' }}
+              </span>
+              <ChevronDown class="w-3 h-3 text-muted group-hover:text-primary-text transition-transform duration-200 shrink-0" />
+            </button>
           </template>
-        </Select>
+
+          <!-- Dropdown Header -->
+          <div class="px-2 py-1.5 flex items-center justify-between text-[11px] font-semibold text-muted border-b border-border mb-1">
+            <span>项目空间 ({{ projectStore.projects.length }})</span>
+            <button
+              type="button"
+              class="p-0.5 rounded text-muted hover:text-primary hover:bg-surface-hover transition-colors"
+              title="管理所有项目"
+              @click.stop="emit('open-project-dialog')"
+            >
+              <Settings class="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <!-- Project List -->
+          <div class="max-h-60 overflow-y-auto space-y-0.5 custom-scrollbar">
+            <DropdownItem
+              v-for="p in projectStore.projects"
+              :key="p.id"
+              custom-class="flex items-center justify-between py-1.5 px-2 rounded-md group"
+              :class="{ 'bg-primary-light/40 font-medium text-primary': p.id === projectStore.currentProject?.id }"
+              @select="onProjectChange(p.id)"
+            >
+              <div class="flex items-center gap-2 min-w-0 flex-1">
+                <FolderGit2
+                  class="w-3.5 h-3.5 shrink-0"
+                  :class="p.id === projectStore.currentProject?.id ? 'text-primary' : 'text-muted group-hover:text-primary-text'"
+                />
+                <div class="flex flex-col min-w-0">
+                  <span class="truncate text-xs leading-tight" :title="p.name">{{ p.name }}</span>
+                  <span v-if="p.description" class="text-[10px] text-muted truncate leading-tight mt-0.5" :title="p.description">
+                    {{ p.description }}
+                  </span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0 ml-2">
+                <span v-if="p.table_count !== undefined" class="text-[10px] font-mono px-1 py-0.2 rounded bg-surface-hover border border-border text-muted">
+                  {{ p.table_count }}表
+                </span>
+                <Check v-if="p.id === projectStore.currentProject?.id" class="w-3.5 h-3.5 text-primary shrink-0" />
+              </div>
+            </DropdownItem>
+            
+            <div v-if="projectStore.projects.length === 0" class="py-3 text-center text-xs text-muted">
+              暂无项目空间
+            </div>
+          </div>
+
+          <DropdownSeparator class="my-1" />
+
+          <!-- Bottom Actions -->
+          <div class="pt-0.5 space-y-0.5">
+            <DropdownItem
+              custom-class="flex items-center gap-2 py-1.5 px-2 rounded-md text-primary hover:bg-primary-light/30"
+              @select="emit('open-project-dialog')"
+            >
+              <Plus class="w-3.5 h-3.5" />
+              <span class="text-xs font-medium">新建 / 管理项目空间...</span>
+            </DropdownItem>
+          </div>
+        </Dropdown>
         <button
           type="button"
           class="w-7 h-7 flex items-center justify-center rounded-md text-muted hover:text-primary-text hover:bg-surface-hover border border-transparent hover:border-border transition-colors duration-100"
