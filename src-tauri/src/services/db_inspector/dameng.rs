@@ -22,7 +22,7 @@ impl DamengInspector {
         );
         client
             .connect()
-            .map_err(|e| format!("达梦数据库连接失败: {:?}", e))?;
+            .map_err(|e| Self::format_error(e))?;
         Ok(client)
     }
 
@@ -32,6 +32,22 @@ impl DamengInspector {
             self.config.username.trim().to_uppercase()
         } else {
             trimmed.to_uppercase()
+        }
+    }
+
+    fn format_error(e: impl std::fmt::Debug) -> String {
+        let err_str = format!("{:?}", e);
+        if err_str.contains("Login") || err_str.contains("password") || err_str.contains("用户") {
+            format!("达梦数据库认证失败: 用户名或密码错误 ({})", err_str)
+        } else if err_str.contains("Connection refused") || err_str.contains("10061") {
+            format!(
+                "达梦数据库连接被拒绝: 目标端口 5236 不可达，请确认达梦数据库服务已启动 ({})",
+                err_str
+            )
+        } else if err_str.contains("timeout") || err_str.contains("timed out") {
+            format!("达梦数据库连接超时: 目标主机无响应 ({})", err_str)
+        } else {
+            format!("达梦数据库操作异常: {}", err_str)
         }
     }
 }
@@ -86,7 +102,7 @@ impl DbInspector for DamengInspector {
         let mut client = self.connect()?;
         let res = client
             .execute("SELECT 1 FROM DUAL", &[])
-            .map_err(|e| format!("达梦执行测试语句失败: {:?}", e))?;
+            .map_err(|e| Self::format_error(e))?;
         client.close();
         match res {
             ExecuteResult::Query { .. } => Ok(()),
@@ -108,13 +124,14 @@ impl DbInspector for DamengInspector {
              LEFT JOIN ALL_TAB_COMMENTS C 
                ON T.OWNER = C.OWNER AND T.TABLE_NAME = C.TABLE_NAME
              WHERE T.OWNER = '{}'
+               AND T.OWNER NOT IN ('SYS', 'CTISYS', 'SYSAUDITOR', 'SYSSSO')
              ORDER BY T.TABLE_NAME",
             schema.replace('\'', "''")
         );
 
         let res = client
             .execute(&sql, &[])
-            .map_err(|e| format!("查询达梦数据表清单失败: {:?}", e))?;
+            .map_err(|e| Self::format_error(e))?;
         client.close();
 
         let mut summaries = Vec::new();
@@ -149,77 +166,104 @@ impl DbInspector for DamengInspector {
         let mut client = self.connect()?;
         let schema = self.get_schema();
 
-        let in_clause = table_names
-            .iter()
-            .map(|t| format!("'{}'", t.replace('\'', "''")))
-            .collect::<Vec<_>>()
-            .join(", ");
-
-        let sql = format!(
-            "SELECT 
-                C.TABLE_NAME, 
-                C.COLUMN_NAME, 
-                C.DATA_TYPE, 
-                COALESCE(C.DATA_LENGTH, 0) AS DATA_LENGTH, 
-                COALESCE(C.DATA_PRECISION, 0) AS DATA_PRECISION, 
-                COALESCE(C.DATA_SCALE, 0) AS DATA_SCALE, 
-                COALESCE(M.COMMENTS, '') AS COLUMN_COMMENT, 
-                C.COLUMN_ID,
-                COALESCE(TC.COMMENTS, '') AS TABLE_COMMENT
-             FROM ALL_TAB_COLS C
-             LEFT JOIN ALL_COL_COMMENTS M 
-               ON C.OWNER = M.OWNER AND C.TABLE_NAME = M.TABLE_NAME AND C.COLUMN_NAME = M.COLUMN_NAME
-             LEFT JOIN ALL_TAB_COMMENTS TC
-               ON C.OWNER = TC.OWNER AND C.TABLE_NAME = TC.TABLE_NAME
-             WHERE C.OWNER = '{}' AND C.TABLE_NAME IN ({})
-             ORDER BY C.TABLE_NAME, C.COLUMN_ID",
-            schema.replace('\'', "''"),
-            in_clause
-        );
-
-        let res = client
-            .execute(&sql, &[])
-            .map_err(|e| format!("查询达梦数据表字段元数据失败: {:?}", e))?;
-        client.close();
-
         let mut table_comment_map: HashMap<String, String> = HashMap::new();
         let mut table_cols_map: HashMap<String, Vec<ParsedColumn>> = HashMap::new();
 
-        if let ExecuteResult::Query { columns: _, rows } = res {
-            for row in rows {
-                let tbl_name = row.first().map(val_to_str).unwrap_or_default();
-                let col_name = row.get(1).map(val_to_str).unwrap_or_default();
-                let dtype = row.get(2).map(val_to_str).unwrap_or_default();
-                let length = row.get(3).and_then(|v| v.as_i64()).unwrap_or(0);
-                let prec = row.get(4).and_then(|v| v.as_i64()).unwrap_or(0);
-                let scale = row.get(5).and_then(|v| v.as_i64()).unwrap_or(0);
-                let col_comment = row.get(6).map(val_to_str).unwrap_or_default();
-                let ordinal = row
-                    .get(7)
-                    .and_then(|v| v.as_i64())
-                    .map(|n| n as i32)
-                    .unwrap_or(1);
-                let tbl_comment = row.get(8).map(val_to_str).unwrap_or_default();
+        // 分批执行（每批 50 张表）
+        for chunk in table_names.chunks(50) {
+            let in_clause = chunk
+                .iter()
+                .map(|t| format!("'{}'", t.replace('\'', "''")))
+                .collect::<Vec<_>>()
+                .join(", ");
 
-                if !tbl_comment.is_empty() {
-                    table_comment_map.insert(tbl_name.clone(), tbl_comment);
-                }
+            let sql = format!(
+                "SELECT 
+                    C.TABLE_NAME, 
+                    C.COLUMN_NAME, 
+                    C.DATA_TYPE, 
+                    COALESCE(C.DATA_LENGTH, 0) AS DATA_LENGTH, 
+                    COALESCE(C.DATA_PRECISION, 0) AS DATA_PRECISION, 
+                    COALESCE(C.DATA_SCALE, 0) AS DATA_SCALE, 
+                    COALESCE(M.COMMENTS, '') AS COLUMN_COMMENT, 
+                    C.COLUMN_ID,
+                    COALESCE(TC.COMMENTS, '') AS TABLE_COMMENT,
+                    CASE WHEN PK.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END AS IS_PK
+                 FROM ALL_TAB_COLS C
+                 LEFT JOIN ALL_COL_COMMENTS M 
+                   ON C.OWNER = M.OWNER AND C.TABLE_NAME = M.TABLE_NAME AND C.COLUMN_NAME = M.COLUMN_NAME
+                 LEFT JOIN ALL_TAB_COMMENTS TC
+                   ON C.OWNER = TC.OWNER AND C.TABLE_NAME = TC.TABLE_NAME
+                 LEFT JOIN (
+                     SELECT CC.OWNER, CC.TABLE_NAME, CC.COLUMN_NAME
+                     FROM ALL_CONSTRAINTS CONS
+                     JOIN ALL_CONS_COLUMNS CC 
+                       ON CONS.OWNER = CC.OWNER AND CONS.CONSTRAINT_NAME = CC.CONSTRAINT_NAME
+                     WHERE CONS.CONSTRAINT_TYPE = 'P'
+                 ) PK ON C.OWNER = PK.OWNER AND C.TABLE_NAME = PK.TABLE_NAME AND C.COLUMN_NAME = PK.COLUMN_NAME
+                 WHERE C.OWNER = '{}' AND C.TABLE_NAME IN ({})
+                 ORDER BY C.TABLE_NAME, C.COLUMN_ID",
+                schema.replace('\'', "''"),
+                in_clause
+            );
 
-                let full_type = format_dm_type(&dtype, length, prec, scale);
-                let col = ParsedColumn {
-                    column_name: col_name,
-                    data_type: full_type,
-                    column_comment: if col_comment.is_empty() {
+            let res = client
+                .execute(&sql, &[])
+                .map_err(|e| Self::format_error(e))?;
+
+            if let ExecuteResult::Query { columns: _, rows } = res {
+                for row in rows {
+                    let tbl_name = row.first().map(val_to_str).unwrap_or_default();
+                    let col_name = row.get(1).map(val_to_str).unwrap_or_default();
+                    let dtype = row.get(2).map(val_to_str).unwrap_or_default();
+                    let length = row.get(3).and_then(|v| v.as_i64()).unwrap_or(0);
+                    let prec = row.get(4).and_then(|v| v.as_i64()).unwrap_or(0);
+                    let scale = row.get(5).and_then(|v| v.as_i64()).unwrap_or(0);
+                    let col_comment = row.get(6).map(val_to_str).unwrap_or_default();
+                    let ordinal = row
+                        .get(7)
+                        .and_then(|v| v.as_i64())
+                        .map(|n| n as i32)
+                        .unwrap_or(1);
+                    let tbl_comment = row.get(8).map(val_to_str).unwrap_or_default();
+                    let is_pk = row
+                        .get(9)
+                        .and_then(|v| v.as_i64())
+                        .map(|n| n == 1)
+                        .unwrap_or(false);
+
+                    if !tbl_comment.is_empty() {
+                        table_comment_map.insert(tbl_name.clone(), tbl_comment);
+                    }
+
+                    let final_comment = if is_pk {
+                        if col_comment.is_empty() {
+                            Some("主键".to_string())
+                        } else if !col_comment.contains("主键") {
+                            Some(format!("{} (主键)", col_comment))
+                        } else {
+                            Some(col_comment)
+                        }
+                    } else if col_comment.is_empty() {
                         None
                     } else {
                         Some(col_comment)
-                    },
-                    sort_order: ordinal,
-                };
+                    };
 
-                table_cols_map.entry(tbl_name).or_default().push(col);
+                    let full_type = format_dm_type(&dtype, length, prec, scale);
+                    let col = ParsedColumn {
+                        column_name: col_name,
+                        data_type: full_type,
+                        column_comment: final_comment,
+                        sort_order: ordinal,
+                    };
+
+                    table_cols_map.entry(tbl_name).or_default().push(col);
+                }
             }
         }
+
+        client.close();
 
         let mut result = Vec::new();
         for t in table_names {

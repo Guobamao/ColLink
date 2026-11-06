@@ -24,6 +24,24 @@ impl MysqlInspector {
 
         Ok(Pool::new(opts))
     }
+
+    fn format_error(e: impl std::fmt::Display) -> String {
+        let err_str = e.to_string();
+        if err_str.contains("Access denied") || err_str.contains("1045") {
+            format!("MySQL 认证失败: 用户名或密码错误 ({})", err_str)
+        } else if err_str.contains("Unknown database") || err_str.contains("1049") {
+            format!("MySQL 数据库不存在: 请核对数据库名称 ({})", err_str)
+        } else if err_str.contains("Connection refused") || err_str.contains("10061") {
+            format!(
+                "MySQL 连接被拒绝: 无法连接到目标主机或端口，请检查数据库服务是否开启 ({})",
+                err_str
+            )
+        } else if err_str.contains("timed out") || err_str.contains("timeout") {
+            format!("MySQL 连接超时: 网络延迟过高或目标地址不可达 ({})", err_str)
+        } else {
+            format!("MySQL 操作异常: {}", err_str)
+        }
+    }
 }
 
 #[async_trait]
@@ -33,12 +51,12 @@ impl DbInspector for MysqlInspector {
         let mut conn = pool
             .get_conn()
             .await
-            .map_err(|e| format!("MySQL 连接失败: {}", e))?;
+            .map_err(|e| Self::format_error(e))?;
         let _ = conn
             .query_drop("SELECT 1")
             .await
-            .map_err(|e| format!("MySQL 执行测试查询失败: {}", e))?;
-        pool.disconnect().await.map_err(|e| e.to_string())?;
+            .map_err(|e| Self::format_error(e))?;
+        let _ = pool.disconnect().await;
         Ok(())
     }
 
@@ -47,7 +65,7 @@ impl DbInspector for MysqlInspector {
         let mut conn = pool
             .get_conn()
             .await
-            .map_err(|e| format!("MySQL 连接失败: {}", e))?;
+            .map_err(|e| Self::format_error(e))?;
 
         let sql = "
             SELECT 
@@ -56,16 +74,18 @@ impl DbInspector for MysqlInspector {
                 (SELECT COUNT(*) FROM information_schema.COLUMNS c 
                  WHERE c.TABLE_SCHEMA = t.TABLE_SCHEMA AND c.TABLE_NAME = t.TABLE_NAME) AS col_count
             FROM information_schema.TABLES t
-            WHERE t.TABLE_SCHEMA = ? AND t.TABLE_TYPE = 'BASE TABLE'
+            WHERE t.TABLE_SCHEMA = ? 
+              AND t.TABLE_TYPE IN ('BASE TABLE', 'SYSTEM VERSIONED')
+              AND t.TABLE_SCHEMA NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')
             ORDER BY t.TABLE_NAME;
         ";
 
         let rows: Vec<(String, String, Option<usize>)> = conn
             .exec(sql, (&self.config.database,))
             .await
-            .map_err(|e| format!("查询 MySQL 表清单失败: {}", e))?;
+            .map_err(|e| Self::format_error(e))?;
 
-        pool.disconnect().await.map_err(|e| e.to_string())?;
+        let _ = pool.disconnect().await;
 
         let summaries = rows
             .into_iter()
@@ -92,87 +112,100 @@ impl DbInspector for MysqlInspector {
         let mut conn = pool
             .get_conn()
             .await
-            .map_err(|e| format!("MySQL 连接失败: {}", e))?;
-
-        // 1. 获取选定表的中文注释
-        let tbl_placeholders = table_names
-            .iter()
-            .map(|_| "?")
-            .collect::<Vec<_>>()
-            .join(", ");
-        let tbl_sql = format!(
-            "SELECT TABLE_NAME, COALESCE(TABLE_COMMENT, '') 
-             FROM information_schema.TABLES 
-             WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ({})",
-            tbl_placeholders
-        );
-
-        let mut tbl_params: Vec<mysql_async::Value> = vec![self.config.database.clone().into()];
-        for t in table_names {
-            tbl_params.push(t.clone().into());
-        }
-
-        let tbl_rows: Vec<(String, String)> = conn
-            .exec(tbl_sql, tbl_params)
-            .await
-            .map_err(|e| format!("查询 MySQL 表注释失败: {}", e))?;
+            .map_err(|e| Self::format_error(e))?;
 
         let mut table_comment_map: std::collections::HashMap<String, String> =
-            tbl_rows.into_iter().collect();
-
-        // 2. 获取列级字段元数据
-        let col_placeholders = table_names
-            .iter()
-            .map(|_| "?")
-            .collect::<Vec<_>>()
-            .join(", ");
-        let col_sql = format!(
-            "SELECT 
-                TABLE_NAME, 
-                COLUMN_NAME, 
-                COLUMN_TYPE, 
-                COALESCE(COLUMN_COMMENT, ''), 
-                ORDINAL_POSITION
-             FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ({})
-             ORDER BY TABLE_NAME, ORDINAL_POSITION",
-            col_placeholders
-        );
-
-        let mut col_params: Vec<mysql_async::Value> = vec![self.config.database.clone().into()];
-        for t in table_names {
-            col_params.push(t.clone().into());
-        }
-
-        let col_rows: Vec<(String, String, String, String, i32)> = conn
-            .exec(col_sql, col_params)
-            .await
-            .map_err(|e| format!("查询 MySQL 列元数据失败: {}", e))?;
-
-        pool.disconnect().await.map_err(|e| e.to_string())?;
-
-        // 按表名聚合字段
+            std::collections::HashMap::new();
         let mut table_cols_map: std::collections::HashMap<String, Vec<ParsedColumn>> =
             std::collections::HashMap::new();
 
-        for (tbl_name, col_name, col_type, col_comment, ordinal) in col_rows {
-            let col = ParsedColumn {
-                column_name: col_name,
-                data_type: col_type.to_uppercase(),
-                column_comment: if col_comment.is_empty() {
+        // 分批处理（每批 50 张表，防止超长 SQL）
+        for chunk in table_names.chunks(50) {
+            let placeholders = chunk.iter().map(|_| "?").collect::<Vec<_>>().join(", ");
+
+            // 1. 获取选定表的中文注释
+            let tbl_sql = format!(
+                "SELECT TABLE_NAME, COALESCE(TABLE_COMMENT, '') 
+                 FROM information_schema.TABLES 
+                 WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ({})",
+                placeholders
+            );
+
+            let mut tbl_params: Vec<mysql_async::Value> =
+                vec![self.config.database.clone().into()];
+            for t in chunk {
+                tbl_params.push(t.clone().into());
+            }
+
+            let tbl_rows: Vec<(String, String)> = conn
+                .exec(tbl_sql, tbl_params)
+                .await
+                .map_err(|e| Self::format_error(e))?;
+
+            for (tbl, comment) in tbl_rows {
+                if !comment.is_empty() {
+                    table_comment_map.insert(tbl, comment);
+                }
+            }
+
+            // 2. 获取列级字段元数据与主键标记 (COLUMN_KEY = 'PRI')
+            let col_sql = format!(
+                "SELECT 
+                    TABLE_NAME, 
+                    COLUMN_NAME, 
+                    COLUMN_TYPE, 
+                    COALESCE(COLUMN_COMMENT, ''), 
+                    ORDINAL_POSITION,
+                    COALESCE(COLUMN_KEY, '')
+                 FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ({})
+                 ORDER BY TABLE_NAME, ORDINAL_POSITION",
+                placeholders
+            );
+
+            let mut col_params: Vec<mysql_async::Value> =
+                vec![self.config.database.clone().into()];
+            for t in chunk {
+                col_params.push(t.clone().into());
+            }
+
+            let col_rows: Vec<(String, String, String, String, i32, String)> = conn
+                .exec(col_sql, col_params)
+                .await
+                .map_err(|e| Self::format_error(e))?;
+
+            for (tbl_name, col_name, col_type, col_comment, ordinal, col_key) in col_rows {
+                let is_pk = col_key.eq_ignore_ascii_case("PRI");
+                let final_comment = if is_pk {
+                    if col_comment.is_empty() {
+                        Some("主键".to_string())
+                    } else if !col_comment.contains("主键") {
+                        Some(format!("{} (主键)", col_comment))
+                    } else {
+                        Some(col_comment)
+                    }
+                } else if col_comment.is_empty() {
                     None
                 } else {
                     Some(col_comment)
-                },
-                sort_order: ordinal,
-            };
-            table_cols_map.entry(tbl_name).or_default().push(col);
+                };
+
+                let col = ParsedColumn {
+                    column_name: col_name,
+                    data_type: col_type.to_uppercase(),
+                    column_comment: final_comment,
+                    sort_order: ordinal,
+                };
+                table_cols_map.entry(tbl_name).or_default().push(col);
+            }
         }
+
+        let _ = pool.disconnect().await;
 
         let mut result = Vec::new();
         for t in table_names {
             let cols = table_cols_map.remove(t).unwrap_or_default();
-            let comment = table_comment_map.remove(t).filter(|c| !c.is_empty());
+            let comment = table_comment_map.remove(t);
             result.push(ParsedTable {
                 table_name: t.clone(),
                 table_comment: comment,

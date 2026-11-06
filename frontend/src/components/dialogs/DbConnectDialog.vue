@@ -118,6 +118,12 @@
               <span v-else class="text-gray">无注释</span>
             </template>
           </el-table-column>
+          <el-table-column prop="column_count" label="字段数" width="80" align="center">
+            <template #default="{ row }">
+              <span v-if="row.column_count != null" class="font-mono">{{ row.column_count }}</span>
+              <span v-else class="text-gray">-</span>
+            </template>
+          </el-table-column>
           <el-table-column label="当前画布状态" width="110" align="center">
             <template #default="{ row }">
               <el-tag v-if="isTableInCanvas(row.table_name)" type="success" size="small" effect="light">
@@ -503,6 +509,17 @@ defineExpose({ open })
 .conn-text {
   font-size: 13px;
   color: #166534;
+}
+
+:deep(html.dark) .conn-info-banner,
+html.dark .conn-info-banner {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+:deep(html.dark) .conn-text,
+html.dark .conn-text {
+  color: #34d399 !important;
 }
 
 .table-list-header {
