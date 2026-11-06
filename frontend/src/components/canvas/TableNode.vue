@@ -1,6 +1,6 @@
 <template>
   <div
-    class="table-card-node nowheel w-80 rounded-lg bg-surface dark:bg-[#1b2232] border border-border dark:border-[#475569] shadow-card select-none flex flex-col font-sans transition-[border-color,box-shadow,opacity] duration-150"
+    class="table-card-node nowheel w-80 rounded-lg bg-surface dark:bg-[#334155] border-2 border-border dark:border-[#64748b] shadow-card select-none flex flex-col font-sans transition-[border-color,box-shadow,opacity] duration-150"
     :class="{
       'opacity-40 grayscale-[60%]': isDimmed,
       'border-primary ring-2 ring-primary/30 shadow-card-hover': isHighlighted,
@@ -10,8 +10,8 @@
     @click="handleCardClick"
     @wheel.stop
   >
-    <!-- Card Header (Vivid Blue Accent in Dark Mode) -->
-    <div class="h-9 px-2.5 bg-surface-subtle dark:bg-[#1d4ed8] border-b border-border dark:border-[#2563eb] rounded-t-[7px] flex items-center justify-between gap-2">
+    <!-- Card Header (High-Luminance Royal Blue in Dark Mode) -->
+    <div class="h-9 px-2.5 bg-surface-subtle dark:bg-[#2563eb] border-b border-border dark:border-[#3b82f6] rounded-t-[7px] flex items-center justify-between gap-2">
       <!-- Left: Table Icon & Title -->
       <div class="flex items-center gap-2 min-w-0 flex-1">
         <div class="w-5 h-5 rounded flex items-center justify-center bg-primary/10 dark:bg-white/20 text-primary dark:text-white border border-primary/20 dark:border-white/30 shrink-0">
@@ -31,13 +31,13 @@
 
       <!-- Right: Column Count & Dropdown Actions -->
       <div class="flex items-center gap-1 shrink-0">
-        <span class="px-1.5 py-0.2 text-[11px] font-mono rounded bg-surface-hover dark:bg-blue-800 dark:text-blue-100 dark:border-blue-600 border border-border text-muted font-medium">
+        <span class="px-1.5 py-0.2 text-[11px] font-mono rounded bg-surface-hover dark:bg-blue-700 dark:text-white dark:border-blue-400 border border-border text-muted font-bold">
           {{ data.columns?.length || 0 }} 列
         </span>
         <el-dropdown trigger="click" @command="handleCommand">
           <button
             type="button"
-            class="w-5 h-5 flex items-center justify-center rounded text-muted dark:text-white/80 hover:text-primary-text dark:hover:text-white hover:bg-surface dark:hover:bg-blue-700 border border-transparent hover:border-border transition-colors"
+            class="w-5 h-5 flex items-center justify-center rounded text-muted dark:text-white hover:text-primary-text dark:hover:text-white hover:bg-surface dark:hover:bg-blue-700 border border-transparent hover:border-border transition-colors"
             title="更多操作"
           >
             <MoreHorizontal class="w-3.5 h-3.5" />
@@ -81,20 +81,20 @@
     </div>
 
     <!-- Search & Filter Bar -->
-    <div class="h-7 px-2 bg-surface border-b border-border flex items-center justify-between gap-1.5">
+    <div class="h-7 px-2 bg-surface dark:bg-[#273244] border-b border-border dark:border-[#475569] flex items-center justify-between gap-1.5">
       <div class="flex items-center gap-1.5 flex-1 min-w-0">
-        <Search class="w-3 h-3 text-muted shrink-0" />
+        <Search class="w-3 h-3 text-muted dark:text-slate-300 shrink-0" />
         <input
           v-model="searchKeyword"
           type="text"
           placeholder="过滤字段..."
-          class="w-full bg-transparent text-[11px] text-primary-text placeholder:text-muted/60 focus:outline-none font-mono"
+          class="w-full bg-transparent text-[11px] text-primary-text dark:text-white placeholder:text-muted/80 dark:placeholder:text-slate-300 focus:outline-none font-mono"
           @mousedown.stop
         />
         <button
           v-if="searchKeyword"
           type="button"
-          class="text-muted hover:text-primary-text text-[10px] px-1"
+          class="text-muted dark:text-slate-300 hover:text-primary-text dark:hover:text-white text-[10px] px-1"
           @click="searchKeyword = ''"
         >
           ×
@@ -105,7 +105,7 @@
       <button
         type="button"
         class="w-5 h-5 flex items-center justify-center rounded text-xs transition-colors shrink-0"
-        :class="onlyMapped ? 'bg-primary-light text-primary font-bold' : 'text-muted hover:text-primary-text hover:bg-surface-hover'"
+        :class="onlyMapped ? 'bg-primary-light text-primary font-bold' : 'text-muted dark:text-slate-300 hover:text-primary-text dark:hover:text-white hover:bg-surface-hover dark:hover:bg-slate-600'"
         :title="onlyMapped ? '当前已折叠无连线字段，点击显示全部' : '仅展示有血缘连线的字段 (折叠其余孤立字段)'"
         @click.stop="onlyMapped = !onlyMapped"
       >
@@ -121,7 +121,7 @@
     <!-- Column List (nowheel prevents outer canvas zooming) -->
     <div
       ref="columnListRef"
-      class="column-list nowheel max-h-[300px] overflow-y-auto overflow-x-hidden divide-y divide-border/40 py-0.5 rounded-b-[7px]"
+      class="column-list nowheel max-h-[300px] overflow-y-auto overflow-x-hidden divide-y divide-border/60 dark:divide-slate-600 py-0.5 rounded-b-[7px]"
       @wheel.stop
       @scroll="handleColumnListScroll"
     >
@@ -129,10 +129,10 @@
         v-for="col in filteredColumns"
         :id="`col_item_${col.id}`"
         :key="col.id"
-        class="column-item group relative flex items-center justify-between h-[27px] px-4 hover:bg-surface-hover cursor-pointer transition-colors text-xs"
+        class="column-item group relative flex items-center justify-between h-[27px] px-4 hover:bg-surface-hover dark:hover:bg-slate-600/80 cursor-pointer transition-colors text-xs"
         :class="{
           'is-breathing bg-primary-light/40': isColumnActive(col.id),
-          'border-l-2 border-l-primary bg-primary/10': hasMapping(col.id) && !isColumnActive(col.id),
+          'border-l-2 border-l-primary bg-primary/10 dark:border-l-sky-400 dark:bg-sky-400/15': hasMapping(col.id) && !isColumnActive(col.id),
         }"
         :title="col.column_comment ? `${col.column_name} (${col.column_comment})` : col.column_name"
         @click.stop="handleFieldClick(col.id)"
@@ -158,10 +158,10 @@
           <span v-if="isPrimaryKey(col)" class="px-1.5 py-0.2 text-[10px] font-mono font-bold rounded bg-amber-500/20 text-amber-700 dark:bg-amber-400 dark:text-slate-900 border border-amber-500/40 dark:border-amber-300 shrink-0 leading-none shadow-2xs">
             PK
           </span>
-          <span class="font-mono text-xs text-primary-text truncate font-semibold">
+          <span class="font-mono text-xs text-primary-text dark:text-white truncate font-bold">
             {{ col.column_name }}
           </span>
-          <span v-if="col.column_comment" class="text-[11px] text-muted font-normal truncate max-w-[110px]">
+          <span v-if="col.column_comment" class="text-[11px] text-muted dark:text-slate-100 font-normal truncate max-w-[110px]">
             {{ col.column_comment }}
           </span>
         </div>
@@ -359,15 +359,15 @@ const formatDataType = (typeStr: string = '') => {
 const getTypeBadgeClass = (typeStr: string = '') => {
   const upper = typeStr.toUpperCase()
   if (upper.includes('INT') || upper.includes('NUMBER') || upper.includes('FLOAT') || upper.includes('DECIMAL')) {
-    return 'bg-amber-500/10 text-amber-700 dark:bg-amber-400/25 dark:text-amber-200 dark:border-amber-400/50 border-amber-500/20 font-semibold'
+    return 'bg-amber-500/10 text-amber-700 dark:bg-amber-400/35 dark:text-amber-100 dark:border-amber-400/70 border-amber-500/20 font-bold'
   }
   if (upper.includes('CHAR') || upper.includes('TEXT') || upper.includes('CLOB') || upper.includes('STRING')) {
-    return 'bg-blue-500/10 text-blue-700 dark:bg-sky-400/25 dark:text-sky-200 dark:border-sky-400/50 border-blue-500/20 font-semibold'
+    return 'bg-blue-500/10 text-blue-700 dark:bg-sky-400/35 dark:text-sky-100 dark:border-sky-400/70 border-blue-500/20 font-bold'
   }
   if (upper.includes('DATE') || upper.includes('TIME') || upper.includes('TIMESTAMP')) {
-    return 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/25 dark:text-emerald-200 dark:border-emerald-400/50 border-emerald-500/20 font-semibold'
+    return 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/35 dark:text-emerald-100 dark:border-emerald-400/70 border-emerald-500/20 font-bold'
   }
-  return 'bg-zinc-500/10 text-zinc-700 dark:bg-slate-700/60 dark:text-slate-200 dark:border-slate-600/60 border-zinc-500/20 font-semibold'
+  return 'bg-zinc-500/10 text-zinc-700 dark:bg-slate-600/70 dark:text-white dark:border-slate-500/70 border-zinc-500/20 font-bold'
 }
 
 const isPrimaryKey = (col: any) => {
