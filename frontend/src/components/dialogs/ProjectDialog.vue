@@ -5,7 +5,7 @@
     destroy-on-close
   >
     <template #header>
-      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: #1e293b;">
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: var(--cl-text-primary);">
         <el-icon color="#3b82f6"><FolderOpened /></el-icon>
         <span>项目空间管理</span>
       </div>

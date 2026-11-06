@@ -6,7 +6,7 @@
     :close-on-click-modal="false"
   >
     <template #header>
-      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: #1e293b;">
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: var(--cl-text-primary);">
         <el-icon color="#3b82f6"><DocumentAdd /></el-icon>
         <span>DDL 脚本解析导入</span>
       </div>
@@ -445,9 +445,9 @@ defineExpose({ open })
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: #f8fafc;
+  background: var(--cl-surface-subtle);
   border-radius: 6px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--cl-border);
 }
 
 .config-item {
@@ -458,7 +458,7 @@ defineExpose({ open })
 
 .label {
   font-size: 13px;
-  color: #475569;
+  color: var(--cl-text-secondary);
   font-weight: 500;
 }
 
@@ -472,8 +472,10 @@ defineExpose({ open })
   font-family: var(--cl-font-mono) !important;
   font-size: 12px;
   background: var(--cl-surface-subtle);
+  color: var(--cl-text-primary);
   line-height: 1.5;
   border-radius: 6px;
+  border: 1px solid var(--cl-border);
 }
 
 .textarea-actions {
@@ -503,16 +505,16 @@ defineExpose({ open })
 .preview-title {
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--cl-text-primary);
 }
 
 .preview-sub-tip {
   font-size: 11px;
-  color: #64748b;
+  color: var(--cl-text-muted);
 }
 
 .text-gray {
-  color: #94a3b8;
+  color: var(--cl-text-faint);
   font-size: 12px;
 }
 </style>

@@ -5,7 +5,7 @@
     destroy-on-close
   >
     <template #header>
-      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: #1e293b;">
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: var(--cl-text-primary);">
         <el-icon color="#3b82f6"><TakeawayBox /></el-icon>
         <span>项目备份与数据迁移</span>
       </div>

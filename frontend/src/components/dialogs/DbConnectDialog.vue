@@ -6,7 +6,7 @@
     :close-on-click-modal="false"
   >
     <template #header>
-      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: #1e293b;">
+      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: var(--cl-text-primary);">
         <el-icon color="#3b82f6"><Connection /></el-icon>
         <span>{{ step === 'config' ? '连接数据库导入 - 数据库配置' : '连接数据库导入 - 选择导入数据表' }}</span>
       </div>
@@ -520,12 +520,12 @@ defineExpose({ open })
 .title {
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--cl-text-primary);
 }
 
 .sub-tip {
   font-size: 11px;
-  color: #64748b;
+  color: var(--cl-text-muted);
 }
 
 .tables-bottom-bar {
@@ -537,7 +537,7 @@ defineExpose({ open })
 
 .selected-summary {
   font-size: 13px;
-  color: #64748b;
+  color: var(--cl-text-secondary);
 }
 
 .highlight-num {

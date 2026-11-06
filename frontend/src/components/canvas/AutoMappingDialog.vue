@@ -430,7 +430,7 @@ defineExpose({
   gap: 8px;
   font-weight: 600;
   font-size: 16px;
-  color: #1e293b;
+  color: var(--cl-text-primary);
 }
 
 .header-icon {
@@ -444,8 +444,8 @@ defineExpose({
 }
 
 .config-panel {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--cl-surface-subtle);
+  border: 1px solid var(--cl-border);
   border-radius: 8px;
   padding: 16px;
   display: flex;
@@ -577,28 +577,28 @@ defineExpose({
 .col-name {
   font-weight: 600;
   font-size: 12px;
-  color: #1e293b;
+  color: var(--cl-text-primary);
 }
 
 .col-comment {
   font-size: 11px;
-  color: #64748b;
-  background: #f1f5f9;
+  color: var(--cl-text-secondary);
+  background: var(--cl-surface-subtle);
   padding: 1px 6px;
   border-radius: 4px;
 }
 
 .col-type {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--cl-text-muted);
   font-family: monospace;
 }
 
 .empty-candidate {
   padding: 20px 0;
-  background: #f8fafc;
+  background: var(--cl-surface-subtle);
   border-radius: 8px;
-  border: 1px dashed #e2e8f0;
+  border: 1px dashed var(--cl-border);
 }
 
 .dialog-footer {
@@ -609,7 +609,7 @@ defineExpose({
 
 .footer-left {
   font-size: 12px;
-  color: #64748b;
+  color: var(--cl-text-muted);
 }
 
 .footer-right {

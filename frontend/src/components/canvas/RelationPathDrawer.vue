@@ -740,14 +740,15 @@ defineExpose({
 .path-index-badge {
   font-size: 12px;
   font-weight: 600;
-  color: #475569;
-  background: #f1f5f9;
+  color: var(--cl-text-secondary);
+  background: var(--cl-surface-subtle);
   padding: 2px 8px;
   border-radius: 4px;
 }
 
 .path-title-flow {
-  background: #f8fafc;
+  background: var(--cl-surface-subtle);
+  border: 1px solid var(--cl-border);
   border-radius: 6px;
   padding: 10px 14px;
   display: flex;
