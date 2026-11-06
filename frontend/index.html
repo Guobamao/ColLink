@@ -7,6 +7,12 @@
     <link rel="apple-touch-icon" href="/logo.png?v=2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ColLink</title>
+    <script>
+      // 禁用原生浏览器右键上下文菜单
+      document.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+      });
+    </script>
   </head>
   <body>
     <div id="app"></div>
