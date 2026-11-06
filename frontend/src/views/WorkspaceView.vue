@@ -49,11 +49,18 @@
         <!-- MiniMap Component -->
         <MiniMap
           v-if="showMiniMap"
-          :node-stroke-color="themeStore.isDark ? '#007acc' : '#3b82f6'"
-          :node-color="themeStore.isDark ? '#2d2d30' : '#dbeafe'"
-          :node-border-radius="3"
-          :mask-color="themeStore.isDark ? 'rgba(30, 30, 30, 0.75)' : 'rgba(241, 245, 249, 0.6)'"
+          :node-color="getMiniMapNodeColor"
+          :node-stroke-color="getMiniMapNodeStrokeColor"
+          :node-border-radius="4"
+          :node-stroke-width="1.5"
+          :mask-color="themeStore.isDark ? 'rgba(0, 0, 0, 0.55)' : 'rgba(15, 23, 42, 0.12)'"
+          :mask-stroke-color="themeStore.isDark ? '#60a5fa' : '#2563eb'"
+          :mask-stroke-width="2"
+          :mask-border-radius="4"
+          :pannable="true"
+          :zoomable="true"
           class="canvas-minimap"
+          @node-click="handleMiniMapNodeClick"
         />
 
         <!-- MiniMap Fold/Unfold Toggle Button -->
@@ -164,7 +171,7 @@ import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useThemeStore } from '@/stores/themeStore'
 
-const { fitView, updateNodeInternals } = useVueFlow()
+const { fitView, updateNodeInternals, setCenter } = useVueFlow()
 
 const projectStore = useProjectStore()
 const canvasStore = useCanvasStore()
@@ -231,6 +238,63 @@ const handleExportExcel = async () => {
 
 const handleFitView = () => {
   fitView({ padding: 0.2, duration: 400 })
+}
+
+// MiniMap Node dynamic colors based on table colorTag & theme
+const getMiniMapNodeColor = (node: any) => {
+  const isDark = themeStore.isDark
+  const colorTag = node.data?.colorTag || 'blue'
+  const colorMap: Record<string, { light: string; dark: string }> = {
+    blue: { light: '#93c5fd', dark: '#1e40af' },
+    emerald: { light: '#6ee7b7', dark: '#065f46' },
+    green: { light: '#86efac', dark: '#166534' },
+    amber: { light: '#fcd34d', dark: '#92400e' },
+    rose: { light: '#fda4af', dark: '#9f1239' },
+    red: { light: '#fca5a5', dark: '#991b1c' },
+    purple: { light: '#d8b4fe', dark: '#6b21a8' },
+    indigo: { light: '#a5b4fc', dark: '#3730a3' },
+    cyan: { light: '#67e8f9', dark: '#155e75' },
+    orange: { light: '#fdba74', dark: '#9a3412' },
+  }
+  if (colorMap[colorTag]) {
+    return isDark ? colorMap[colorTag].dark : colorMap[colorTag].light
+  }
+  return isDark ? '#1e40af' : '#bfdbfe'
+}
+
+const getMiniMapNodeStrokeColor = (node: any) => {
+  const isDark = themeStore.isDark
+  const colorTag = node.data?.colorTag || 'blue'
+  const strokeMap: Record<string, { light: string; dark: string }> = {
+    blue: { light: '#3b82f6', dark: '#60a5fa' },
+    emerald: { light: '#10b981', dark: '#34d399' },
+    green: { light: '#22c55e', dark: '#4ade80' },
+    amber: { light: '#f59e0b', dark: '#fbbf24' },
+    rose: { light: '#f43f5e', dark: '#fb7185' },
+    red: { light: '#ef4444', dark: '#f87171' },
+    purple: { light: '#a855f7', dark: '#c084fc' },
+    indigo: { light: '#6366f1', dark: '#818cf8' },
+    cyan: { light: '#06b6d4', dark: '#22d3ee' },
+    orange: { light: '#f97316', dark: '#fb923c' },
+  }
+  if (strokeMap[colorTag]) {
+    return isDark ? strokeMap[colorTag].dark : strokeMap[colorTag].light
+  }
+  return isDark ? '#60a5fa' : '#3b82f6'
+}
+
+// Click node on minimap to smoothly fly and focus
+const handleMiniMapNodeClick = ({ node }: { node: any }) => {
+  if (node) {
+    const x = node.computedPosition?.x ?? node.position?.x ?? 0
+    const y = node.computedPosition?.y ?? node.position?.y ?? 0
+    const width = node.dimensions?.width || 320
+    const height = node.dimensions?.height || 200
+    setCenter(x + width / 2, y + height / 2, { duration: 500 })
+    if (node.data?.tableId) {
+      canvasStore.focusTable(node.data.tableId)
+    }
+  }
 }
 
 const handleFocusTable = ({ tableId, nodeId, columnId }: { tableId: string; nodeId: string; columnId?: string }) => {
@@ -549,24 +613,43 @@ const handleExportImage = async () => {
   bottom: 16px !important;
   right: 60px !important;
   margin: 0 !important;
-  width: 200px !important;
-  height: 130px !important;
+  width: 210px !important;
+  height: 135px !important;
   background: var(--cl-surface) !important;
   border: 1px solid var(--cl-border) !important;
-  border-radius: 6px !important;
+  border-radius: 8px !important;
   box-shadow: var(--cl-shadow-popup) !important;
   overflow: hidden !important;
   z-index: 9 !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+:deep(.canvas-minimap:hover) {
+  border-color: var(--cl-border-active) !important;
 }
 
 :deep(.canvas-minimap .vue-flow__minimap-mask) {
-  fill: var(--cl-canvas-bg) !important;
+  cursor: grab;
+}
+
+:deep(.canvas-minimap.dragging .vue-flow__minimap-mask),
+:deep(.canvas-minimap .vue-flow__minimap-mask:active) {
+  cursor: grabbing;
+}
+
+:deep(.canvas-minimap .vue-flow__minimap-node) {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+:deep(.canvas-minimap .vue-flow__minimap-node:hover) {
+  opacity: 0.8;
 }
 
 /* MiniMap Toggle Button */
 .minimap-toggle-btn {
   position: absolute;
-  bottom: 154px;
+  bottom: 159px;
   right: 60px;
   z-index: 10;
   display: inline-flex;
