@@ -16,8 +16,9 @@ pub fn window_toggle_maximize(window: tauri::Window) -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub fn window_close(window: tauri::Window) -> Result<(), String> {
-    window.close().map_err(|e| e.to_string())
+pub fn window_close(app: tauri::AppHandle, window: tauri::Window) -> Result<(), String> {
+    crate::hide_window_to_tray(&app, &window);
+    Ok(())
 }
 
 #[tauri::command]

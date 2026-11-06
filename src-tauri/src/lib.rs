@@ -6,8 +6,26 @@ pub mod services;
 
 use db::{get_db_path, init_db, DbState};
 use rusqlite::Connection;
+use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
 use tauri::Manager;
+
+pub struct TrayNotificationState(pub AtomicBool);
+
+pub fn hide_window_to_tray(app: &tauri::AppHandle, window: &tauri::Window) {
+    let _ = window.hide();
+    if let Some(state) = app.try_state::<TrayNotificationState>() {
+        if !state.0.swap(true, std::sync::atomic::Ordering::SeqCst) {
+            use tauri_plugin_notification::NotificationExt;
+            let _ = app
+                .notification()
+                .builder()
+                .title("ColLink")
+                .body("ColLink 正在后台运行，双击托盘图标即可打开")
+                .show();
+        }
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -16,6 +34,7 @@ pub fn run() {
     init_db(&conn).expect("Failed to initialize database tables");
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .setup(move |app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
@@ -25,7 +44,71 @@ pub fn run() {
                 )?;
             }
             app.manage(DbState(Mutex::new(conn)));
+            app.manage(TrayNotificationState(AtomicBool::new(false)));
+
+            let show_item =
+                tauri::menu::MenuItem::with_id(app, "show", "显示主窗口", true, None::<&str>)?;
+            let quit_item =
+                tauri::menu::MenuItem::with_id(app, "quit", "彻底退出", true, None::<&str>)?;
+            let menu = tauri::menu::Menu::with_items(
+                app,
+                &[
+                    &show_item,
+                    &tauri::menu::PredefinedMenuItem::separator(app)?,
+                    &quit_item,
+                ],
+            )?;
+
+            let mut tray_builder = tauri::tray::TrayIconBuilder::new()
+                .tooltip("ColLink")
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(move |app, event| match event.id.as_ref() {
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.unminimize();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .on_tray_icon_event(|tray, event| match event {
+                    tauri::tray::TrayIconEvent::Click {
+                        button: tauri::tray::MouseButton::Left,
+                        button_state: tauri::tray::MouseButtonState::Up,
+                        ..
+                    }
+                    | tauri::tray::TrayIconEvent::DoubleClick {
+                        button: tauri::tray::MouseButton::Left,
+                        ..
+                    } => {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.unminimize();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    _ => {}
+                });
+
+            if let Some(icon) = app.default_window_icon() {
+                tray_builder = tray_builder.icon(icon.clone());
+            }
+
+            tray_builder.build(app)?;
+
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                hide_window_to_tray(window.app_handle(), window);
+            }
         })
         .invoke_handler(tauri::generate_handler![
             // Projects
