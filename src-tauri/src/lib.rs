@@ -60,6 +60,10 @@ pub fn run() {
             commands::ddl::parse_ddl_text,
             commands::ddl::parse_ddl_file,
             commands::ddl::import_ddl_tables,
+            // Database Direct Connection
+            commands::db::test_db_connection,
+            commands::db::list_db_tables,
+            commands::db::import_db_tables,
             // Exporter
             commands::exporter::export_excel,
             commands::exporter::export_project_json,

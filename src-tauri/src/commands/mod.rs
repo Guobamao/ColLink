@@ -1,4 +1,5 @@
 pub mod canvases;
+pub mod db;
 pub mod ddl;
 pub mod exporter;
 pub mod mappings;

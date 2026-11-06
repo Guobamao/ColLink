@@ -108,34 +108,33 @@ export const api = {
       canvasId: canvasId || undefined,
     }),
 
-  // DB Connection (Reserved for Stage 4 ODBC integration)
-  testDbConnection: async (_data: any): Promise<{ success: boolean; message: string }> => {
-    return {
-      success: false,
-      message: '数据库直连服务已计划在后续阶段接入，当前请优先使用 DDL 脚本解析导入。',
-    }
-  },
-  listDbTables: async (_data: any): Promise<DbTableSummary[]> => {
-    return []
-  },
-  importDbTables: async (
-    _projectId: string,
-    _connection: any,
-    _selectedTables?: string[],
-    _canvasId?: string
-  ) => {
-    return {
-      tables: [],
+  // DB Connection
+  testDbConnection: (config: any) =>
+    invoke<{ success: boolean; message: string }>('test_db_connection', { config }),
+  listDbTables: (config: any) =>
+    invoke<DbTableSummary[]>('list_db_tables', { config }),
+  importDbTables: (
+    projectId: string,
+    config: any,
+    selectedTables: string[],
+    canvasId?: string
+  ) =>
+    invoke<{
+      tables: TableMeta[]
       summary: {
-        tables_created: 0,
-        tables_updated: 0,
-        columns_added: 0,
-        columns_updated: 0,
-        mappings_preserved: 0,
-        message: '请优先使用离线 DDL 脚本解析导入',
-      },
-    }
-  },
+        tables_created: number
+        tables_updated: number
+        columns_added: number
+        columns_updated: number
+        mappings_preserved: number
+        message: string
+      }
+    }>('import_db_tables', {
+      projectId,
+      canvasId: canvasId || undefined,
+      config,
+      selectedTables,
+    }),
 
   // Export / Backup
   exportExcel: async (projectId: string, projectName: string = '项目'): Promise<void> => {

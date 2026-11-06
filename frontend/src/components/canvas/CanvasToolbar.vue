@@ -55,7 +55,7 @@
       <!-- Quick Command Palette Trigger (Ctrl+K) -->
       <button
         type="button"
-        class="group flex items-center justify-between w-64 h-7 px-2.5 rounded-md border border-border bg-[#18181b] hover:bg-surface-hover hover:border-border-strong text-muted hover:text-primary-text transition-all duration-100 cursor-pointer shadow-2xs text-[11px]"
+        class="group flex items-center justify-between w-60 h-7 px-2 rounded-md border border-border bg-surface-subtle hover:bg-surface-hover text-muted hover:text-primary-text transition-all duration-100 cursor-pointer shadow-2xs text-[11px]"
         title="唤起全局命令中心 (快捷键: Ctrl+K)"
         @click="emit('open-command-palette')"
       >
@@ -74,7 +74,7 @@
       <el-dropdown trigger="click" @command="handleImportCommand">
         <button
           type="button"
-          class="h-7 px-3 rounded-md bg-[#0284c7] hover:bg-[#0369a1] text-white text-xs font-medium flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+          class="h-7 px-2.5 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-medium flex items-center gap-1.5 shadow-2xs transition-colors"
         >
           <Plus class="w-3.5 h-3.5 shrink-0" />
           <span>导入表结构</span>
@@ -99,10 +99,10 @@
       </el-dropdown>
 
       <!-- Layout & View Fit Segmented Control -->
-      <div class="flex items-center p-0.5 rounded-md border border-border bg-[#18181b]">
+      <div class="flex items-center p-0.5 rounded-md border border-border bg-surface-subtle">
         <button
           type="button"
-          class="h-6 px-2 rounded flex items-center gap-1 text-[11px] text-muted hover:text-primary-text hover:bg-surface transition-colors cursor-pointer"
+          class="h-6 px-2 rounded flex items-center gap-1 text-[11px] text-muted hover:text-primary-text hover:bg-surface transition-colors"
           title="DAG 有向分层拓扑智能排版 (从左至右)"
           @click="handleAutoLayout"
         >
@@ -112,7 +112,7 @@
         <div class="w-px h-3 bg-border my-auto"></div>
         <button
           type="button"
-          class="h-6 px-2 rounded flex items-center gap-1 text-[11px] text-muted hover:text-primary-text hover:bg-surface transition-colors cursor-pointer"
+          class="h-6 px-2 rounded flex items-center gap-1 text-[11px] text-muted hover:text-primary-text hover:bg-surface transition-colors"
           title="自动缩放平移以完整容纳所有节点"
           @click="emit('fit-view')"
         >
@@ -127,22 +127,22 @@
       <!-- 智能自动连线 -->
       <button
         type="button"
-        class="h-7 px-2.5 rounded-md border border-border/80 bg-surface/90 hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer"
+        class="h-7 px-2 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors"
         title="基于字段同名与中文语义自动匹配连线"
         @click="emit('open-auto-mapping')"
       >
-        <Sparkles class="w-3.5 h-3.5 text-sky-400 shrink-0" />
+        <Sparkles class="w-3.5 h-3.5 text-primary shrink-0" />
         <span>智能连线</span>
       </button>
 
       <!-- 关联路径探查 -->
       <button
         type="button"
-        class="h-7 px-2.5 rounded-md border border-border/80 bg-surface/90 hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer"
+        class="h-7 px-2 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors"
         title="计算两表间多跳关联路径与生成 SQL JOIN"
         @click="emit('open-relation-path')"
       >
-        <Route class="w-3.5 h-3.5 text-sky-400 shrink-0" />
+        <Route class="w-3.5 h-3.5 text-primary shrink-0" />
         <span>路径探查</span>
       </button>
 
@@ -150,7 +150,7 @@
       <button
         v-if="canvasStore.highlightedNodeIds.size > 0"
         type="button"
-        class="h-7 px-2 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center gap-1 text-xs font-medium transition-colors cursor-pointer"
+        class="h-7 px-2 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center gap-1 text-xs font-medium transition-colors"
         @click="canvasStore.clearHighlight()"
       >
         <XCircle class="w-3.5 h-3.5 shrink-0" />
@@ -160,13 +160,13 @@
       <!-- Mapping Review Drawer Button with Count Badge -->
       <button
         type="button"
-        class="h-7 px-2.5 rounded-md border border-border/80 bg-surface/90 hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors cursor-pointer"
+        class="h-7 px-2 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors"
         title="查看当前项目所有已建立的字段映射连线"
         @click="emit('open-mapping-drawer')"
       >
         <Link2 class="w-3.5 h-3.5 text-muted shrink-0" />
         <span>映射</span>
-        <span class="px-1.5 py-0.2 text-[10px] font-mono rounded bg-sky-500/15 text-sky-400 font-semibold border border-sky-500/25">
+        <span class="px-1.5 py-0.2 text-[10px] font-mono rounded bg-primary-light text-primary font-semibold">
           {{ canvasStore.edges.length }}
         </span>
       </button>
@@ -177,7 +177,7 @@
       <el-dropdown trigger="click" @command="handleExportCommand">
         <button
           type="button"
-          class="h-7 px-2.5 rounded-md border border-border/80 bg-surface/90 hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors shadow-2xs cursor-pointer"
+          class="h-7 px-2.5 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors shadow-2xs"
         >
           <Download class="w-3.5 h-3.5 text-muted shrink-0" />
           <span>导出</span>
@@ -213,7 +213,7 @@
       <el-dropdown trigger="click" @command="handleThemeCommand">
         <button
           type="button"
-          class="w-7 h-7 flex items-center justify-center rounded-md text-muted hover:text-primary-text hover:bg-surface-hover transition-colors cursor-pointer"
+          class="w-7 h-7 flex items-center justify-center rounded-md border border-border bg-surface hover:bg-surface-hover text-muted hover:text-primary-text transition-colors"
           :title="'切换主题风格 (当前: ' + themeLabel + ')'"
         >
           <Moon v-if="themeStore.isDark" class="w-3.5 h-3.5" />
