@@ -139,6 +139,86 @@ const edgePath = computed(() => {
     return Math.max(45, Math.min(maxT, absX * ratio))
   }
 
+  // Find the optimal horizontal passage (open inter-card gap or outer margin) through a column
+  const findBestPassageY = (
+    colCards: Rect[],
+    expectedY: number,
+    endY: number,
+    fanOffset: number
+  ): number => {
+    if (colCards.length === 0) return expectedY
+
+    const sorted = [...colCards].sort((a, b) => a.top - b.top)
+    interface Passage {
+      y: number
+      minY: number
+      maxY: number
+      isGap: boolean
+    }
+    const passages: Passage[] = []
+
+    // 1. Passage above the topmost card
+    const topCard = sorted[0]
+    passages.push({
+      y: topCard.top - 36 - Math.abs(fanOffset),
+      minY: -Infinity,
+      maxY: topCard.top - 16,
+      isGap: false,
+    })
+
+    // 2. Inter-card gaps between adjacent cards in this column
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const curr = sorted[i]
+      const next = sorted[i + 1]
+      const gap = next.top - curr.bottom
+      // A gap >= 36px is an open horizontal freeway for lines to glide straight through
+      if (gap >= 36) {
+        passages.push({
+          y: (curr.bottom + next.top) / 2,
+          minY: curr.bottom + 14,
+          maxY: next.top - 14,
+          isGap: true,
+        })
+      }
+    }
+
+    // 3. Passage below the bottommost card
+    const bottomCard = sorted[sorted.length - 1]
+    passages.push({
+      y: bottomCard.bottom + 36 + Math.abs(fanOffset),
+      minY: bottomCard.bottom + 16,
+      maxY: Infinity,
+      isGap: false,
+    })
+
+    // If expectedY already lands inside an open passage/gap, use it directly without detours
+    const directHit = passages.find(p => expectedY >= p.minY && expectedY <= p.maxY)
+    if (directHit) {
+      if (directHit.isGap) {
+        return Math.max(directHit.minY + 4, Math.min(directHit.maxY - 4, expectedY))
+      }
+      return directHit.y
+    }
+
+    // Pick the passage with the minimum detour cost, strongly prioritizing natural inter-card gaps
+    let best = passages[0]
+    let minCost = Infinity
+
+    for (const p of passages) {
+      const distFromExpected = Math.abs(p.y - expectedY)
+      const distFromEnd = Math.abs(p.y - endY)
+      const gapBonus = p.isGap ? -50 : 0
+      const cost = distFromExpected * 1.6 + distFromEnd * 0.7 + gapBonus
+
+      if (cost < minCost) {
+        minCost = cost
+        best = p
+      }
+    }
+
+    return best.y
+  }
+
   // Case 1: Standard Left-to-Right Flow (source on Right, target on Left)
   if (props.sourcePosition === Position.Right && props.targetPosition === Position.Left) {
     if (dx > 0) {
@@ -178,21 +258,16 @@ const edgePath = computed(() => {
           return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${(tx - 8).toFixed(1)} ${endY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
         }
       } else {
-        // Collect full column cluster to route around the cluster rather than diving into card crevices
         const clusterCards = obstacles.filter(obs => {
           return blockingObstacles.some(bo => Math.abs(obs.centerX - bo.centerX) < 90)
         })
-        const clusterTop = Math.min(...clusterCards.map(o => o.top))
-        const clusterBottom = Math.max(...clusterCards.map(o => o.bottom))
         const obsLeft = Math.min(...clusterCards.map(o => o.left))
         const obsRight = Math.max(...clusterCards.map(o => o.right))
+        const midX = (obsLeft + obsRight) / 2
+        const ratio = (midX - sx) / dx
+        const expectedY = startY + ratio * (endY - startY)
 
-        const distOverTop = Math.abs(startY - (clusterTop - 32)) + Math.abs(endY - (clusterTop - 32))
-        const distUnderBottom = Math.abs(startY - (clusterBottom + 32)) + Math.abs(endY - (clusterBottom + 32))
-        const goTop = (startY <= (clusterTop + clusterBottom) / 2) || (distOverTop <= distUnderBottom)
-        const safeY = goTop
-          ? clusterTop - 36 - Math.abs(fanOffset)
-          : clusterBottom + 36 + Math.abs(fanOffset)
+        const safeY = findBestPassageY(clusterCards, expectedY, endY, fanOffset)
 
         const enterX = obsLeft - 24
         const exitX = obsRight + 24
@@ -249,21 +324,16 @@ const edgePath = computed(() => {
           return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${(tx + 8).toFixed(1)} ${endY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
         }
       } else {
-        // Collect full column cluster to route around the cluster rather than diving into card crevices
         const clusterCards = obstacles.filter(obs => {
           return blockingObstacles.some(bo => Math.abs(obs.centerX - bo.centerX) < 90)
         })
-        const clusterTop = Math.min(...clusterCards.map(o => o.top))
-        const clusterBottom = Math.max(...clusterCards.map(o => o.bottom))
         const obsLeft = Math.min(...clusterCards.map(o => o.left))
         const obsRight = Math.max(...clusterCards.map(o => o.right))
+        const midX = (obsLeft + obsRight) / 2
+        const ratio = (sx - midX) / Math.abs(dx)
+        const expectedY = startY + ratio * (endY - startY)
 
-        const distOverTop = Math.abs(startY - (clusterTop - 32)) + Math.abs(endY - (clusterTop - 32))
-        const distUnderBottom = Math.abs(startY - (clusterBottom + 32)) + Math.abs(endY - (clusterBottom + 32))
-        const goTop = (startY <= (clusterTop + clusterBottom) / 2) || (distOverTop <= distUnderBottom)
-        const safeY = goTop
-          ? clusterTop - 36 - Math.abs(fanOffset)
-          : clusterBottom + 36 + Math.abs(fanOffset)
+        const safeY = findBestPassageY(clusterCards, expectedY, endY, fanOffset)
 
         const enterX = obsRight + 24
         const exitX = obsLeft - 24
