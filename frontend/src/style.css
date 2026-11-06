@@ -61,27 +61,27 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Dark Theme Tokens (Linear / Supabase Deep Zinc) */
+/* Dark Theme Tokens (Warm IDE Soft Charcoal: #1e1e1e / #252526 / #333333) */
 html.dark {
   color-scheme: dark;
 
-  --cl-canvas-bg: #09090b;
-  --cl-surface: #121215;
-  --cl-surface-subtle: #18181b;
-  --cl-surface-hover: #27272a;
+  --cl-canvas-bg: #1e1e1e;
+  --cl-surface: #252526;
+  --cl-surface-subtle: #2d2d30;
+  --cl-surface-hover: #37373d;
 
-  --cl-border: #27272a;
-  --cl-border-strong: #3f3f46;
-  --cl-border-active: #60a5fa;
+  --cl-border: #333333;
+  --cl-border-strong: #3e3e42;
+  --cl-border-active: #007acc;
 
-  --cl-text-primary: #fafafa;
-  --cl-text-secondary: #e4e4e7;
-  --cl-text-muted: #a1a1aa;
-  --cl-text-faint: #71717a;
+  --cl-text-primary: #e0e0e0;
+  --cl-text-secondary: #cccccc;
+  --cl-text-muted: #969696;
+  --cl-text-faint: #6e6e6e;
 
   --cl-primary: #3b82f6;
   --cl-primary-hover: #60a5fa;
-  --cl-primary-light: rgba(59, 130, 246, 0.15);
+  --cl-primary-light: rgba(59, 130, 246, 0.16);
   --cl-primary-border: rgba(59, 130, 246, 0.35);
 
   --cl-accent-glow: #60a5fa;
@@ -95,29 +95,43 @@ html.dark {
   --cl-danger-light: rgba(239, 68, 68, 0.15);
 
   /* Deep Contrast Shadows */
-  --cl-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.5);
-  --cl-shadow-card: 0 4px 14px -2px rgba(0, 0, 0, 0.65), 0 2px 6px -1px rgba(0, 0, 0, 0.5);
-  --cl-shadow-card-hover: 0 12px 28px -4px rgba(0, 0, 0, 0.85), 0 4px 12px -2px rgba(0, 0, 0, 0.6);
-  --cl-shadow-popup: 0 16px 36px -4px rgba(0, 0, 0, 0.9), 0 6px 16px -2px rgba(0, 0, 0, 0.7);
+  --cl-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --cl-shadow-card: 0 4px 14px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -1px rgba(0, 0, 0, 0.35);
+  --cl-shadow-card-hover: 0 10px 24px -4px rgba(0, 0, 0, 0.65), 0 4px 10px -2px rgba(0, 0, 0, 0.45);
+  --cl-shadow-popup: 0 16px 36px -4px rgba(0, 0, 0, 0.75), 0 6px 16px -2px rgba(0, 0, 0, 0.5);
 
   /* Element Plus Harmonization in Dark */
-  --el-bg-color: #121215;
-  --el-bg-color-page: #09090b;
-  --el-bg-color-overlay: #18181b;
-  --el-text-color-primary: #fafafa;
-  --el-text-color-regular: #e4e4e7;
-  --el-text-color-secondary: #a1a1aa;
-  --el-border-color: #27272a;
-  --el-border-color-light: #27272a;
-  --el-border-color-lighter: #18181b;
-  --el-fill-color-blank: #121215;
-  --el-fill-color: #27272a;
-  --el-fill-color-light: #18181b;
-  --el-fill-color-lighter: #121215;
+  --el-bg-color: #252526;
+  --el-bg-color-page: #1e1e1e;
+  --el-bg-color-overlay: #2d2d30;
+  --el-text-color-primary: #e0e0e0;
+  --el-text-color-regular: #cccccc;
+  --el-text-color-secondary: #969696;
+  --el-border-color: #333333;
+  --el-border-color-light: #333333;
+  --el-border-color-lighter: #2d2d30;
+  --el-fill-color-blank: #252526;
+  --el-fill-color: #333333;
+  --el-fill-color-light: #2d2d30;
+  --el-fill-color-lighter: #252526;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* Tauri Custom Window Titlebar & Drag Region */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+
+[data-tauri-drag-region] button,
+[data-tauri-drag-region] input,
+[data-tauri-drag-region] select,
+[data-tauri-drag-region] .el-dropdown,
+[data-tauri-drag-region] .el-select,
+[data-tauri-drag-region] .no-drag {
+  -webkit-app-region: no-drag;
 }
 
 body {
@@ -151,11 +165,11 @@ body {
 }
 
 html.dark ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: #3e3e42;
 }
 
 html.dark ::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
+  background: #4e4e52;
 }
 
 /* Global UI Polish for Element Plus Dialogs & Drawers */

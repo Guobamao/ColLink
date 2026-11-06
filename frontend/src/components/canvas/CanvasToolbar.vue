@@ -1,5 +1,9 @@
 <template>
-  <div class="h-10 px-3 bg-surface border-b border-border flex items-center justify-between z-50 text-xs shrink-0 select-none shadow-sm gap-2">
+  <div
+    data-tauri-drag-region
+    class="h-10 pl-3 pr-0 bg-surface border-b border-border flex items-center justify-between z-50 text-xs shrink-0 select-none shadow-sm gap-2"
+    @dblclick="handleHeaderDblClick"
+  >
     <!-- Left: Brand & Workspace / Project Context -->
     <div class="flex items-center gap-2 shrink-0">
       <!-- App Brand -->
@@ -247,12 +251,46 @@
           </el-dropdown-menu>
         </template>
       </el-dropdown>
+
+      <!-- Window Controls (Tauri Custom Titlebar) -->
+      <div v-if="isTauri" class="flex items-center h-10 ml-2 border-l border-border/50 select-none">
+        <!-- Minimize -->
+        <button
+          type="button"
+          class="w-11 h-10 flex items-center justify-center text-muted hover:text-primary-text hover:bg-surface-hover transition-colors"
+          title="最小化"
+          @click="handleMinimize"
+        >
+          <Minus class="w-3.5 h-3.5" />
+        </button>
+
+        <!-- Maximize / Restore -->
+        <button
+          type="button"
+          class="w-11 h-10 flex items-center justify-center text-muted hover:text-primary-text hover:bg-surface-hover transition-colors"
+          :title="isMaximized ? '向下还原' : '最大化'"
+          @click="handleToggleMaximize"
+        >
+          <Copy v-if="isMaximized" class="w-3 h-3" />
+          <Square v-else class="w-3 h-3" />
+        </button>
+
+        <!-- Close -->
+        <button
+          type="button"
+          class="w-11 h-10 flex items-center justify-center text-muted hover:text-white hover:bg-[#e81123] transition-colors"
+          title="关闭"
+          @click="handleClose"
+        >
+          <X class="w-4 h-4" />
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useThemeStore } from '@/stores/themeStore'
@@ -280,6 +318,10 @@ import {
   Link2,
   FileCode,
   Database,
+  Minus,
+  Square,
+  Copy,
+  X,
 } from 'lucide-vue-next'
 
 const emit = defineEmits([
@@ -299,6 +341,52 @@ const emit = defineEmits([
 const projectStore = useProjectStore()
 const canvasStore = useCanvasStore()
 const themeStore = useThemeStore()
+
+// Tauri Frameless Window Controls
+const isTauri = typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
+const isMaximized = ref(false)
+let appWindow: any = null
+
+onMounted(async () => {
+  if (isTauri) {
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window')
+      appWindow = getCurrentWindow()
+      isMaximized.value = await appWindow.isMaximized()
+      await appWindow.onResized(async () => {
+        isMaximized.value = await appWindow.isMaximized()
+      })
+    } catch (e) {
+      console.warn('Tauri window API not available:', e)
+    }
+  }
+})
+
+const handleMinimize = async () => {
+  if (appWindow) {
+    await appWindow.minimize()
+  }
+}
+
+const handleToggleMaximize = async () => {
+  if (appWindow) {
+    await appWindow.toggleMaximize()
+    isMaximized.value = await appWindow.isMaximized()
+  }
+}
+
+const handleClose = async () => {
+  if (appWindow) {
+    await appWindow.close()
+  }
+}
+
+const handleHeaderDblClick = (e: MouseEvent) => {
+  const target = e.target as HTMLElement
+  if (target && (target.hasAttribute('data-tauri-drag-region') || target.classList.contains('drag-spacer'))) {
+    handleToggleMaximize()
+  }
+}
 
 const themeLabel = computed(() => {
   if (themeStore.mode === 'dark') return '深色模式'
