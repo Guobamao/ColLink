@@ -475,8 +475,8 @@ defineExpose({
 }
 
 .target-card {
-  background: var(--cl-surface-subtle);
-  border: 1px solid var(--cl-border);
+  background: rgba(168, 85, 247, 0.08);
+  border: 1px solid rgba(168, 85, 247, 0.25);
 }
 
 .card-badge-row {
@@ -494,12 +494,14 @@ defineExpose({
 
 .source-badge {
   color: var(--cl-primary);
-  background: #dbeafe;
+  background: var(--cl-primary-light);
+  border: 1px solid var(--cl-primary-border);
 }
 
 .target-badge {
-  color: #7e22ce;
-  background: #f3e8ff;
+  color: #a855f7;
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
 }
 
 .arrow-indicator {
@@ -534,13 +536,13 @@ defineExpose({
 
 .strategy-label {
   font-weight: 600;
-  color: #475569;
+  color: var(--cl-text-primary);
   font-size: 12px;
 }
 
 .strategy-hint {
   font-size: 11px;
-  color: #94a3b8;
+  color: var(--cl-text-muted);
   margin-left: 2px;
 }
 
@@ -564,7 +566,8 @@ defineExpose({
 
 .results-title {
   font-size: 13px;
-  color: #334155;
+  font-weight: 600;
+  color: var(--cl-text-primary);
 }
 
 .col-preview {
