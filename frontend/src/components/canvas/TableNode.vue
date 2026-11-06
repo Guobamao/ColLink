@@ -31,7 +31,7 @@
 
       <!-- Right: Column Count & Dropdown Actions -->
       <div class="flex items-center gap-1 shrink-0">
-        <span class="px-1.5 py-0.2 text-[11px] font-mono rounded bg-surface-hover border border-border/50 text-muted">
+        <span class="px-1.5 py-0.2 text-[11px] font-mono rounded bg-surface-hover border border-border text-muted">
           {{ data.columns?.length || 0 }}
         </span>
         <el-dropdown trigger="click" @command="handleCommand">
@@ -81,7 +81,7 @@
     </div>
 
     <!-- Search & Filter Bar -->
-    <div class="h-7 px-2 bg-surface border-b border-border/60 flex items-center justify-between gap-1.5">
+    <div class="h-7 px-2 bg-surface border-b border-border flex items-center justify-between gap-1.5">
       <div class="flex items-center gap-1.5 flex-1 min-w-0">
         <Search class="w-3 h-3 text-muted shrink-0" />
         <input

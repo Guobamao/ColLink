@@ -1,14 +1,14 @@
 <template>
   <div class="h-8 px-3 bg-surface-subtle/80 border-b border-border flex items-center justify-between text-xs shrink-0 select-none">
     <!-- Left: Canvas Views Tabs List -->
-    <div class="flex items-center gap-0.5 overflow-x-auto max-w-[calc(100%-240px)] h-full scrollbar-none">
+    <div class="flex items-center gap-1 overflow-x-auto max-w-[calc(100%-240px)] h-full scrollbar-none py-1">
       <div
         v-for="c in canvasStore.canvases"
         :key="c.id"
-        class="group relative h-8 px-2.5 flex items-center gap-1.5 text-xs cursor-pointer transition-colors border-r border-border/40"
+        class="group relative h-6 px-2.5 rounded flex items-center gap-1.5 text-xs cursor-pointer transition-colors"
         :class="canvasStore.currentCanvasId === c.id
-          ? 'bg-surface text-primary font-medium border-t-2 border-t-primary shadow-2xs'
-          : 'text-muted hover:text-primary-text hover:bg-surface/50'"
+          ? 'bg-surface text-primary font-medium shadow-2xs border border-border'
+          : 'text-muted hover:text-primary-text hover:bg-surface-hover/60 border border-transparent'"
         @click="canvasStore.switchCanvas(c.id)"
         @dblclick="handleRename(c)"
       >

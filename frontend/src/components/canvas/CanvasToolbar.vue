@@ -253,7 +253,7 @@
       </el-dropdown>
 
       <!-- Window Controls (Tauri Custom Titlebar) -->
-      <div v-if="isTauri" class="flex items-center h-10 ml-2 border-l border-border/50 select-none">
+      <div v-if="isTauri" class="flex items-center h-10 ml-1 select-none">
         <!-- Minimize -->
         <button
           type="button"
