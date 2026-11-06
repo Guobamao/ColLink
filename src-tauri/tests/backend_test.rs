@@ -172,3 +172,64 @@ fn test_ddl_parser_multi_dialect() {
     assert_eq!(t.columns[2].column_name, "AGE");
     assert_eq!(t.columns[2].column_comment, Some("用户年龄".to_string()));
 }
+
+#[test]
+fn test_user_sql_crash() {
+    let sql = r#"
+CREATE TABLE "DAILY_REPORT_PUSH_RECORD"
+(
+"ID" VARCHAR(64) NOT NULL,
+"SUBSCRIBE_ID" VARCHAR(64),
+"REPORT_ID" VARCHAR(64),
+"REPORT_NAME" VARCHAR(266),
+"USER_UID" VARCHAR(64),
+"USER_UNAME" VARCHAR(255),
+"PUSH_TIME" TIMESTAMP(6),
+"PUSH_STATUS" INTEGER,
+"ERROR_MSG" VARCHAR(2000),
+"DIR_ID" VARCHAR(64),
+"PUSH_TYPE" INTEGER,
+"CREATE_TIME" TIMESTAMP(6),
+"REPORT_TYPE" INTEGER DEFAULT 1,
+NOT CLUSTER PRIMARY KEY("ID")) STORAGE(ON "MAIN", CLUSTERBTR) ;
+
+COMMENT ON TABLE "DAILY_REPORT_PUSH_RECORD" IS '报告推送记录表';
+
+COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."CREATE_TIME" IS '创建时间';
+
+COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."DIR_ID" IS '报告文件夹ID';
+
+COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."ERROR_MSG" IS '错误信息';
+
+COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."ID" IS '主键';
+
+COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."PUSH_STATUS" IS '推送状态(1-成功 0-失败)';
+
+COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."PUSH_TIME" IS '推送时间';
+
+COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."PUSH_TYPE" IS '推送类型(1-首页推送 2-eLink推送)';
+
+COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."REPORT_ID" IS '报告编号';
+
+COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."REPORT_NAME" IS '报告名称';
+
+COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."REPORT_TYPE" IS '报告类型(1-静态报告 2-动态报告)';
+
+COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."SUBSCRIBE_ID" IS '订阅ID';
+
+COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."USER_UID" IS '用户ID';
+
+COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."USER_UNAME" IS '用户姓名';
+    "#;
+
+    let tables = DdlParser::parse(sql, Some("dm"));
+    assert_eq!(tables.len(), 1);
+    let t = &tables[0];
+    assert_eq!(t.table_name, "DAILY_REPORT_PUSH_RECORD");
+    assert_eq!(t.table_comment, Some("报告推送记录表".to_string()));
+    assert_eq!(t.columns.len(), 13);
+    assert_eq!(t.columns[0].column_name, "ID");
+    assert_eq!(t.columns[0].column_comment, Some("主键".to_string()));
+    assert_eq!(t.columns[12].column_name, "REPORT_TYPE");
+    assert_eq!(t.columns[12].column_comment, Some("报告类型(1-静态报告 2-动态报告)".to_string()));
+}

@@ -77,14 +77,12 @@ impl DdlParser {
             let tbl_name_upper = raw_table_name.to_uppercase();
 
             let start_pos = full_match.end() - 1; // position of '('
-            let chars: Vec<char> = sql_text[start_pos..].chars().collect();
-
             let mut paren_count = 0;
             let mut in_single_quote = false;
             let mut in_double_quote = false;
             let mut end_offset = None;
 
-            for (i, &ch) in chars.iter().enumerate() {
+            for (byte_offset, ch) in sql_text[start_pos..].char_indices() {
                 if ch == '\'' && !in_double_quote {
                     in_single_quote = !in_single_quote;
                 } else if ch == '"' && !in_single_quote {
@@ -95,7 +93,7 @@ impl DdlParser {
                     } else if ch == ')' {
                         paren_count -= 1;
                         if paren_count == 0 {
-                            end_offset = Some(start_pos + i);
+                            end_offset = Some(start_pos + byte_offset);
                             break;
                         }
                     }
@@ -108,18 +106,15 @@ impl DdlParser {
             };
 
             let columns_block = &sql_text[start_pos + 1..end_pos];
-            let after_end = if end_pos + 400 < sql_text.len() {
-                &sql_text[end_pos + 1..end_pos + 400]
-            } else {
-                &sql_text[end_pos + 1..]
-            };
+            let after_end_part = sql_text[end_pos + 1..].split(';').next().unwrap_or("");
+            let after_end: String = after_end_part.chars().take(500).collect();
 
             let mysql_tbl_comment_regex =
                 Regex::new(r"(?i)COMMENT\s*=\s*'((?:''|[^'])*)'").unwrap();
             let mut table_comment = table_comments.get(&tbl_name_upper).cloned().unwrap_or_default();
 
             if table_comment.is_empty() {
-                if let Some(m_cap) = mysql_tbl_comment_regex.captures(after_end) {
+                if let Some(m_cap) = mysql_tbl_comment_regex.captures(&after_end) {
                     if let Some(c_val) = m_cap.get(1) {
                         table_comment = c_val.as_str().replace("''", "'");
                     }
@@ -180,18 +175,9 @@ impl DdlParser {
         let mut parsed_cols = Vec::new();
         let mut sort_order = 1;
 
-        let ignore_prefixes = [
-            "PRIMARY KEY",
-            "CONSTRAINT",
-            "FOREIGN KEY",
-            "KEY",
-            "INDEX",
-            "UNIQUE KEY",
-            "UNIQUE INDEX",
-            "CHECK",
-            "FULLTEXT",
-            "SPATIAL",
-        ];
+        let constraint_regex = Regex::new(
+            r#"(?i)^\s*(?:CONSTRAINT\b|(?:NOT\s+CLUSTER\s+|CLUSTER\s+)?PRIMARY\s+KEY\b|(?:NOT\s+CLUSTER\s+|CLUSTER\s+)?KEY\b|FOREIGN\s+KEY\b|INDEX\b|(?:UNIQUE\s+)?(?:KEY|INDEX)\b|UNIQUE\s*\(|CHECK\s*\(|FULLTEXT\b|SPATIAL\b|PARTITION\s+BY\b)"#,
+        ).unwrap();
 
         let mysql_col_comment_regex =
             Regex::new(r"(?i)\s+COMMENT\s+'((?:''|[^'])*)'").unwrap();
@@ -202,12 +188,21 @@ impl DdlParser {
 
         for line in lines {
             let mut l = line.trim_end_matches(',').trim().to_string();
-            if l.is_empty() {
+            if l.is_empty() || l.starts_with("--") || l.starts_with("/*") {
                 continue;
             }
 
-            let upper_line = l.to_uppercase();
-            if ignore_prefixes.iter().any(|prefix| upper_line.starts_with(prefix)) {
+            // Strip trailing line comments if not inside quotes
+            if let Some(comment_idx) = l.find("--") {
+                let before = &l[..comment_idx];
+                let single_quotes = before.chars().filter(|&c| c == '\'').count();
+                let double_quotes = before.chars().filter(|&c| c == '"').count();
+                if single_quotes % 2 == 0 && double_quotes % 2 == 0 {
+                    l = before.trim().to_string();
+                }
+            }
+
+            if constraint_regex.is_match(&l) {
                 continue;
             }
 
