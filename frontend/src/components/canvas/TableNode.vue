@@ -1,6 +1,6 @@
 <template>
   <div
-    class="table-card-node nowheel w-80 rounded-lg bg-surface border border-border shadow-card select-none flex flex-col font-sans transition-all duration-150"
+    class="table-card-node nowheel w-80 rounded-lg bg-surface border border-border shadow-card select-none flex flex-col font-sans transition-[border-color,box-shadow,opacity] duration-150"
     :class="{
       'opacity-25 grayscale': isDimmed,
       'border-primary ring-2 ring-primary/30 shadow-card-hover': isHighlighted,
@@ -23,7 +23,7 @@
               {{ data.tableName }}
             </span>
           </div>
-          <span v-if="data.tableComment" class="text-[10px] text-muted truncate leading-tight -mt-0.5" :title="data.tableComment">
+          <span v-if="data.tableComment" class="text-[11px] text-muted truncate leading-tight -mt-0.5" :title="data.tableComment">
             {{ data.tableComment }}
           </span>
         </div>
@@ -31,7 +31,7 @@
 
       <!-- Right: Column Count & Dropdown Actions -->
       <div class="flex items-center gap-1 shrink-0">
-        <span class="px-1.5 py-0.2 text-[10px] font-mono rounded bg-surface-hover border border-border/50 text-muted">
+        <span class="px-1.5 py-0.2 text-[11px] font-mono rounded bg-surface-hover border border-border/50 text-muted">
           {{ data.columns?.length || 0 }}
         </span>
         <el-dropdown trigger="click" @command="handleCommand">
@@ -155,13 +155,13 @@
 
         <!-- Column Left: Name, PK Badge, Comment -->
         <div class="flex items-center gap-1.5 min-w-0 pr-2 flex-1">
-          <span v-if="isPrimaryKey(col)" class="px-1 py-0.1 text-[9px] font-mono font-bold rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0 leading-none">
+          <span v-if="isPrimaryKey(col)" class="px-1 py-0.2 text-[10px] font-mono font-bold rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0 leading-none">
             PK
           </span>
-          <span class="font-mono text-xs text-primary-text truncate font-normal">
+          <span class="font-mono text-xs text-primary-text truncate font-medium">
             {{ col.column_name }}
           </span>
-          <span v-if="col.column_comment" class="text-[10px] text-muted truncate max-w-[90px]">
+          <span v-if="col.column_comment" class="text-[11px] text-muted truncate max-w-[100px]">
             {{ col.column_comment }}
           </span>
         </div>
@@ -169,7 +169,7 @@
         <!-- Column Right: Type Pill & Mapping Indicator -->
         <div class="flex items-center gap-1.5 shrink-0">
           <span
-            class="px-1.5 py-0.2 text-[9px] font-mono rounded border uppercase tracking-tight"
+            class="px-1.5 py-0.2 text-[10px] font-mono font-medium rounded border uppercase tracking-tight"
             :class="getTypeBadgeClass(col.data_type)"
           >
             {{ formatDataType(col.data_type) }}
@@ -451,6 +451,14 @@ const confirmDelete = () => {
 </script>
 
 <style scoped>
+.table-card-node {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+  image-rendering: -webkit-optimize-contrast;
+  transform: translateZ(0);
+}
+
 .text-primary-text {
   color: var(--cl-text-primary);
 }

@@ -384,11 +384,18 @@ const handleExportImage = async () => {
 }
 
 :deep(.vue-flow__viewport) {
-  will-change: transform;
+  transform-style: flat;
 }
 
 :deep(.vue-flow__node) {
-  will-change: transform;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+  transform: translateZ(0);
+}
+
+:deep(.vue-flow__node *) {
+  text-rendering: geometricPrecision;
 }
 
 /* Floating Operational Tip Pill (Bottom Left) */
