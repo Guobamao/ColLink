@@ -400,11 +400,11 @@ const handleExportImage = async () => {
   display: flex;
   align-items: center;
   gap: 7px;
-  background: #ffffff;
+  background: var(--cl-surface);
   border: 1px solid var(--cl-border);
   border-radius: 20px;
   padding: 5px 14px;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--cl-shadow-card);
   user-select: none;
   pointer-events: none;
 }
@@ -430,10 +430,10 @@ const handleExportImage = async () => {
   right: 16px !important;
   margin: 0 !important;
   padding: 0 !important;
-  background: #ffffff !important;
+  background: var(--cl-surface) !important;
   border: 1px solid var(--cl-border) !important;
   border-radius: 6px !important;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
+  box-shadow: var(--cl-shadow-popup) !important;
   overflow: hidden !important;
   display: flex !important;
   flex-direction: column !important;
@@ -456,6 +456,10 @@ const handleExportImage = async () => {
   justify-content: center !important;
 }
 
+:deep(.vue-flow__controls-button svg) {
+  fill: currentColor !important;
+}
+
 :deep(.vue-flow__controls-button:last-child) {
   border-bottom: none !important;
 }
@@ -475,11 +479,11 @@ const handleExportImage = async () => {
 }
 
 .empty-card {
-  background: #ffffff;
+  background: var(--cl-surface);
   padding: 40px 48px;
   border-radius: 12px;
   border: 1px solid var(--cl-border);
-  box-shadow: 0 12px 32px -4px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--cl-shadow-popup);
   text-align: center;
   max-width: 440px;
 }
@@ -529,12 +533,16 @@ const handleExportImage = async () => {
   margin: 0 !important;
   width: 200px !important;
   height: 130px !important;
-  background: #ffffff !important;
+  background: var(--cl-surface) !important;
   border: 1px solid var(--cl-border) !important;
   border-radius: 6px !important;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08) !important;
+  box-shadow: var(--cl-shadow-popup) !important;
   overflow: hidden !important;
   z-index: 9 !important;
+}
+
+:deep(.canvas-minimap .vue-flow__minimap-mask) {
+  fill: var(--cl-canvas-bg) !important;
 }
 
 /* MiniMap Toggle Button */
@@ -548,10 +556,10 @@ const handleExportImage = async () => {
   gap: 6px;
   height: 26px;
   padding: 0 10px;
-  background: #ffffff;
+  background: var(--cl-surface);
   border: 1px solid var(--cl-border);
   border-radius: 4px;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--cl-shadow-sm);
   font-size: 11px;
   font-weight: 500;
   color: var(--cl-text-secondary);
@@ -566,14 +574,14 @@ const handleExportImage = async () => {
   height: 32px;
   padding: 0 12px;
   border-radius: 6px;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--cl-shadow-popup);
 }
 
 .minimap-toggle-btn:hover {
-  background: #ffffff;
+  background: var(--cl-surface-hover);
   color: var(--cl-primary);
   border-color: var(--cl-border-active);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+  box-shadow: var(--cl-shadow-card);
 }
 
 .minimap-toggle-btn.is-active {

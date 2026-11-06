@@ -470,13 +470,13 @@ defineExpose({
 }
 
 .source-card {
-  background: #f8faff;
-  border: 1px solid #bfdbfe;
+  background: var(--cl-primary-light);
+  border: 1px solid var(--cl-primary-border);
 }
 
 .target-card {
-  background: #faf5ff;
-  border: 1px solid #e9d5ff;
+  background: var(--cl-surface-subtle);
+  border: 1px solid var(--cl-border);
 }
 
 .card-badge-row {
@@ -513,13 +513,13 @@ defineExpose({
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--cl-surface);
   border: 1px solid var(--cl-border);
   box-shadow: var(--cl-shadow-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--cl-text-muted);
+  color: var(--cl-primary);
   font-size: 16px;
 }
 

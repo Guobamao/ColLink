@@ -711,7 +711,7 @@ defineExpose({
 
 /* Path Card */
 .path-card {
-  background: #ffffff;
+  background: var(--cl-surface);
   border: 1px solid var(--cl-border, #e2e8f0);
   border-radius: 10px;
   padding: 16px;
@@ -766,11 +766,11 @@ defineExpose({
 }
 
 .step-tbl-tag {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--cl-surface);
+  border: 1px solid var(--cl-border);
   padding: 3px 8px;
   border-radius: 4px;
-  color: #1e293b;
+  color: var(--cl-text-primary);
   font-weight: 600;
 }
 

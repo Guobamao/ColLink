@@ -121,7 +121,7 @@
     <!-- Column List (nowheel prevents outer canvas zooming) -->
     <div
       ref="columnListRef"
-      class="column-list nowheel max-h-[300px] overflow-y-auto divide-y divide-border/20 py-0.5 rounded-b-[7px]"
+      class="column-list nowheel max-h-[300px] overflow-y-auto overflow-x-hidden divide-y divide-border/20 py-0.5 rounded-b-[7px]"
       @wheel.stop
       @scroll="handleColumnListScroll"
     >
@@ -129,7 +129,7 @@
         v-for="col in filteredColumns"
         :id="`col_item_${col.id}`"
         :key="col.id"
-        class="column-item relative flex items-center justify-between h-[27px] px-4 hover:bg-surface-hover cursor-pointer transition-colors text-xs"
+        class="column-item group relative flex items-center justify-between h-[27px] px-4 hover:bg-surface-hover cursor-pointer transition-colors text-xs"
         :class="{
           'is-breathing bg-primary-light/40': isColumnActive(col.id),
           'border-l-2 border-l-primary bg-primary/5': hasMapping(col.id) && !isColumnActive(col.id),
@@ -504,29 +504,33 @@ const confirmDelete = () => {
   width: 8px !important;
   height: 8px !important;
   border-radius: 9999px !important;
-  border: 1.5px solid #3b82f6 !important;
+  border: 1.5px solid var(--cl-primary) !important;
   background-color: var(--cl-surface) !important;
-  opacity: 0.25;
-  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease !important;
 }
 
 .left-handle {
-  left: -4px !important;
+  left: 4px !important;
 }
 
 .right-handle {
-  right: -4px !important;
+  right: 4px !important;
 }
 
-.column-item:hover .field-handle {
-  opacity: 1 !important;
-  transform: translateY(-50%) scale(1.2) !important;
+.column-item:hover .field-handle,
+.column-item.is-breathing .field-handle {
+  opacity: 0.9 !important;
+  pointer-events: all !important;
+  transform: translateY(-50%) scale(1.15) !important;
 }
 
 .field-handle:hover {
-  background-color: #3b82f6 !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35) !important;
-  transform: translateY(-50%) scale(1.4) !important;
+  opacity: 1 !important;
+  background-color: var(--cl-primary) !important;
+  box-shadow: 0 0 0 3px var(--cl-primary-border) !important;
+  transform: translateY(-50%) scale(1.35) !important;
 }
 
 .left-source,
