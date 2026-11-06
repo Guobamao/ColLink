@@ -1,5 +1,5 @@
 use crate::db::DbState;
-use crate::models::ImportResult;
+use crate::models::{ImportResult, ParsedTable};
 use crate::services::db_inspector::{create_inspector, DbConfig, DbTableSummary, DbTestResult};
 use tauri::State;
 
@@ -22,6 +22,16 @@ pub async fn test_db_connection(config: DbConfig) -> Result<DbTestResult, String
 pub async fn list_db_tables(config: DbConfig) -> Result<Vec<DbTableSummary>, String> {
     let inspector = create_inspector(&config)?;
     inspector.list_tables().await
+}
+
+#[tauri::command]
+pub async fn inspect_single_table(
+    config: DbConfig,
+    table_name: String,
+) -> Result<ParsedTable, String> {
+    let inspector = create_inspector(&config)?;
+    let mut parsed = inspector.inspect_tables(&[table_name]).await?;
+    parsed.pop().ok_or_else(|| "未能检索到该表元数据".to_string())
 }
 
 #[tauri::command]

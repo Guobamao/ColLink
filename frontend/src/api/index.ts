@@ -113,6 +113,8 @@ export const api = {
     invoke<{ success: boolean; message: string }>('test_db_connection', { config }),
   listDbTables: (config: any) =>
     invoke<DbTableSummary[]>('list_db_tables', { config }),
+  inspectSingleTable: (config: any, tableName: string) =>
+    invoke<ParsedTable>('inspect_single_table', { config, tableName }),
   importDbTables: (
     projectId: string,
     config: any,

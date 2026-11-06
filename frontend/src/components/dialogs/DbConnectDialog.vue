@@ -14,8 +14,49 @@
     <div class="dialog-body">
       <!-- Step 1: Connection Form (hidden once tables are fetched) -->
       <div v-if="step === 'config'" class="config-step">
+        <!-- Connection Profiles Header -->
+        <div class="mb-4 p-2.5 rounded-lg bg-surface-subtle border border-border flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2 flex-1 min-w-0">
+            <span class="text-xs text-muted shrink-0 font-medium">常用配置预设:</span>
+            <el-select
+              v-model="selectedProfileId"
+              placeholder="选择已保存的连接配置或新建..."
+              size="small"
+              class="flex-1"
+              @change="onProfileSelect"
+            >
+              <el-option label="+ 新建连接配置" value="__new__" />
+              <el-option
+                v-for="p in savedProfiles"
+                :key="p.id"
+                :label="p.name"
+                :value="p.id"
+              />
+            </el-select>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <el-button size="small" text type="primary" @click="handleSaveProfile">
+              保存当前配置
+            </el-button>
+            <el-button
+              v-if="selectedProfileId && selectedProfileId !== '__new__'"
+              size="small"
+              text
+              type="danger"
+              @click="handleDeleteProfile"
+            >
+              删除
+            </el-button>
+          </div>
+        </div>
+
         <el-form :model="form" label-width="100px" size="default">
           <el-row :gutter="16">
+            <el-col :span="12">
+              <el-form-item label="配置名称">
+                <el-input v-model="profileName" placeholder="例如: 本地DM8开发库" />
+              </el-form-item>
+            </el-col>
             <el-col :span="12">
               <el-form-item label="数据库类型">
                 <el-select v-model="form.db_type" style="width: 100%" @change="onDbTypeChange">
@@ -25,35 +66,43 @@
                 </el-select>
               </el-form-item>
             </el-col>
+          </el-row>
+
+          <el-row :gutter="16">
             <el-col :span="12">
               <el-form-item label="主机 IP / 域名">
                 <el-input v-model="form.host" placeholder="例如 127.0.0.1" />
               </el-form-item>
             </el-col>
-          </el-row>
-
-          <el-row :gutter="16">
             <el-col :span="12">
               <el-form-item label="端口号">
                 <el-input-number v-model="form.port" :min="1" :max="65535" style="width: 100%" />
               </el-form-item>
             </el-col>
+          </el-row>
+
+          <el-row :gutter="16">
             <el-col :span="12">
               <el-form-item :label="form.db_type === 'dm' ? '模式名/库名' : '数据库名'">
                 <el-input v-model="form.database" placeholder="例如 SYSDBA 或 DAMENG" />
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="用户名">
+                <el-input v-model="form.username" placeholder="SYSDBA / root" />
               </el-form-item>
             </el-col>
           </el-row>
 
           <el-row :gutter="16">
             <el-col :span="12">
-              <el-form-item label="用户名">
-                <el-input v-model="form.username" placeholder="SYSDBA / root" />
+              <el-form-item label="密码">
+                <el-input v-model="form.password" type="password" show-password />
               </el-form-item>
             </el-col>
             <el-col :span="12">
-              <el-form-item label="密码">
-                <el-input v-model="form.password" type="password" show-password />
+              <el-form-item label="密码保存">
+                <el-checkbox v-model="rememberPassword">记住密码 (保存在本地配置中)</el-checkbox>
               </el-form-item>
             </el-col>
           </el-row>
@@ -118,7 +167,42 @@
           row-key="table_name"
           @select="handleRowSelect"
           @select-all="handleSelectAll"
+          @expand-change="handleExpandChange"
         >
+          <el-table-column type="expand" width="35">
+            <template #default="{ row }">
+              <div class="p-3 bg-surface-subtle border-y border-border">
+                <div v-if="loadingColumns[row.table_name]" class="text-xs text-muted flex items-center gap-1.5 py-1">
+                  <el-icon class="is-loading text-primary"><Loading /></el-icon>
+                  <span>正在探查数据表「{{ row.table_name }}」字段元数据...</span>
+                </div>
+                <div v-else-if="columnsCache[row.table_name]">
+                  <div class="text-[11px] font-semibold text-muted mb-2 flex items-center justify-between">
+                    <span>字段定义清单 (共 {{ columnsCache[row.table_name].length }} 个字段)</span>
+                  </div>
+                  <div class="grid grid-cols-2 md:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto pr-1">
+                    <div
+                      v-for="col in columnsCache[row.table_name]"
+                      :key="col.column_name"
+                      class="flex items-center gap-1.5 px-2 py-1 rounded bg-surface border border-border text-xs truncate"
+                      :title="col.column_comment ? `${col.column_name} (${col.column_comment}) - ${col.data_type}` : `${col.column_name} - ${col.data_type}`"
+                    >
+                      <span v-if="col.column_comment?.includes('主键') || col.column_name.toUpperCase() === 'ID'" class="px-1 text-[9px] font-mono font-bold rounded bg-amber-500/20 text-amber-500 shrink-0 leading-none">PK</span>
+                      <span class="font-mono font-medium text-primary-text truncate">{{ col.column_name }}</span>
+                      <span class="font-mono text-[10px] text-muted shrink-0">{{ col.data_type }}</span>
+                      <span v-if="col.column_comment" class="text-muted text-[11px] truncate">({{ col.column_comment }})</span>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="text-xs text-muted py-1 flex items-center gap-2">
+                  <span>展开可实时预览字段清单与数据类型</span>
+                  <el-button size="small" text type="primary" @click="fetchTableColumns(row.table_name)">
+                    点击探查
+                  </el-button>
+                </div>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column type="selection" width="45" align="center" />
           <el-table-column prop="table_name" label="表英文名" min-width="160" />
           <el-table-column prop="table_comment" label="表中文注释" min-width="180">
@@ -175,7 +259,7 @@ import { api } from '@/api'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
-import { Connection, Right, Back } from '@element-plus/icons-vue'
+import { Connection, Right, Back, Loading } from '@element-plus/icons-vue'
 import type { DbTableSummary } from '@/types'
 
 const visible = ref(false)
@@ -189,6 +273,26 @@ const searchKey = ref('')
 const tables = ref<DbTableSummary[]>([])
 const selectedTables = ref<DbTableSummary[]>([])
 const tableRef = ref<any>(null)
+
+interface DbProfile {
+  id: string
+  name: string
+  db_type: string
+  host: string
+  port: number
+  database: string
+  username: string
+  password?: string
+  rememberPassword?: boolean
+}
+
+const savedProfiles = ref<DbProfile[]>([])
+const selectedProfileId = ref<string>('__new__')
+const profileName = ref('')
+const rememberPassword = ref(true)
+
+const loadingColumns = ref<Record<string, boolean>>({})
+const columnsCache = ref<Record<string, any[]>>({})
 
 const projectStore = useProjectStore()
 const canvasStore = useCanvasStore()
@@ -249,6 +353,109 @@ const selectAllUnadded = () => {
   ElMessage.success(`已一键勾选 ${newlyAdded.length} 张未在画布中的新表`)
 }
 
+const loadProfiles = () => {
+  try {
+    const raw = localStorage.getItem('collink_saved_db_profiles')
+    if (raw) {
+      savedProfiles.value = JSON.parse(raw)
+    }
+  } catch (e) {
+    console.error('加载连接预设失败', e)
+  }
+}
+
+const saveProfilesToStorage = () => {
+  try {
+    localStorage.setItem('collink_saved_db_profiles', JSON.stringify(savedProfiles.value))
+  } catch (e) {
+    console.error('保存连接预设失败', e)
+  }
+}
+
+const onProfileSelect = (val: string) => {
+  if (val === '__new__') {
+    profileName.value = ''
+    onDbTypeChange(form.value.db_type)
+    return
+  }
+  const found = savedProfiles.value.find(p => p.id === val)
+  if (found) {
+    profileName.value = found.name
+    form.value.db_type = found.db_type
+    form.value.host = found.host
+    form.value.port = found.port
+    form.value.database = found.database
+    form.value.username = found.username
+    form.value.password = found.password || ''
+    rememberPassword.value = found.rememberPassword ?? true
+  }
+}
+
+const handleSaveProfile = () => {
+  const name =
+    profileName.value.trim() ||
+    `${getDbLabel(form.value.db_type)} ${form.value.host}:${form.value.port}/${form.value.database}`
+  profileName.value = name
+
+  const profileData: DbProfile = {
+    id: selectedProfileId.value !== '__new__' ? selectedProfileId.value : `profile_${Date.now()}`,
+    name,
+    db_type: form.value.db_type,
+    host: form.value.host,
+    port: form.value.port,
+    database: form.value.database,
+    username: form.value.username,
+    password: rememberPassword.value ? form.value.password : '',
+    rememberPassword: rememberPassword.value,
+  }
+
+  const existingIdx = savedProfiles.value.findIndex(p => p.id === profileData.id)
+  if (existingIdx >= 0) {
+    savedProfiles.value[existingIdx] = profileData
+  } else {
+    savedProfiles.value.push(profileData)
+  }
+  selectedProfileId.value = profileData.id
+  saveProfilesToStorage()
+  ElMessage.success(`已保存连接配置「${name}」`)
+}
+
+const handleDeleteProfile = async () => {
+  if (!selectedProfileId.value || selectedProfileId.value === '__new__') return
+  try {
+    await ElMessageBox.confirm('确定要删除此连接配置吗？', '删除确认', {
+      type: 'warning',
+    })
+    savedProfiles.value = savedProfiles.value.filter(p => p.id !== selectedProfileId.value)
+    selectedProfileId.value = '__new__'
+    profileName.value = ''
+    saveProfilesToStorage()
+    ElMessage.success('已删除连接配置')
+  } catch {}
+}
+
+const fetchTableColumns = async (tableName: string) => {
+  if (columnsCache.value[tableName]) return
+  loadingColumns.value[tableName] = true
+  try {
+    const res = await api.inspectSingleTable(form.value, tableName)
+    if (res && res.columns) {
+      columnsCache.value[tableName] = res.columns
+    }
+  } catch (err: any) {
+    ElMessage.error(`探查字段失败: ${err.message || '未知错误'}`)
+  } finally {
+    loadingColumns.value[tableName] = false
+  }
+}
+
+const handleExpandChange = (row: any, expandedRows: any[]) => {
+  const isExpanded = expandedRows.some((r: any) => r.table_name === row.table_name)
+  if (isExpanded && !columnsCache.value[row.table_name]) {
+    fetchTableColumns(row.table_name)
+  }
+}
+
 const getStorageKey = () => {
   const projId = projectStore.currentProject?.id || 'default'
   return `dfm_db_conn_${projId}`
@@ -257,6 +464,8 @@ const getStorageKey = () => {
 const open = async () => {
   visible.value = true
   searchKey.value = ''
+  columnsCache.value = {}
+  loadProfiles()
 
   const saved = localStorage.getItem(getStorageKey())
   if (saved) {

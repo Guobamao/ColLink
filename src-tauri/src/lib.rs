@@ -63,6 +63,7 @@ pub fn run() {
             // Database Direct Connection
             commands::db::test_db_connection,
             commands::db::list_db_tables,
+            commands::db::inspect_single_table,
             commands::db::import_db_tables,
             // Exporter
             commands::exporter::export_excel,
