@@ -219,6 +219,62 @@ const edgePath = computed(() => {
     return best.y
   }
 
+  // Build a crisp, professional orthogonal corridor route with smooth rounded corners (SmoothStep)
+  const buildRoundedCorridorPath = (
+    sx: number,
+    sy: number,
+    tx: number,
+    ty: number,
+    c1x: number,
+    passY: number,
+    c2x: number,
+    radius = 14,
+    targetFanY = 0
+  ): string => {
+    const landingY = ty + targetFanY
+
+    // Ensure corner radius does not exceed half the shortest segment length
+    const span1 = Math.abs(c1x - sx)
+    const span2 = Math.abs(passY - sy)
+    const span3 = Math.abs(c2x - c1x)
+    const span4 = Math.abs(landingY - passY)
+    const span5 = Math.abs(tx - c2x)
+
+    const r = Math.max(
+      4,
+      Math.min(
+        radius,
+        span1 * 0.45,
+        span2 * 0.45,
+        span3 * 0.45,
+        span4 * 0.45,
+        span5 * 0.45
+      )
+    )
+
+    const dirX1 = c1x >= sx ? 1 : -1
+    const dirY1 = passY >= sy ? 1 : -1
+    const dirX2 = c2x >= c1x ? 1 : -1
+    const dirY2 = landingY >= passY ? 1 : -1
+    const dirX3 = tx >= c2x ? 1 : -1
+
+    const p1 = `M ${sx.toFixed(1)} ${sy.toFixed(1)} L ${(c1x - dirX1 * r).toFixed(1)} ${sy.toFixed(1)} `
+    const p2 = `Q ${c1x.toFixed(1)} ${sy.toFixed(1)}, ${c1x.toFixed(1)} ${(sy + dirY1 * r).toFixed(1)} `
+    const p3 = `L ${c1x.toFixed(1)} ${(passY - dirY1 * r).toFixed(1)} `
+    const p4 = `Q ${c1x.toFixed(1)} ${passY.toFixed(1)}, ${(c1x + dirX2 * r).toFixed(1)} ${passY.toFixed(1)} `
+    const p5 = `L ${(c2x - dirX2 * r).toFixed(1)} ${passY.toFixed(1)} `
+    const p6 = `Q ${c2x.toFixed(1)} ${passY.toFixed(1)}, ${c2x.toFixed(1)} ${(passY + dirY2 * r).toFixed(1)} `
+    const p7 = `L ${c2x.toFixed(1)} ${(landingY - dirY2 * r).toFixed(1)} `
+    const p8 = `Q ${c2x.toFixed(1)} ${landingY.toFixed(1)}, ${(c2x + dirX3 * r).toFixed(1)} ${landingY.toFixed(1)} `
+    let p9 = `L ${tx.toFixed(1)} ${landingY.toFixed(1)}`
+
+    if (targetFanY !== 0) {
+      p9 = `L ${(tx - dirX3 * 8).toFixed(1)} ${landingY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
+    }
+
+    return p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9
+  }
+
   // Case 1: Standard Left-to-Right Flow (source on Right, target on Left)
   if (props.sourcePosition === Position.Right && props.targetPosition === Position.Left) {
     if (dx > 0) {
@@ -269,15 +325,10 @@ const edgePath = computed(() => {
 
         const safeY = findBestPassageY(clusterCards, expectedY, endY, fanOffset)
 
-        const enterX = obsLeft - 24
-        const exitX = obsRight + 24
-        const tIn = Math.max(30, Math.min(100, (enterX - sx) * 0.45))
-        const tOut = Math.max(30, Math.min(100, (tx - exitX) * 0.45))
+        const c1x = (sx + obsLeft) / 2
+        const c2x = (obsRight + tx) / 2
 
-        return `M ${sx.toFixed(1)} ${startY.toFixed(1)} ` +
-          `C ${(sx + tIn).toFixed(1)} ${startY.toFixed(1)}, ${(enterX - tIn).toFixed(1)} ${safeY.toFixed(1)}, ${enterX.toFixed(1)} ${safeY.toFixed(1)} ` +
-          `L ${exitX.toFixed(1)} ${safeY.toFixed(1)} ` +
-          `C ${(exitX + tOut).toFixed(1)} ${safeY.toFixed(1)}, ${(tx - tOut).toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        return buildRoundedCorridorPath(sx, startY, tx, ty, c1x, safeY, c2x, 14, targetFanY)
       }
     } else {
       // Target is slightly to the left: smooth graceful S-curve
@@ -335,15 +386,10 @@ const edgePath = computed(() => {
 
         const safeY = findBestPassageY(clusterCards, expectedY, endY, fanOffset)
 
-        const enterX = obsRight + 24
-        const exitX = obsLeft - 24
-        const tIn = Math.max(30, Math.min(100, (sx - enterX) * 0.45))
-        const tOut = Math.max(30, Math.min(100, (exitX - tx) * 0.45))
+        const c1x = (obsRight + sx) / 2
+        const c2x = (tx + obsLeft) / 2
 
-        return `M ${sx.toFixed(1)} ${startY.toFixed(1)} ` +
-          `C ${(sx - tIn).toFixed(1)} ${startY.toFixed(1)}, ${(enterX + tIn).toFixed(1)} ${safeY.toFixed(1)}, ${enterX.toFixed(1)} ${safeY.toFixed(1)} ` +
-          `L ${exitX.toFixed(1)} ${safeY.toFixed(1)} ` +
-          `C ${(exitX - tOut).toFixed(1)} ${safeY.toFixed(1)}, ${(tx + tOut).toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+        return buildRoundedCorridorPath(sx, startY, tx, ty, c1x, safeY, c2x, 14, targetFanY)
       }
     } else {
       const tangent = Math.max(30, Math.min(120, Math.abs(dx) * 0.4))
