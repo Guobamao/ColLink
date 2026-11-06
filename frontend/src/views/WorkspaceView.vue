@@ -13,6 +13,7 @@
       @export-image="handleExportImage"
       @focus-table="handleFocusTable"
       @open-command-palette="commandPaletteRef?.open()"
+      @open-settings="$emit('open-settings')"
     />
 
     <!-- Multi-Canvas / Subject View Tabs -->
@@ -41,7 +42,11 @@
         @edge-click="handleEdgeClick"
       >
         <!-- Background Grid Pattern -->
-        <Background :gap="20" :color="themeStore.isDark ? '#333333' : '#cbd5e1'" />
+        <Background
+          :gap="20"
+          :variant="themeStore.gridPattern === 'lines' ? 'lines' : 'dots'"
+          :color="themeStore.isDark ? '#333333' : '#cbd5e1'"
+        />
 
         <!-- Controls: Zoom In/Out, Fit View, Lock -->
         <Controls position="bottom-right" />
@@ -142,6 +147,7 @@
       @export-excel="handleExportExcel"
       @export-image="handleExportImage"
       @focus-table="handleFocusTable"
+      @open-settings="$emit('open-settings')"
     />
   </div>
 </template>
@@ -225,9 +231,14 @@ const edgeTypes = {
   smoothstep: markRaw(SmartObstacleEdge),
 }
 
+const emit = defineEmits(['open-settings'])
+
 onMounted(async () => {
   window.addEventListener('collink:open-relation-path', (e: any) => {
     openRelationPathDrawer(e.detail?.sourceTableId)
+  })
+  window.addEventListener('collink:open-backup-dialog', () => {
+    openBackupDialog()
   })
   await projectStore.fetchProjects()
   if (projectStore.currentProject) {

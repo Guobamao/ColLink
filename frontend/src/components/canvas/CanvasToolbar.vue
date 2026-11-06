@@ -254,6 +254,17 @@
 
       <div class="w-px h-3.5 bg-border mx-1"></div>
 
+      <!-- Settings Button (Ctrl+,) -->
+      <Tooltip content="系统设置 (快捷键: Ctrl+,)" side="bottom">
+        <button
+          type="button"
+          class="w-7 h-7 flex items-center justify-center rounded-md border border-border bg-surface hover:bg-surface-hover text-muted hover:text-primary-text transition-colors cursor-pointer"
+          @click="emit('open-settings')"
+        >
+          <Settings class="w-3.5 h-3.5" />
+        </button>
+      </Tooltip>
+
       <!-- Theme Switcher (Cycle: Light -> Dark -> Auto) with Wave Transition -->
       <Tooltip :content="themeTooltipText" side="bottom">
         <button
@@ -359,6 +370,7 @@ const emit = defineEmits([
   'fit-view',
   'export-image',
   'focus-table',
+  'open-settings',
 ])
 
 const projectStore = useProjectStore()

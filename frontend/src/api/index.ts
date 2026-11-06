@@ -207,4 +207,9 @@ export const api = {
     const jsonContent = await file.text()
     return invoke<Project>('restore_project_json', { jsonContent })
   },
+
+  // System & Paths
+  getAppInfo: () =>
+    invoke<{ db_path: string; mcp_path: string; app_version: string }>('get_app_info'),
+  openPathInExplorer: (path: string) => invoke<void>('open_path_in_explorer', { path }),
 }

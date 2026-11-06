@@ -157,6 +157,9 @@ pub fn run() {
             commands::window::window_toggle_maximize,
             commands::window::window_close,
             commands::window::window_is_maximized,
+            // System & Paths
+            commands::system::get_app_info,
+            commands::system::open_path_in_explorer,
         ])
         .run(tauri::generate_context!())
         .expect("error while building tauri application");

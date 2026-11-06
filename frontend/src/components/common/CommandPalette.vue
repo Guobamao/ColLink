@@ -166,6 +166,7 @@ import {
   FileCode,
   Database,
   CornerDownLeft,
+  Settings,
 } from 'lucide-vue-next'
 
 const emit = defineEmits([
@@ -181,6 +182,7 @@ const emit = defineEmits([
   'export-excel',
   'export-image',
   'focus-table',
+  'open-settings',
 ])
 
 const canvasStore = useCanvasStore()
@@ -266,6 +268,14 @@ const actions = computed<PaletteAction[]>(() => [
     subtitle: '切换界面全局暗黑与明亮色彩',
     icon: themeStore.isDark ? Sun : Moon,
     action: () => themeStore.toggleDark(),
+  },
+  {
+    id: 'open-settings',
+    title: '系统设置中心 (Preferences)',
+    subtitle: '配置全站强调配色、MCP 协同、托盘驻留与画板偏好',
+    icon: Settings,
+    shortcut: 'Ctrl+,',
+    action: () => emit('open-settings'),
   },
 ])
 
