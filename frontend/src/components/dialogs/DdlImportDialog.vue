@@ -148,6 +148,7 @@ import { DocumentAdd, UploadFilled } from '@element-plus/icons-vue'
 import type { ParsedTable } from '@/types'
 
 const visible = ref(false)
+const emit = defineEmits(['imported'])
 const dialect = ref('dm')
 const inputMode = ref<'text' | 'file'>('text')
 const sqlText = ref('')
@@ -423,6 +424,7 @@ const handleImportSelected = async () => {
         await canvasStore.fetchCanvases(projectStore.currentProject.id)
       }
     }
+    emit('imported')
   } catch (err: any) {
     ElMessage.error('导入失败: ' + (err.message || '网络错误'))
   } finally {

@@ -97,8 +97,8 @@
     </div>
 
     <!-- Dialogs and Drawers -->
-    <DdlImportDialog ref="ddlDialogRef" />
-    <DbConnectDialog ref="dbDialogRef" />
+    <DdlImportDialog ref="ddlDialogRef" @imported="handleImported" />
+    <DbConnectDialog ref="dbDialogRef" @imported="handleImported" />
     <AutoMappingDialog ref="autoMappingDialogRef" />
     <ProjectDialog ref="projectDialogRef" />
     <BackupDialog ref="backupDialogRef" />
@@ -271,6 +271,12 @@ const checkProjectSelected = (): boolean => {
     return false
   }
   return true
+}
+
+const handleImported = () => {
+  setTimeout(() => {
+    handleFitView()
+  }, 200)
 }
 
 // Dialog openers

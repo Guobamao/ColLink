@@ -87,12 +87,21 @@
             <span class="title">发现数据表 (共 {{ tables.length }} 张)</span>
             <span class="sub-tip">已在画布中的表已自动勾选，取消勾选将同步删除画布表及关联清单</span>
           </div>
-          <div class="header-right">
+          <div class="header-right" style="display: flex; align-items: center; gap: 8px;">
+            <el-button
+              v-if="tables.length > 0"
+              size="small"
+              text
+              type="primary"
+              @click="selectAllUnadded"
+            >
+              一键勾选新表
+            </el-button>
             <el-input
               v-model="searchKey"
               placeholder="快速过滤表名/注释..."
               size="small"
-              style="width: 200px"
+              style="width: 180px"
               clearable
             />
           </div>
@@ -170,6 +179,7 @@ import { Connection, Right, Back } from '@element-plus/icons-vue'
 import type { DbTableSummary } from '@/types'
 
 const visible = ref(false)
+const emit = defineEmits(['imported'])
 const step = ref<'config' | 'tables'>('config')
 const testing = ref(false)
 const fetchingTables = ref(false)
@@ -227,6 +237,17 @@ const isTableInCanvas = (tableName: string): boolean => {
 const newTablesCount = computed(() => {
   return selectedTables.value.filter(t => !isTableInCanvas(t.table_name)).length
 })
+
+const selectAllUnadded = () => {
+  const unadded = tables.value.filter(t => !isTableInCanvas(t.table_name))
+  unadded.forEach(row => {
+    tableRef.value?.toggleRowSelection(row, true)
+  })
+  const existingMap = new Set(selectedTables.value.map(s => s.table_name.toUpperCase()))
+  const newlyAdded = unadded.filter(u => !existingMap.has(u.table_name.toUpperCase()))
+  selectedTables.value = [...selectedTables.value, ...newlyAdded]
+  ElMessage.success(`已一键勾选 ${newlyAdded.length} 张未在画布中的新表`)
+}
 
 const getStorageKey = () => {
   const projId = projectStore.currentProject?.id || 'default'
@@ -460,6 +481,7 @@ const handleImportTables = async () => {
         await canvasStore.fetchCanvases(projectStore.currentProject.id)
       }
     }
+    emit('imported')
   } catch (err: any) {
     ElMessage.error(err.response?.data?.detail || err.message || '导入失败')
   } finally {
