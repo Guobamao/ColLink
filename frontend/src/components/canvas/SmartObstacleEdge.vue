@@ -142,12 +142,14 @@ const edgePath = computed(() => {
   // Case 1: Standard Left-to-Right Flow (source on Right, target on Left)
   if (props.sourcePosition === Position.Right && props.targetPosition === Position.Left) {
     if (dx > 0) {
-      // Adjacent columns (gap <= 220px): pure, clean direct S-curve
+      // Clamped corridor control point distance strictly bounded inside [sx, tx]
+      const corridorHalf = Math.max(16, Math.min(calcTangent(dx, dy), dx * 0.46))
+
+      // Adjacent columns (gap <= 220px): pure, clean direct S-curve strictly inside corridor
       if (dx <= 220) {
-        const tangent = calcTangent(dx, dy)
-        const cp1x = sx + tangent + fanOffset
+        const cp1x = sx + corridorHalf
         const cp1y = startY
-        const cp2x = tx - tangent - fanOffset
+        const cp2x = tx - corridorHalf
         const cp2y = endY
         if (targetFanY === 0) {
           return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
@@ -160,16 +162,15 @@ const edgePath = computed(() => {
       const blockingObstacles = obstacles.filter(obs => {
         if (obs.centerX <= sx + 60 || obs.centerX >= tx - 60) return false
         const ratio = (obs.centerX - sx) / dx
-        if (ratio <= 0.1 || ratio >= 0.9) return false
+        if (ratio <= 0.08 || ratio >= 0.92) return false
         const expectedY = startY + ratio * (endY - startY)
-        return expectedY >= obs.top && expectedY <= obs.bottom
+        return expectedY >= obs.top - 10 && expectedY <= obs.bottom + 10
       })
 
       if (blockingObstacles.length === 0) {
-        const tangent = calcTangent(dx, dy, 220)
-        const cp1x = sx + tangent + fanOffset
+        const cp1x = sx + corridorHalf
         const cp1y = startY
-        const cp2x = tx - tangent - fanOffset
+        const cp2x = tx - corridorHalf
         const cp2y = endY
         if (targetFanY === 0) {
           return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
@@ -177,20 +178,24 @@ const edgePath = computed(() => {
           return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${(tx - 8).toFixed(1)} ${endY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
         }
       } else {
-        const minTop = Math.min(...blockingObstacles.map(o => o.top))
-        const maxBottom = Math.max(...blockingObstacles.map(o => o.bottom))
-        const obsLeft = Math.min(...blockingObstacles.map(o => o.left))
-        const obsRight = Math.max(...blockingObstacles.map(o => o.right))
-        const avgY = (startY + endY) / 2
+        // Collect full column cluster to route around the cluster rather than diving into card crevices
+        const clusterCards = obstacles.filter(obs => {
+          return blockingObstacles.some(bo => Math.abs(obs.centerX - bo.centerX) < 90)
+        })
+        const clusterTop = Math.min(...clusterCards.map(o => o.top))
+        const clusterBottom = Math.max(...clusterCards.map(o => o.bottom))
+        const obsLeft = Math.min(...clusterCards.map(o => o.left))
+        const obsRight = Math.max(...clusterCards.map(o => o.right))
 
-        const distToTop = Math.abs(minTop - 24 - avgY)
-        const distToBottom = Math.abs(maxBottom + 24 - avgY)
-        const safeY = distToTop <= distToBottom
-          ? minTop - 32 - Math.abs(fanOffset)
-          : maxBottom + 32 + Math.abs(fanOffset)
+        const distOverTop = Math.abs(startY - (clusterTop - 32)) + Math.abs(endY - (clusterTop - 32))
+        const distUnderBottom = Math.abs(startY - (clusterBottom + 32)) + Math.abs(endY - (clusterBottom + 32))
+        const goTop = (startY <= (clusterTop + clusterBottom) / 2) || (distOverTop <= distUnderBottom)
+        const safeY = goTop
+          ? clusterTop - 36 - Math.abs(fanOffset)
+          : clusterBottom + 36 + Math.abs(fanOffset)
 
-        const enterX = obsLeft - 20
-        const exitX = obsRight + 20
+        const enterX = obsLeft - 24
+        const exitX = obsRight + 24
         const tIn = Math.max(30, Math.min(100, (enterX - sx) * 0.45))
         const tOut = Math.max(30, Math.min(100, (tx - exitX) * 0.45))
 
@@ -201,7 +206,7 @@ const edgePath = computed(() => {
       }
     } else {
       // Target is slightly to the left: smooth graceful S-curve
-      const tangent = Math.max(45, Math.abs(dx) * 0.4)
+      const tangent = Math.max(30, Math.min(120, Math.abs(dx) * 0.4))
       return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${(sx + tangent).toFixed(1)} ${startY.toFixed(1)}, ${(tx - tangent).toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
     }
   }
@@ -209,11 +214,14 @@ const edgePath = computed(() => {
   // Case 2: Right-to-Left Flow (source on Left, target on Right)
   if (props.sourcePosition === Position.Left && props.targetPosition === Position.Right) {
     if (dx < 0) {
+      // Clamped corridor control point distance strictly bounded inside [tx, sx]
+      const corridorHalf = Math.max(16, Math.min(calcTangent(dx, dy), Math.abs(dx) * 0.46))
+
+      // Adjacent columns (gap <= 220px): pure, clean direct S-curve strictly inside corridor
       if (Math.abs(dx) <= 220) {
-        const tangent = calcTangent(dx, dy)
-        const cp1x = sx - tangent - fanOffset
+        const cp1x = sx - corridorHalf
         const cp1y = startY
-        const cp2x = tx + tangent + fanOffset
+        const cp2x = tx + corridorHalf
         const cp2y = endY
         if (targetFanY === 0) {
           return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
@@ -225,16 +233,15 @@ const edgePath = computed(() => {
       const blockingObstacles = obstacles.filter(obs => {
         if (obs.centerX <= tx + 60 || obs.centerX >= sx - 60) return false
         const ratio = (obs.centerX - tx) / Math.abs(dx)
-        if (ratio <= 0.1 || ratio >= 0.9) return false
+        if (ratio <= 0.08 || ratio >= 0.92) return false
         const expectedY = endY + ratio * (startY - endY)
-        return expectedY >= obs.top && expectedY <= obs.bottom
+        return expectedY >= obs.top - 10 && expectedY <= obs.bottom + 10
       })
 
       if (blockingObstacles.length === 0) {
-        const tangent = calcTangent(dx, dy, 220)
-        const cp1x = sx - tangent - fanOffset
+        const cp1x = sx - corridorHalf
         const cp1y = startY
-        const cp2x = tx + tangent + fanOffset
+        const cp2x = tx + corridorHalf
         const cp2y = endY
         if (targetFanY === 0) {
           return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
@@ -242,20 +249,24 @@ const edgePath = computed(() => {
           return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${(tx + 8).toFixed(1)} ${endY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
         }
       } else {
-        const minTop = Math.min(...blockingObstacles.map(o => o.top))
-        const maxBottom = Math.max(...blockingObstacles.map(o => o.bottom))
-        const obsLeft = Math.min(...blockingObstacles.map(o => o.left))
-        const obsRight = Math.max(...blockingObstacles.map(o => o.right))
-        const avgY = (startY + endY) / 2
+        // Collect full column cluster to route around the cluster rather than diving into card crevices
+        const clusterCards = obstacles.filter(obs => {
+          return blockingObstacles.some(bo => Math.abs(obs.centerX - bo.centerX) < 90)
+        })
+        const clusterTop = Math.min(...clusterCards.map(o => o.top))
+        const clusterBottom = Math.max(...clusterCards.map(o => o.bottom))
+        const obsLeft = Math.min(...clusterCards.map(o => o.left))
+        const obsRight = Math.max(...clusterCards.map(o => o.right))
 
-        const distToTop = Math.abs(minTop - 24 - avgY)
-        const distToBottom = Math.abs(maxBottom + 24 - avgY)
-        const safeY = distToTop <= distToBottom
-          ? minTop - 32 - Math.abs(fanOffset)
-          : maxBottom + 32 + Math.abs(fanOffset)
+        const distOverTop = Math.abs(startY - (clusterTop - 32)) + Math.abs(endY - (clusterTop - 32))
+        const distUnderBottom = Math.abs(startY - (clusterBottom + 32)) + Math.abs(endY - (clusterBottom + 32))
+        const goTop = (startY <= (clusterTop + clusterBottom) / 2) || (distOverTop <= distUnderBottom)
+        const safeY = goTop
+          ? clusterTop - 36 - Math.abs(fanOffset)
+          : clusterBottom + 36 + Math.abs(fanOffset)
 
-        const enterX = obsRight + 20
-        const exitX = obsLeft - 20
+        const enterX = obsRight + 24
+        const exitX = obsLeft - 24
         const tIn = Math.max(30, Math.min(100, (sx - enterX) * 0.45))
         const tOut = Math.max(30, Math.min(100, (exitX - tx) * 0.45))
 
@@ -265,7 +276,7 @@ const edgePath = computed(() => {
           `C ${(exitX - tOut).toFixed(1)} ${safeY.toFixed(1)}, ${(tx + tOut).toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
       }
     } else {
-      const tangent = Math.max(45, Math.abs(dx) * 0.4)
+      const tangent = Math.max(30, Math.min(120, Math.abs(dx) * 0.4))
       return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${(sx - tangent).toFixed(1)} ${startY.toFixed(1)}, ${(tx + tangent).toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
     }
   }
