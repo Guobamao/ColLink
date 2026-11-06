@@ -1,11 +1,11 @@
 <template>
   <div class="h-8 px-3 bg-surface-subtle/80 border-b border-border flex items-center justify-between text-xs shrink-0 select-none">
     <!-- Left: Canvas Views Tabs List -->
-    <div class="flex items-center gap-1 overflow-x-auto max-w-[calc(100%-240px)] h-full scrollbar-none py-1">
+    <div class="flex items-center gap-1.5 overflow-x-auto max-w-[calc(100%-240px)] h-full scrollbar-none py-1">
       <div
         v-for="c in canvasStore.canvases"
         :key="c.id"
-        class="group relative h-6 px-2.5 rounded flex items-center gap-1.5 text-xs cursor-pointer transition-colors"
+        class="group relative h-6.5 px-2.5 rounded-md flex items-center gap-1.5 text-xs cursor-pointer transition-colors"
         :class="canvasStore.currentCanvasId === c.id
           ? 'bg-surface text-primary font-medium shadow-2xs border border-border'
           : 'text-muted hover:text-primary-text hover:bg-surface-hover/60 border border-transparent'"
@@ -15,8 +15,8 @@
         <LayoutDashboard class="w-3.5 h-3.5 shrink-0 opacity-70" />
         <span class="max-w-[130px] truncate" :title="`双击重命名: ${c.name}`">{{ c.name }}</span>
         <span
-          class="px-1 py-0.2 text-[10px] font-mono rounded"
-          :class="canvasStore.currentCanvasId === c.id ? 'bg-primary-light text-primary font-semibold' : 'bg-surface-hover text-muted'"
+          class="px-1.5 py-0.2 text-[10px] font-mono rounded font-semibold"
+          :class="canvasStore.currentCanvasId === c.id ? 'bg-primary-light text-primary' : 'bg-surface-hover text-muted'"
           :title="`当前视图包含 ${c.table_count || 0} 张表`"
         >
           {{ c.table_count || 0 }}
@@ -47,12 +47,11 @@
       <!-- + New Canvas Button -->
       <button
         type="button"
-        class="h-6 px-1.5 rounded flex items-center gap-1 text-[11px] text-muted hover:text-primary-text hover:bg-surface border border-dashed border-border hover:border-primary/50 transition-colors ml-1.5 shrink-0"
+        class="w-6 h-6 rounded-md flex items-center justify-center text-muted hover:text-primary-text hover:bg-surface border border-transparent hover:border-border transition-colors ml-0.5 shrink-0"
         title="新建业务视图画布"
         @click="handleCreateCanvas"
       >
-        <Plus class="w-3 h-3" />
-        <span>新建</span>
+        <Plus class="w-3.5 h-3.5" />
       </button>
     </div>
 

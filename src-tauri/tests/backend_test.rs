@@ -233,3 +233,143 @@ COMMENT ON COLUMN "DAILY_REPORT_PUSH_RECORD"."USER_UNAME" IS '用户姓名';
     assert_eq!(t.columns[12].column_name, "REPORT_TYPE");
     assert_eq!(t.columns[12].column_comment, Some("报告类型(1-静态报告 2-动态报告)".to_string()));
 }
+
+#[test]
+fn test_db_inspector_factory() {
+    use collink_lib::services::db_inspector::{create_inspector, DbConfig};
+
+    let cfg_mysql = DbConfig {
+        db_type: "mysql".to_string(),
+        host: "127.0.0.1".to_string(),
+        port: 3306,
+        database: "test".to_string(),
+        username: "root".to_string(),
+        password: "pwd".to_string(),
+    };
+    assert!(create_inspector(&cfg_mysql).is_ok());
+
+    let cfg_pg = DbConfig {
+        db_type: "postgres".to_string(),
+        host: "127.0.0.1".to_string(),
+        port: 5432,
+        database: "postgres".to_string(),
+        username: "postgres".to_string(),
+        password: "pwd".to_string(),
+    };
+    assert!(create_inspector(&cfg_pg).is_ok());
+
+    let cfg_dm = DbConfig {
+        db_type: "dm".to_string(),
+        host: "127.0.0.1".to_string(),
+        port: 5236,
+        database: "SYSDBA".to_string(),
+        username: "SYSDBA".to_string(),
+        password: "SYSDBA".to_string(),
+    };
+    assert!(create_inspector(&cfg_dm).is_ok());
+
+    let cfg_invalid = DbConfig {
+        db_type: "mongodb".to_string(),
+        host: "127.0.0.1".to_string(),
+        port: 27017,
+        database: "test".to_string(),
+        username: "root".to_string(),
+        password: "".to_string(),
+    };
+    assert!(create_inspector(&cfg_invalid).is_err());
+}
+
+#[test]
+fn test_direct_db_import_and_incremental_mapping_preservation() {
+    use collink_lib::models::{ParsedColumn, ParsedTable};
+
+    let conn = Connection::open_in_memory().unwrap();
+    init_db(&conn).unwrap();
+
+    let proj = projects::create_project(&conn, "直连测试项目", None).unwrap();
+    let canvases_list = canvases::list_canvases(&conn, &proj.id).unwrap();
+    let canvas_id = &canvases_list[0].id;
+
+    // Simulate inspected tables from database
+    let table_a = ParsedTable {
+        table_name: "T_ORDER".to_string(),
+        table_comment: Some("订单表".to_string()),
+        columns: vec![
+            ParsedColumn {
+                column_name: "ORDER_ID".to_string(),
+                data_type: "VARCHAR(64)".to_string(),
+                column_comment: Some("主键".to_string()),
+                sort_order: 1,
+            },
+            ParsedColumn {
+                column_name: "USER_ID".to_string(),
+                data_type: "VARCHAR(64)".to_string(),
+                column_comment: Some("买家ID".to_string()),
+                sort_order: 2,
+            },
+        ],
+    };
+
+    let table_b = ParsedTable {
+        table_name: "T_USER".to_string(),
+        table_comment: Some("用户表".to_string()),
+        columns: vec![
+            ParsedColumn {
+                column_name: "ID".to_string(),
+                data_type: "VARCHAR(64)".to_string(),
+                column_comment: Some("主键".to_string()),
+                sort_order: 1,
+            },
+            ParsedColumn {
+                column_name: "NAME".to_string(),
+                data_type: "VARCHAR(100)".to_string(),
+                column_comment: Some("姓名".to_string()),
+                sort_order: 2,
+            },
+        ],
+    };
+
+    // First import
+    let import_res1 = DdlParser::import_tables(&conn, &proj.id, &[table_a.clone(), table_b.clone()], Some(canvas_id)).unwrap();
+    assert_eq!(import_res1.summary.tables_created, 2);
+
+    let tables_after1 = tables::list_tables_for_project(&conn, &proj.id).unwrap();
+    assert_eq!(tables_after1.len(), 2);
+
+    let order_table = tables_after1.iter().find(|t| t.table_name == "T_ORDER").unwrap();
+    let user_table = tables_after1.iter().find(|t| t.table_name == "T_USER").unwrap();
+
+    let order_user_id_col = order_table.columns.iter().find(|c| c.column_name == "USER_ID").unwrap();
+    let user_id_col = user_table.columns.iter().find(|c| c.column_name == "ID").unwrap();
+
+    // Create a mapping between T_ORDER.USER_ID and T_USER.ID
+    let mapping = mappings::create_mapping(
+        &conn,
+        &proj.id,
+        &order_table.id,
+        &order_user_id_col.id,
+        &user_table.id,
+        &user_id_col.id,
+    ).unwrap();
+    assert!(!mapping.id.is_empty());
+
+    // Incremental Re-import (Simulating column addition in database: T_ORDER added AMOUNT column)
+    let mut table_a_updated = table_a.clone();
+    table_a_updated.columns.push(ParsedColumn {
+        column_name: "AMOUNT".to_string(),
+        data_type: "DECIMAL(12, 2)".to_string(),
+        column_comment: Some("订单金额".to_string()),
+        sort_order: 3,
+    });
+
+    let import_res2 = DdlParser::import_tables(&conn, &proj.id, &[table_a_updated, table_b], Some(canvas_id)).unwrap();
+    assert_eq!(import_res2.summary.tables_updated, 2);
+    assert_eq!(import_res2.summary.columns_added, 1);
+
+    // Verify existing mapping is still intact!
+    let current_mappings = mappings::list_mappings(&conn, &proj.id).unwrap();
+    assert_eq!(current_mappings.len(), 1);
+    assert_eq!(current_mappings[0].id, mapping.id);
+    assert_eq!(current_mappings[0].source_column_id, order_user_id_col.id);
+    assert_eq!(current_mappings[0].target_column_id, user_id_col.id);
+}
