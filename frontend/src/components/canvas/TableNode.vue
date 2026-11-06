@@ -1,63 +1,78 @@
 <template>
   <div
-    class="table-card-node nowheel"
+    class="table-card-node nowheel w-80 rounded-lg bg-surface border border-border shadow-card select-none flex flex-col font-sans transition-all duration-150"
     :class="{
-      'is-dimmed': isDimmed,
-      'is-highlighted': isHighlighted,
+      'opacity-25 grayscale': isDimmed,
+      'border-primary ring-2 ring-primary/30 shadow-card-hover': isHighlighted,
       'is-focused': isFocused,
-      'is-picking-mode': !!canvasStore.pickingTableRole,
+      'cursor-crosshair border-dashed border-primary ring-2 ring-primary/40': !!canvasStore.pickingTableRole,
     }"
     @click="handleCardClick"
     @wheel.stop
   >
-    <!-- Card Header with Top Brand Accent -->
-    <div class="card-header">
-      <div class="header-left">
-        <div class="db-icon-badge">
-          <svg class="table-svg" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="4" width="18" height="16" rx="2" stroke="#3B82F6" stroke-width="2"/>
-            <path d="M3 9H21" stroke="#3B82F6" stroke-width="2"/>
-            <path d="M9 20V9" stroke="#3B82F6" stroke-width="2"/>
-          </svg>
+    <!-- Card Header -->
+    <div class="h-9 px-2.5 bg-surface-subtle border-b border-border rounded-t-[7px] flex items-center justify-between gap-2">
+      <!-- Left: Table Icon & Title -->
+      <div class="flex items-center gap-2 min-w-0 flex-1">
+        <div class="w-5 h-5 rounded flex items-center justify-center bg-primary/10 text-primary border border-primary/20 shrink-0">
+          <Table2 class="w-3.5 h-3.5" />
         </div>
-        <div class="title-wrap">
-          <div class="table-name" :title="data.tableName">{{ data.tableName }}</div>
-          <div v-if="data.tableComment" class="table-comment" :title="data.tableComment">
-            {{ data.tableComment }}
+        <div class="flex flex-col min-w-0">
+          <div class="flex items-center gap-1.5">
+            <span class="font-mono font-semibold text-xs text-primary-text truncate" :title="data.tableName">
+              {{ data.tableName }}
+            </span>
           </div>
+          <span v-if="data.tableComment" class="text-[10px] text-muted truncate leading-tight -mt-0.5" :title="data.tableComment">
+            {{ data.tableComment }}
+          </span>
         </div>
       </div>
-      <div class="header-right">
-        <span class="count-pill">
-          {{ data.columns?.length || 0 }} 列
+
+      <!-- Right: Column Count & Dropdown Actions -->
+      <div class="flex items-center gap-1 shrink-0">
+        <span class="px-1.5 py-0.2 text-[10px] font-mono rounded bg-surface-hover border border-border/50 text-muted">
+          {{ data.columns?.length || 0 }}
         </span>
         <el-dropdown trigger="click" @command="handleCommand">
-          <span class="action-btn" title="更多操作">
-            <el-icon><MoreFilled /></el-icon>
-          </span>
+          <button
+            type="button"
+            class="w-5 h-5 flex items-center justify-center rounded text-muted hover:text-primary-text hover:bg-surface border border-transparent hover:border-border transition-colors"
+            title="更多操作"
+          >
+            <MoreHorizontal class="w-3.5 h-3.5" />
+          </button>
           <template #dropdown>
             <el-dropdown-menu class="table-dropdown-menu">
               <el-dropdown-item command="highlight">
-                <el-icon><Search /></el-icon>
-                <span>高亮上下游血缘</span>
+                <div class="flex items-center gap-2">
+                  <Search class="w-3.5 h-3.5 text-primary" />
+                  <span class="text-xs">高亮上下游血缘</span>
+                </div>
               </el-dropdown-item>
               <el-dropdown-item command="relation-path">
-                <el-icon><Guide /></el-icon>
-                <span>探查关联路径</span>
+                <div class="flex items-center gap-2">
+                  <Route class="w-3.5 h-3.5 text-primary" />
+                  <span class="text-xs">探查多跳关联路径</span>
+                </div>
               </el-dropdown-item>
               <el-dropdown-item command="edit">
-                <el-icon><Edit /></el-icon>
-                <span>编辑表信息</span>
+                <div class="flex items-center gap-2">
+                  <Edit3 class="w-3.5 h-3.5 text-muted" />
+                  <span class="text-xs">编辑表元信息</span>
+                </div>
               </el-dropdown-item>
-
-              <!-- Canvas / Project separation -->
               <el-dropdown-item command="remove-canvas" divided>
-                <el-icon><Remove /></el-icon>
-                <span>从当前画布移出</span>
+                <div class="flex items-center gap-2">
+                  <MinusCircle class="w-3.5 h-3.5 text-amber-500" />
+                  <span class="text-xs">从当前视图移出</span>
+                </div>
               </el-dropdown-item>
-              <el-dropdown-item command="delete" style="color: #ef4444;">
-                <el-icon><Delete /></el-icon>
-                <span>从项目中彻底删除</span>
+              <el-dropdown-item command="delete">
+                <div class="flex items-center gap-2 text-red-500">
+                  <Trash2 class="w-3.5 h-3.5" />
+                  <span class="text-xs">从项目中彻底删除</span>
+                </div>
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -65,44 +80,48 @@
       </div>
     </div>
 
-    <!-- Column Search Bar with Filter Toggle -->
-    <div class="search-bar">
-      <div class="search-input-wrap">
-        <el-icon class="search-icon"><Search /></el-icon>
+    <!-- Search & Filter Bar -->
+    <div class="h-7 px-2 bg-surface border-b border-border/60 flex items-center justify-between gap-1.5">
+      <div class="flex items-center gap-1.5 flex-1 min-w-0">
+        <Search class="w-3 h-3 text-muted shrink-0" />
         <input
           v-model="searchKeyword"
           type="text"
-          placeholder="搜索字段名/注释..."
-          class="search-input"
+          placeholder="过滤字段..."
+          class="w-full bg-transparent text-[11px] text-primary-text placeholder:text-muted/60 focus:outline-none font-mono"
           @mousedown.stop
         />
-        <el-icon v-if="searchKeyword" class="clear-icon" @click="searchKeyword = ''"><CircleClose /></el-icon>
+        <button
+          v-if="searchKeyword"
+          type="button"
+          class="text-muted hover:text-primary-text text-[10px] px-1"
+          @click="searchKeyword = ''"
+        >
+          ×
+        </button>
       </div>
 
       <!-- Filter Toggle: Only Show Mapped Fields -->
-      <el-tooltip
-        :content="onlyMapped ? '当前已折叠未连线字段，点击显示全部' : '仅显示已连线映射字段 (折叠无连线字段)'"
-        placement="top"
+      <button
+        type="button"
+        class="w-5 h-5 flex items-center justify-center rounded text-xs transition-colors shrink-0"
+        :class="onlyMapped ? 'bg-primary-light text-primary font-bold' : 'text-muted hover:text-primary-text hover:bg-surface-hover'"
+        :title="onlyMapped ? '当前已折叠无连线字段，点击显示全部' : '仅展示有血缘连线的字段 (折叠其余孤立字段)'"
+        @click.stop="onlyMapped = !onlyMapped"
       >
-        <button
-          class="btn-filter-mapped"
-          :class="{ 'is-active': onlyMapped }"
-          @click.stop="onlyMapped = !onlyMapped"
-        >
-          <el-icon><Filter /></el-icon>
-        </button>
-      </el-tooltip>
+        <Filter class="w-3 h-3" />
+      </button>
     </div>
 
     <!-- Folded Hint Banner -->
-    <div v-if="onlyMapped && hiddenCount > 0" class="filter-folded-banner">
+    <div v-if="onlyMapped && hiddenCount > 0" class="px-2 py-0.5 bg-primary-light/60 border-b border-primary/20 text-[10px] font-mono text-primary text-center">
       已折叠 {{ hiddenCount }} 个未映射字段
     </div>
 
-    <!-- Column List (nowheel + @wheel.stop prevents canvas zooming) -->
+    <!-- Column List (nowheel prevents outer canvas zooming) -->
     <div
       ref="columnListRef"
-      class="column-list nowheel"
+      class="column-list nowheel max-h-[300px] overflow-y-auto divide-y divide-border/20 py-0.5 rounded-b-[7px]"
       @wheel.stop
       @scroll="handleColumnListScroll"
     >
@@ -110,12 +129,12 @@
         v-for="col in filteredColumns"
         :id="`col_item_${col.id}`"
         :key="col.id"
-        class="column-item"
+        class="column-item relative flex items-center justify-between h-[27px] px-4 hover:bg-surface-hover cursor-pointer transition-colors text-xs"
         :class="{
-          'is-breathing': isColumnActive(col.id),
-          'has-mapping': hasMapping(col.id),
+          'is-breathing bg-primary-light/40': isColumnActive(col.id),
+          'border-l-2 border-l-primary bg-primary/5': hasMapping(col.id) && !isColumnActive(col.id),
         }"
-        :title="col.column_comment ? `${col.column_name} (${col.column_comment}) - 点击高亮血缘` : `${col.column_name} - 点击高亮血缘`"
+        :title="col.column_comment ? `${col.column_name} (${col.column_comment})` : col.column_name"
         @click.stop="handleFieldClick(col.id)"
       >
         <!-- Left Handles (Dual-directional: Target & Source) -->
@@ -134,32 +153,33 @@
           title="左侧拖拽/输出锚点"
         />
 
-        <div class="col-content">
-          <div class="col-info">
-            <div class="col-name-row">
-              <span class="col-name">{{ col.column_name }}</span>
-              <span v-if="isPrimaryKey(col)" class="pk-badge" title="主键字段">PK</span>
-            </div>
-            <span v-if="col.column_comment" class="col-comment">
-              {{ col.column_comment }}
-            </span>
-          </div>
+        <!-- Column Left: Name, PK Badge, Comment -->
+        <div class="flex items-center gap-1.5 min-w-0 pr-2 flex-1">
+          <span v-if="isPrimaryKey(col)" class="px-1 py-0.1 text-[9px] font-mono font-bold rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0 leading-none">
+            PK
+          </span>
+          <span class="font-mono text-xs text-primary-text truncate font-normal">
+            {{ col.column_name }}
+          </span>
+          <span v-if="col.column_comment" class="text-[10px] text-muted truncate max-w-[90px]">
+            {{ col.column_comment }}
+          </span>
+        </div>
 
-          <div class="col-right-group">
-            <span class="col-type" :class="getTypeClass(col.data_type)">
-              {{ col.data_type }}
-            </span>
-            <span
-              v-if="hasMapping(col.id)"
-              class="mapping-icon-wrap"
-              title="已建立血缘映射，点击高亮并显示连线"
-            >
-              <el-icon class="mapping-icon"><Link /></el-icon>
-            </span>
-            <span v-else class="drag-hint-wrap" title="拖拽两侧蓝圈锚点建立映射">
-              <el-icon class="drag-hint-icon"><Right /></el-icon>
-            </span>
-          </div>
+        <!-- Column Right: Type Pill & Mapping Indicator -->
+        <div class="flex items-center gap-1.5 shrink-0">
+          <span
+            class="px-1.5 py-0.2 text-[9px] font-mono rounded border uppercase tracking-tight"
+            :class="getTypeBadgeClass(col.data_type)"
+          >
+            {{ formatDataType(col.data_type) }}
+          </span>
+          <span v-if="hasMapping(col.id)" class="text-primary flex items-center" title="已建立血缘连线">
+            <Link2 class="w-3 h-3" />
+          </span>
+          <span v-else class="text-muted/40 group-hover:text-muted/80 flex items-center">
+            <ChevronRight class="w-2.5 h-2.5 opacity-60" />
+          </span>
         </div>
 
         <!-- Right Handles (Dual-directional: Target & Source) -->
@@ -179,7 +199,7 @@
         />
       </div>
 
-      <div v-if="filteredColumns.length === 0" class="empty-tip">
+      <div v-if="filteredColumns.length === 0" class="py-6 text-center text-xs text-muted font-mono">
         无匹配字段
       </div>
     </div>
@@ -187,7 +207,7 @@
     <!-- Edit Dialog -->
     <el-dialog
       v-model="editDialogVisible"
-      title="修改表信息"
+      title="修改表元信息"
       width="400px"
       append-to-body
       @mousedown.stop
@@ -215,7 +235,18 @@ import { useCanvasStore } from '@/stores/canvasStore'
 import { useProjectStore } from '@/stores/projectStore'
 import { api } from '@/api'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { Search, Edit, Delete, CircleClose, Link, Right, MoreFilled, Filter, Remove, Guide } from '@element-plus/icons-vue'
+import {
+  Table2,
+  MoreHorizontal,
+  Search,
+  Filter,
+  Link2,
+  Edit3,
+  Trash2,
+  MinusCircle,
+  Route,
+  ChevronRight,
+} from 'lucide-vue-next'
 import type { ColumnMeta } from '@/types'
 
 const props = defineProps<{
@@ -268,7 +299,6 @@ const isFocused = computed(() => {
   return canvasStore.focusedTableId === props.data.tableId
 })
 
-
 // Column level active & breathing logic
 const isColumnActive = (colId: string) => {
   return (
@@ -319,12 +349,22 @@ onMounted(() => {
   })
 })
 
-const getTypeClass = (typeStr: string = '') => {
+const formatDataType = (typeStr: string = '') => {
+  return typeStr.split('(')[0].trim() || typeStr
+}
+
+const getTypeBadgeClass = (typeStr: string = '') => {
   const upper = typeStr.toUpperCase()
-  if (upper.includes('INT') || upper.includes('NUMBER')) return 'type-num'
-  if (upper.includes('CHAR') || upper.includes('TEXT') || upper.includes('CLOB')) return 'type-str'
-  if (upper.includes('DATE') || upper.includes('TIME')) return 'type-date'
-  return 'type-other'
+  if (upper.includes('INT') || upper.includes('NUMBER') || upper.includes('FLOAT') || upper.includes('DECIMAL')) {
+    return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+  }
+  if (upper.includes('CHAR') || upper.includes('TEXT') || upper.includes('CLOB') || upper.includes('STRING')) {
+    return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+  }
+  if (upper.includes('DATE') || upper.includes('TIME') || upper.includes('TIMESTAMP')) {
+    return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+  }
+  return 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20'
 }
 
 const isPrimaryKey = (col: any) => {
@@ -411,58 +451,23 @@ const confirmDelete = () => {
 </script>
 
 <style scoped>
-.table-card-node {
-  width: 320px;
-  background: var(--cl-surface);
-  border-radius: 8px;
-  box-shadow: var(--cl-shadow-card);
-  border: 1px solid var(--cl-border);
-  display: flex;
-  flex-direction: column;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-  font-family: var(--cl-font-sans);
-  overflow: visible !important;
-  contain: layout style;
+.text-primary-text {
+  color: var(--cl-text-primary);
 }
 
-.table-card-node:hover {
-  box-shadow: var(--cl-shadow-card-hover);
-  border-color: var(--cl-border-strong);
-}
-
-.table-card-node.is-dimmed {
-  opacity: 0.22;
-  filter: grayscale(85%);
-}
-
-.table-card-node.is-highlighted {
-  border-color: var(--cl-primary);
-  box-shadow: 0 0 0 2.5px var(--cl-primary-border), var(--cl-shadow-card-hover);
-}
-
-.table-card-node.is-picking-mode {
-  cursor: crosshair !important;
-  border-style: dashed;
-}
-
-.table-card-node.is-picking-mode:hover {
-  outline: 2px solid var(--cl-primary);
-  box-shadow: 0 0 16px rgba(37, 99, 235, 0.25);
-  transform: translateY(-2px);
-}
-
+/* Pulsing Animation for Focused Table (from Search or Selection) */
 @keyframes focus-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(29, 78, 216, 0.6), var(--cl-shadow-card);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6), var(--cl-shadow-card);
     border-color: var(--cl-primary);
   }
   50% {
-    box-shadow: 0 0 0 5px rgba(29, 78, 216, 0.25), 0 12px 30px rgba(29, 78, 216, 0.2);
+    box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.25), 0 10px 25px rgba(59, 130, 246, 0.2);
     border-color: var(--cl-primary-hover);
     transform: scale(1.015);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(29, 78, 216, 0.6), var(--cl-shadow-card);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6), var(--cl-shadow-card);
     border-color: var(--cl-primary);
   }
 }
@@ -472,383 +477,22 @@ const confirmDelete = () => {
   z-index: 100 !important;
 }
 
-.card-header {
-  padding: 10px 12px;
-  background: var(--cl-surface-subtle);
-  border-top-left-radius: 7px;
-  border-top-right-radius: 7px;
-  border-bottom: 1px solid var(--cl-border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  max-width: 220px;
-}
-
-.db-icon-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: var(--cl-primary-light);
-  border: 1px solid var(--cl-primary-border);
-  border-radius: 5px;
-  flex-shrink: 0;
-}
-
-.table-svg {
-  width: 14px;
-  height: 14px;
-}
-
-.title-wrap {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.table-name {
-  font-family: var(--cl-font-mono);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--cl-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
-  letter-spacing: -0.01em;
-}
-
-.table-comment {
-  font-size: 11px;
-  color: var(--cl-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
-  margin-top: 1px;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.count-pill {
-  font-family: var(--cl-font-mono);
-  font-size: 10px;
-  padding: 1px 6px;
-  height: 18px;
-  line-height: 16px;
-  background: var(--cl-surface-hover);
-  color: var(--cl-text-secondary);
-  border: 1px solid var(--cl-border);
-  border-radius: 4px;
-  font-weight: 500;
-  user-select: none;
-}
-
-.action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  font-size: 14px;
-  color: var(--cl-text-muted);
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.15s ease;
-}
-
-.action-btn:hover {
-  background: var(--cl-surface-hover);
-  color: var(--cl-text-primary);
-}
-
-.search-bar {
-  padding: 6px 10px;
-  background: var(--cl-surface);
-  border-bottom: 1px solid var(--cl-border);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.search-input-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex: 1;
-}
-
-.btn-filter-mapped {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--cl-surface-subtle);
-  border: 1px solid var(--cl-border);
-  border-radius: 4px;
-  color: var(--cl-text-muted);
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-}
-
-.btn-filter-mapped:hover {
-  background: var(--cl-surface-hover);
-  color: var(--cl-text-primary);
-  border-color: var(--cl-border-strong);
-}
-
-.btn-filter-mapped.is-active {
-  background: var(--cl-primary-light);
-  color: var(--cl-primary);
-  border-color: var(--cl-primary-border);
-}
-
-.filter-folded-banner {
-  font-size: 11px;
-  color: var(--cl-primary);
-  background: var(--cl-primary-light);
-  border-bottom: 1px solid var(--cl-primary-border);
-  padding: 3px 10px;
-  text-align: center;
-  font-weight: 500;
-  font-family: var(--cl-font-mono);
-}
-
-.search-icon {
-  position: absolute;
-  left: 8px;
-  font-size: 11px;
-  color: var(--cl-text-faint);
-  pointer-events: none;
-}
-
-.search-input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 4px 24px;
-  font-size: 11px;
-  border: 1px solid var(--cl-border);
-  border-radius: 4px;
-  outline: none;
-  background: var(--cl-surface-subtle);
-  color: var(--cl-text-primary);
-  transition: all 0.15s ease;
-}
-
-.search-input:focus {
-  background: var(--cl-surface);
-  border-color: var(--cl-primary);
-  box-shadow: 0 0 0 1px var(--cl-primary);
-}
-
-.clear-icon {
-  position: absolute;
-  right: 8px;
-  font-size: 11px;
-  color: var(--cl-text-faint);
-  cursor: pointer;
-  padding: 2px;
-}
-
-.clear-icon:hover {
-  color: var(--cl-text-muted);
-}
-
-.column-list {
-  max-height: 280px;
-  overflow-y: auto;
-  padding: 2px 0;
-  border-bottom-left-radius: 7px;
-  border-bottom-right-radius: 7px;
-}
-
-.column-item {
-  position: relative;
-  display: flex;
-  align-items: center;
-  padding: 6px 24px 6px 20px;
-  transition: all 0.15s ease;
-  user-select: none;
-  cursor: pointer;
-  border-left: 2px solid transparent;
-}
-
-.column-item:hover {
-  background: var(--cl-surface-hover);
-}
-
-/* Subtle accent for columns that have mappings */
-.column-item.has-mapping {
-  background: var(--cl-primary-light);
-  border-left-color: var(--cl-primary);
-}
-
-.column-item.has-mapping:hover {
-  background: var(--cl-primary-light);
-}
-
-.column-item:hover .drag-hint-icon {
-  opacity: 1;
-  color: var(--cl-primary);
-}
-
-/* Breathing / Pulsing Animation for Activated Fields */
+/* Breathing animation for active / lineage-connected column item */
 @keyframes breathe-pulse {
   0% {
-    background-color: var(--cl-primary-light);
-    box-shadow: 0 0 0 1.5px var(--cl-primary), 0 0 8px rgba(29, 78, 216, 0.35);
+    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.8), 0 0 8px rgba(59, 130, 246, 0.25);
   }
   50% {
-    background-color: #dbeafe;
-    box-shadow: 0 0 0 2px var(--cl-primary-hover), 0 0 14px rgba(29, 78, 216, 0.55);
+    box-shadow: inset 0 0 0 1.5px rgba(59, 130, 246, 1), 0 0 14px rgba(59, 130, 246, 0.45);
   }
   100% {
-    background-color: var(--cl-primary-light);
-    box-shadow: 0 0 0 1.5px var(--cl-primary), 0 0 8px rgba(29, 78, 216, 0.35);
+    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.8), 0 0 8px rgba(59, 130, 246, 0.25);
   }
 }
 
 .column-item.is-breathing {
   animation: breathe-pulse 1.6s ease-in-out infinite;
-  border-radius: 4px;
   z-index: 20;
-}
-
-.col-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: 8px;
-}
-
-.col-info {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  max-width: 175px;
-}
-
-.col-name-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.pk-badge {
-  font-family: var(--cl-font-mono);
-  font-size: 9px;
-  font-weight: 700;
-  color: #b45309;
-  background: #fef3c7;
-  border: 1px solid #fde68a;
-  padding: 0 3px;
-  border-radius: 2px;
-  line-height: 1.1;
-  flex-shrink: 0;
-}
-
-.col-name {
-  font-family: var(--cl-font-mono);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--cl-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.4;
-}
-
-.col-comment {
-  font-size: 10px;
-  color: var(--cl-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
-}
-
-.col-right-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.col-type {
-  font-size: 10px;
-  font-family: var(--cl-font-mono);
-  padding: 1px 5px;
-  border-radius: 3px;
-  white-space: nowrap;
-  font-weight: 500;
-  background: var(--cl-surface-subtle);
-  color: var(--cl-text-secondary);
-  border: 1px solid var(--cl-border);
-}
-
-.mapping-icon-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mapping-icon {
-  font-size: 12px;
-  color: var(--cl-primary);
-}
-
-.drag-hint-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.drag-hint-icon {
-  font-size: 11px;
-  color: var(--cl-text-faint);
-  opacity: 0.25;
-  transition: all 0.15s ease;
-}
-
-/* Subtle, Muted Type Badges */
-.type-num {
-  background: #fafaf9;
-  color: #78350f;
-  border-color: #fef3c7;
-}
-
-.type-str {
-  background: #f8fafc;
-  color: #1e3a8a;
-  border-color: #dbeafe;
-}
-
-.type-date {
-  background: #f0fdf4;
-  color: #166534;
-  border-color: #dcfce7;
-}
-
-.type-other {
-  background: #f8fafc;
-  color: #475569;
-  border-color: #e2e8f0;
 }
 
 /* Field Connection Handles */
@@ -857,122 +501,36 @@ const confirmDelete = () => {
   top: 50% !important;
   transform: translateY(-50%) !important;
   z-index: 50 !important;
-  opacity: 0.35;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 9999px !important;
+  border: 1.5px solid #3b82f6 !important;
+  background-color: var(--cl-surface) !important;
+  opacity: 0.25;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-.column-item:hover .field-handle,
-.column-item.is-breathing .field-handle {
-  opacity: 1 !important;
-}
-
-/* Left Port Handles */
 .left-handle {
-  left: 6px !important;
-  width: 10px !important;
-  height: 10px !important;
-  border-radius: 50% !important;
-  background-color: #ffffff !important;
-  border: 2px solid var(--cl-text-faint) !important;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08) !important;
-  cursor: crosshair !important;
+  left: -4px !important;
 }
 
-.left-source {
-  z-index: 52 !important;
-}
-
-.left-handle:hover,
-.column-item:hover .left-handle {
-  border-color: var(--cl-primary) !important;
-  background-color: var(--cl-primary-light) !important;
-  box-shadow: 0 0 0 3px var(--cl-primary-border) !important;
-}
-
-/* Right Port Handles */
 .right-handle {
-  right: 6px !important;
-  width: 11px !important;
-  height: 11px !important;
-  border-radius: 50% !important;
-  background: #ffffff !important;
-  border: 2px solid var(--cl-primary) !important;
-  box-shadow: 0 1px 3px rgba(29, 78, 216, 0.25) !important;
-  cursor: crosshair !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  right: -4px !important;
 }
 
-.right-source {
-  z-index: 52 !important;
-}
-
-.right-handle::after {
-  content: '';
-  width: 3.5px;
-  height: 3.5px;
-  background-color: var(--cl-primary);
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.right-handle:hover,
-.column-item:hover .right-handle {
+.column-item:hover .field-handle {
+  opacity: 1 !important;
   transform: translateY(-50%) scale(1.2) !important;
-  background: var(--cl-primary) !important;
-  border-color: var(--cl-primary-hover) !important;
-  box-shadow: 0 0 0 3.5px var(--cl-primary-border) !important;
 }
 
-.right-handle:hover::after,
-.column-item:hover .right-handle::after {
-  background-color: #ffffff;
+.field-handle:hover {
+  background-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35) !important;
+  transform: translateY(-50%) scale(1.4) !important;
 }
 
-.empty-tip {
-  text-align: center;
-  font-size: 11px;
-  color: var(--cl-text-muted);
-  padding: 16px 0;
+.left-source,
+.right-source {
+  cursor: crosshair !important;
 }
-
-:deep(.table-dropdown-menu .el-dropdown-menu__item) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  padding: 8px 14px;
-}
-
-:global(html.dark) .type-num {
-  background: rgba(245, 158, 11, 0.15) !important;
-  color: #fcd34d !important;
-  border-color: rgba(245, 158, 11, 0.3) !important;
-}
-
-:global(html.dark) .type-str {
-  background: rgba(59, 130, 246, 0.15) !important;
-  color: #93c5fd !important;
-  border-color: rgba(59, 130, 246, 0.3) !important;
-}
-
-:global(html.dark) .type-date {
-  background: rgba(16, 185, 129, 0.15) !important;
-  color: #6ee7b7 !important;
-  border-color: rgba(16, 185, 129, 0.3) !important;
-}
-
-:global(html.dark) .type-other {
-  background: rgba(148, 163, 184, 0.15) !important;
-  color: #cbd5e1 !important;
-  border-color: rgba(148, 163, 184, 0.3) !important;
-}
-
-:global(html.dark) .pk-badge {
-  color: #fbbf24 !important;
-  background: rgba(245, 158, 11, 0.2) !important;
-  border-color: rgba(245, 158, 11, 0.4) !important;
-}
-
 </style>
