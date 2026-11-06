@@ -516,13 +516,15 @@ const edgePath = computed(() => {
 }
 
 :global(.dark) .smart-bezier-edge {
-  stroke: #60a5fa;
-  opacity: 0.65;
+  stroke: #38bdf8 !important;
+  stroke-width: 2px !important;
+  opacity: 0.95;
 }
 
 :global(.dark) .smart-bezier-edge.is-active,
 :global(.dark) .smart-obstacle-edge-group:hover .smart-bezier-edge {
-  stroke: #38bdf8;
+  stroke: #67e8f9 !important;
+  stroke-width: 3px !important;
   opacity: 1 !important;
 }
 

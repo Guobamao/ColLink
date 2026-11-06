@@ -50,9 +50,9 @@
         <MiniMap
           v-if="showMiniMap"
           :node-stroke-color="themeStore.isDark ? '#38bdf8' : '#3b82f6'"
-          :node-color="themeStore.isDark ? '#1f2b42' : '#dbeafe'"
+          :node-color="themeStore.isDark ? '#1e293b' : '#dbeafe'"
           :node-border-radius="3"
-          :mask-color="themeStore.isDark ? 'rgba(11, 15, 25, 0.75)' : 'rgba(241, 245, 249, 0.6)'"
+          :mask-color="themeStore.isDark ? 'rgba(9, 13, 22, 0.75)' : 'rgba(241, 245, 249, 0.6)'"
           class="canvas-minimap"
         />
 
