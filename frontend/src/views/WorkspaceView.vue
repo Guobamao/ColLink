@@ -32,7 +32,7 @@
         :edge-types="edgeTypes"
         :default-edge-options="{ type: 'smartObstacle' }"
         :connection-mode="ConnectionMode.Loose"
-        :connection-line-style="{ stroke: '#3b82f6', strokeWidth: 2 }"
+        :connection-line-style="{ stroke: 'var(--cl-primary)', strokeWidth: 2 }"
         :connection-line-type="'smoothstep'"
         @node-drag-start="canvasStore.onNodeDragStart"
         @node-drag="canvasStore.onNodeDrag"
@@ -483,6 +483,16 @@ const handleExportImage = async () => {
   width: 100%;
   height: calc(100vh - 40px - 32px);
   position: relative;
+}
+
+/* High-Contrast Canvas Hand Cursors (Crisp dark outline & shadow for light & dark modes) */
+:deep(.vue-flow__pane) {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M9 11V4.5a1.5 1.5 0 0 1 3 0V10M12 10V3.5a1.5 1.5 0 0 1 3 0V10M15 10V5.5a1.5 1.5 0 0 1 3 0V11M6 13V8.5a1.5 1.5 0 0 1 3 0V12m9-1v2.5a6 6 0 0 1-6 6h-2a6 6 0 0 1-4.24-1.76l-2.5-2.5a1.5 1.5 0 0 1 2.12-2.12L7 13.5' fill='%23ffffff' stroke='%2309090b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 10 10, grab !important;
+}
+
+:deep(.vue-flow__pane.dragging),
+:deep(.vue-flow__pane:active) {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M6 13.5a1.5 1.5 0 0 1 1.5-1.5h9a1.5 1.5 0 0 1 1.5 1.5V15a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5v-1.5zM8 12V9a1.5 1.5 0 0 1 3 0v3m0 0V8.5a1.5 1.5 0 0 1 3 0V12m0 0V9.5a1.5 1.5 0 0 1 3 0V12' fill='%23ffffff' stroke='%2309090b' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 10 10, grabbing !important;
 }
 
 :deep(.vue-flow__viewport) {
