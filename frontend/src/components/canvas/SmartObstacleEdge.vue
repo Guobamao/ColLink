@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Position, useVueFlow } from '@vue-flow/core'
-import { useCanvasStore } from '@/stores/canvasStore'
-import { useThemeStore } from '@/stores/themeStore'
 
 interface Props {
   id: string
@@ -21,8 +19,11 @@ interface Props {
 
 const props = defineProps<Props>()
 const { getNodes, edges } = useVueFlow()
-const canvasStore = useCanvasStore()
-const themeStore = useThemeStore()
+
+interface Point {
+  x: number
+  y: number
+}
 
 interface Rect {
   id: string
@@ -30,454 +31,363 @@ interface Rect {
   right: number
   top: number
   bottom: number
-  centerX: number
-  centerY: number
 }
 
-// Compute whether this edge or its fields are currently active/focused
-const isLineActive = computed(() => {
-  if (canvasStore.selectedEdgeId === props.id) return true
-  if (canvasStore.highlightedEdgeIds.has(props.id)) return true
-  if (canvasStore.activeColumnId) {
-    const srcCol = props.data?.sourceColumnId
-    const tgtCol = props.data?.targetColumnId
-    if (srcCol === canvasStore.activeColumnId || tgtCol === canvasStore.activeColumnId) {
-      return true
+// Check if an axis-aligned segment intersects a bounding box
+function isSegmentIntersectingBox(x1: number, y1: number, x2: number, y2: number, box: Rect): boolean {
+  const minX = Math.min(x1, x2)
+  const maxX = Math.max(x1, x2)
+  const minY = Math.min(y1, y2)
+  const maxY = Math.max(y1, y2)
+
+  // Horizontal segment
+  if (Math.abs(y1 - y2) < 1.0) {
+    const y = (y1 + y2) / 2
+    if (y >= box.top && y <= box.bottom) {
+      if (Math.max(minX, box.left) < Math.min(maxX, box.right)) {
+        return true
+      }
+    }
+  }
+  // Vertical segment
+  else if (Math.abs(x1 - x2) < 1.0) {
+    const x = (x1 + x2) / 2
+    if (x >= box.left && x <= box.right) {
+      if (Math.max(minY, box.top) < Math.min(maxY, box.bottom)) {
+        return true
+      }
     }
   }
   return false
-})
+}
 
-// Whether user is focusing on any specific lineage path or field
-const hasGlobalFocus = computed(() => {
-  return Boolean(
-    canvasStore.activeColumnId ||
-    canvasStore.selectedEdgeId ||
-    canvasStore.highlightedEdgeIds.size > 0 ||
-    canvasStore.highlightedNodeIds.size > 0
-  )
-})
+// Find all obstacles intersecting any segment in the polyline
+function getIntersectingObstacles(pts: Point[], obstacles: Rect[], excludeIds: string[]): Rect[] {
+  const hit: Rect[] = []
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    for (const obs of obstacles) {
+      if (excludeIds.includes(obs.id)) continue
+      if (isSegmentIntersectingBox(p1.x, p1.y, p2.x, p2.y, obs)) {
+        if (!hit.some(h => h.id === obs.id)) {
+          hit.push(obs)
+        }
+      }
+    }
+  }
+  return hit
+}
+
+// Simplify redundant collinear points
+function simplifyPoints(pts: Point[]): Point[] {
+  if (pts.length <= 2) return pts
+  const res: Point[] = [pts[0]]
+  for (let i = 1; i < pts.length - 1; i++) {
+    const prev = res[res.length - 1]
+    const curr = pts[i]
+    const next = pts[i + 1]
+
+    const isCollinearX = Math.abs(prev.x - curr.x) < 0.5 && Math.abs(curr.x - next.x) < 0.5
+    const isCollinearY = Math.abs(prev.y - curr.y) < 0.5 && Math.abs(curr.y - next.y) < 0.5
+    const isSameAsPrev = Math.abs(prev.x - curr.x) < 0.5 && Math.abs(prev.y - curr.y) < 0.5
+
+    if (!isSameAsPrev && !isCollinearX && !isCollinearY) {
+      res.push(curr)
+    }
+  }
+  res.push(pts[pts.length - 1])
+  return res
+}
+
+// Convert points to smooth rounded SVG path
+function pointsToRoundedSvgPath(pts: Point[], radius = 8): string {
+  const cleanPts = simplifyPoints(pts)
+  if (cleanPts.length === 0) return ''
+  if (cleanPts.length === 1) return `M ${cleanPts[0].x.toFixed(1)} ${cleanPts[0].y.toFixed(1)}`
+  if (cleanPts.length === 2) {
+    return `M ${cleanPts[0].x.toFixed(1)} ${cleanPts[0].y.toFixed(1)} L ${cleanPts[1].x.toFixed(1)} ${cleanPts[1].y.toFixed(1)}`
+  }
+
+  let d = `M ${cleanPts[0].x.toFixed(1)} ${cleanPts[0].y.toFixed(1)}`
+
+  for (let i = 1; i < cleanPts.length - 1; i++) {
+    const prev = cleanPts[i - 1]
+    const curr = cleanPts[i]
+    const next = cleanPts[i + 1]
+
+    const dPrev = Math.hypot(curr.x - prev.x, curr.y - prev.y)
+    const dNext = Math.hypot(next.x - curr.x, next.y - curr.y)
+    const r = Math.min(radius, dPrev / 2, dNext / 2)
+
+    if (r < 1) {
+      d += ` L ${curr.x.toFixed(1)} ${curr.y.toFixed(1)}`
+      continue
+    }
+
+    const vPrevX = (prev.x - curr.x) / dPrev
+    const vPrevY = (prev.y - curr.y) / dPrev
+    const vNextX = (next.x - curr.x) / dNext
+    const vNextY = (next.y - curr.y) / dNext
+
+    const q1X = curr.x + vPrevX * r
+    const q1Y = curr.y + vPrevY * r
+    const q2X = curr.x + vNextX * r
+    const q2Y = curr.y + vNextY * r
+
+    d += ` L ${q1X.toFixed(1)} ${q1Y.toFixed(1)} Q ${curr.x.toFixed(1)} ${curr.y.toFixed(1)} ${q2X.toFixed(1)} ${q2Y.toFixed(1)}`
+  }
+
+  const last = cleanPts[cleanPts.length - 1]
+  d += ` L ${last.x.toFixed(1)} ${last.y.toFixed(1)}`
+  return d
+}
 
 const edgePath = computed(() => {
   if (props.sourceX == null || props.targetX == null || isNaN(props.sourceX) || isNaN(props.targetX)) {
     return ''
   }
 
-  // Fast path: if edge is hidden in store and not in active export/view, skip computation
+  // Fast path: if this edge is hidden, skip expensive obstacle raycasting
   const currentEdge = edges.value.find(e => e.id === props.id)
   if (currentEdge && currentEdge.hidden) {
     return ''
   }
 
-  const sx = props.sourceX
-  const sy = props.sourceY
-  const tx = props.targetX
-  const ty = props.targetY
-  const dx = tx - sx
-  const dy = ty - sy
+  const MARGIN = 16
 
-  // Collect potential obstacle nodes between source and target
+  // Collect obstacles (bounding boxes of all other table cards)
   const allNodes = getNodes.value || []
   const obstacles: Rect[] = []
-  const PADDING = 14
-
   for (let i = 0; i < allNodes.length; i++) {
     const n = allNodes[i]
     if (n.id === props.source || n.id === props.target || n.hidden) continue
-    const nx = n.position.x
-    const ny = n.position.y
-    const nw = (n as any).dimensions?.width || 320
-    const nh = (n as any).dimensions?.height || 280
-
+    const x = n.position.x
+    const y = n.position.y
+    const w = (n as any).dimensions?.width || 320
+    const h = (n as any).dimensions?.height || 300
     obstacles.push({
       id: n.id,
-      left: nx - PADDING,
-      right: nx + nw + PADDING,
-      top: ny - PADDING,
-      bottom: ny + nh + PADDING,
-      centerX: nx + nw / 2,
-      centerY: ny + nh / 2,
+      left: x - MARGIN,
+      right: x + w + MARGIN,
+      top: y - MARGIN,
+      bottom: y + h + MARGIN,
     })
   }
 
-  // Anti-bundling curvature modulation for adjacent parallel field lines
+  // Lane offset for parallel lines to prevent overlapping
   const visibleEdges = edges.value.filter(e => !e.hidden)
-  const tgtHandle = (props as any).targetHandleId || currentEdge?.targetHandle
-  const srcHandle = (props as any).sourceHandleId || currentEdge?.sourceHandle
-
-  // Handle fan-out: When multiple edges connect to the same target handle or source handle,
-  // distribute their landing Y offsets slightly so they do not collapse into a single indistinguishable bar.
-  const sharingTargetEdges = tgtHandle
-    ? visibleEdges.filter(e => (e.targetHandle === tgtHandle || (e as any).targetHandleId === tgtHandle) && e.target === props.target)
-    : []
-  const targetK = sharingTargetEdges.findIndex(e => e.id === props.id)
-  const targetFanY = sharingTargetEdges.length > 1 && targetK >= 0
-    ? Math.max(-9, Math.min(9, (targetK - (sharingTargetEdges.length - 1) / 2) * 4))
-    : 0
-
-  const sharingSourceEdges = srcHandle
-    ? visibleEdges.filter(e => (e.sourceHandle === srcHandle || (e as any).sourceHandleId === srcHandle) && e.source === props.source)
-    : []
-  const sourceK = sharingSourceEdges.findIndex(e => e.id === props.id)
-  const sourceFanY = sharingSourceEdges.length > 1 && sourceK >= 0
-    ? Math.max(-9, Math.min(9, (sourceK - (sharingSourceEdges.length - 1) / 2) * 4))
-    : 0
-
-  const startY = sy + sourceFanY
-  const endY = ty + targetFanY
-
   const edgeIdx = visibleEdges.findIndex(e => e.id === props.id)
   const idx = edgeIdx >= 0 ? edgeIdx : Math.abs(props.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0))
-  // subtle tangent modulation factor (-12px ~ +12px)
-  const fanOffset = ((idx % 7) - 3) * 4
+  const laneOffset = ((idx % 5) - 2) * 6 // -12, -6, 0, +6, +12
 
-  // Adaptive tangent calculation avoiding exaggerated ballooning on large dy
-  const calcTangent = (distX: number, distY: number, maxT = 180) => {
-    const absX = Math.abs(distX)
-    const absY = Math.abs(distY)
-    const ratio = Math.max(0.32, Math.min(0.48, 0.45 - (absY / 1000) * 0.12))
-    return Math.max(45, Math.min(maxT, absX * ratio))
+  const pSrc: Point = { x: props.sourceX, y: props.sourceY }
+  const pTgt: Point = { x: props.targetX, y: props.targetY }
+
+  // Adaptive stub distance based on node gap to avoid crossing over when cards are close
+  const gap = Math.abs(props.targetX - props.sourceX)
+  const STUB = Math.min(24, Math.max(8, gap / 3))
+
+  const pStart: Point = {
+    x: props.sourcePosition === Position.Left ? props.sourceX - STUB : props.sourcePosition === Position.Right ? props.sourceX + STUB : props.sourceX,
+    y: props.sourcePosition === Position.Top ? props.sourceY - STUB : props.sourcePosition === Position.Bottom ? props.sourceY + STUB : props.sourceY,
+  }
+  const pEnd: Point = {
+    x: props.targetPosition === Position.Left ? props.targetX - STUB : props.targetPosition === Position.Right ? props.targetX + STUB : props.targetX,
+    y: props.targetPosition === Position.Top ? props.targetY - STUB : props.targetPosition === Position.Bottom ? props.targetY + STUB : props.targetY,
   }
 
-  // Find the optimal horizontal passage (open inter-card gap or outer margin) through a column
-  const findBestPassageY = (
-    colCards: Rect[],
-    expectedY: number,
-    endY: number,
-    fanOffset: number
-  ): number => {
-    if (colCards.length === 0) return expectedY
+  let rawPoints: Point[] = []
 
-    const sorted = [...colCards].sort((a, b) => a.top - b.top)
-    interface Passage {
-      y: number
-      minY: number
-      maxY: number
-      isGap: boolean
-    }
-    const passages: Passage[] = []
-
-    // 1. Passage above the topmost card
-    const topCard = sorted[0]
-    passages.push({
-      y: topCard.top - 36 - Math.abs(fanOffset),
-      minY: -Infinity,
-      maxY: topCard.top - 16,
-      isGap: false,
-    })
-
-    // 2. Inter-card gaps between adjacent cards in this column
-    for (let i = 0; i < sorted.length - 1; i++) {
-      const curr = sorted[i]
-      const next = sorted[i + 1]
-      const gap = next.top - curr.bottom
-      // A gap >= 36px is an open horizontal freeway for lines to glide straight through
-      if (gap >= 36) {
-        passages.push({
-          y: (curr.bottom + next.top) / 2,
-          minY: curr.bottom + 14,
-          maxY: next.top - 14,
-          isGap: true,
-        })
-      }
-    }
-
-    // 3. Passage below the bottommost card
-    const bottomCard = sorted[sorted.length - 1]
-    passages.push({
-      y: bottomCard.bottom + 36 + Math.abs(fanOffset),
-      minY: bottomCard.bottom + 16,
-      maxY: Infinity,
-      isGap: false,
-    })
-
-    // If expectedY already lands inside an open passage/gap, use it directly without detours
-    const directHit = passages.find(p => expectedY >= p.minY && expectedY <= p.maxY)
-    if (directHit) {
-      if (directHit.isGap) {
-        return Math.max(directHit.minY + 4, Math.min(directHit.maxY - 4, expectedY))
-      }
-      return directHit.y
-    }
-
-    // Pick the passage with the minimum detour cost, strongly prioritizing natural inter-card gaps
-    let best = passages[0]
-    let minCost = Infinity
-
-    for (const p of passages) {
-      const distFromExpected = Math.abs(p.y - expectedY)
-      const distFromEnd = Math.abs(p.y - endY)
-      const gapBonus = p.isGap ? -50 : 0
-      const cost = distFromExpected * 1.6 + distFromEnd * 0.7 + gapBonus
-
-      if (cost < minCost) {
-        minCost = cost
-        best = p
-      }
-    }
-
-    return best.y
-  }
-
-  // Build a crisp, professional orthogonal corridor route with smooth rounded corners (SmoothStep)
-  const buildRoundedCorridorPath = (
-    sx: number,
-    sy: number,
-    tx: number,
-    ty: number,
-    c1x: number,
-    passY: number,
-    c2x: number,
-    radius = 14,
-    targetFanY = 0
-  ): string => {
-    const landingY = ty + targetFanY
-
-    // Ensure corner radius does not exceed half the shortest segment length
-    const span1 = Math.abs(c1x - sx)
-    const span2 = Math.abs(passY - sy)
-    const span3 = Math.abs(c2x - c1x)
-    const span4 = Math.abs(landingY - passY)
-    const span5 = Math.abs(tx - c2x)
-
-    const r = Math.max(
-      4,
-      Math.min(
-        radius,
-        span1 * 0.45,
-        span2 * 0.45,
-        span3 * 0.45,
-        span4 * 0.45,
-        span5 * 0.45
-      )
-    )
-
-    const dirX1 = c1x >= sx ? 1 : -1
-    const dirY1 = passY >= sy ? 1 : -1
-    const dirX2 = c2x >= c1x ? 1 : -1
-    const dirY2 = landingY >= passY ? 1 : -1
-    const dirX3 = tx >= c2x ? 1 : -1
-
-    const p1 = `M ${sx.toFixed(1)} ${sy.toFixed(1)} L ${(c1x - dirX1 * r).toFixed(1)} ${sy.toFixed(1)} `
-    const p2 = `Q ${c1x.toFixed(1)} ${sy.toFixed(1)}, ${c1x.toFixed(1)} ${(sy + dirY1 * r).toFixed(1)} `
-    const p3 = `L ${c1x.toFixed(1)} ${(passY - dirY1 * r).toFixed(1)} `
-    const p4 = `Q ${c1x.toFixed(1)} ${passY.toFixed(1)}, ${(c1x + dirX2 * r).toFixed(1)} ${passY.toFixed(1)} `
-    const p5 = `L ${(c2x - dirX2 * r).toFixed(1)} ${passY.toFixed(1)} `
-    const p6 = `Q ${c2x.toFixed(1)} ${passY.toFixed(1)}, ${c2x.toFixed(1)} ${(passY + dirY2 * r).toFixed(1)} `
-    const p7 = `L ${c2x.toFixed(1)} ${(landingY - dirY2 * r).toFixed(1)} `
-    const p8 = `Q ${c2x.toFixed(1)} ${landingY.toFixed(1)}, ${(c2x + dirX3 * r).toFixed(1)} ${landingY.toFixed(1)} `
-    let p9 = `L ${tx.toFixed(1)} ${landingY.toFixed(1)}`
-
-    if (targetFanY !== 0) {
-      p9 = `L ${(tx - dirX3 * 8).toFixed(1)} ${landingY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
-    }
-
-    return p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9
-  }
-
-  // Case 1: Standard Left-to-Right Flow (source on Right, target on Left)
+  // Case 1: Source Right -> Target Left (Standard left-to-right)
   if (props.sourcePosition === Position.Right && props.targetPosition === Position.Left) {
-    if (dx > 0) {
-      // Clamped corridor control point distance strictly bounded inside [sx, tx]
-      const corridorHalf = Math.max(16, Math.min(calcTangent(dx, dy), dx * 0.46))
+    if (pStart.x < pEnd.x) {
+      const xMid = (pStart.x + pEnd.x) / 2 + laneOffset
+      const tryPoints: Point[] = [
+        pSrc,
+        pStart,
+        { x: xMid, y: pStart.y },
+        { x: xMid, y: pEnd.y },
+        pEnd,
+        pTgt,
+      ]
 
-      // Adjacent columns (gap <= 220px): pure, clean direct S-curve strictly inside corridor
-      if (dx <= 220) {
-        const cp1x = sx + corridorHalf
-        const cp1y = startY
-        const cp2x = tx - corridorHalf
-        const cp2y = endY
-        if (targetFanY === 0) {
-          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
-        } else {
-          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${(tx - 8).toFixed(1)} ${endY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
-        }
-      }
-
-      // Cross-layer columns: check if any intermediary node actually blocks the line
-      const blockingObstacles = obstacles.filter(obs => {
-        if (obs.centerX <= sx + 60 || obs.centerX >= tx - 60) return false
-        const ratio = (obs.centerX - sx) / dx
-        if (ratio <= 0.08 || ratio >= 0.92) return false
-        const expectedY = startY + ratio * (endY - startY)
-        return expectedY >= obs.top - 10 && expectedY <= obs.bottom + 10
-      })
-
-      if (blockingObstacles.length === 0) {
-        const cp1x = sx + corridorHalf
-        const cp1y = startY
-        const cp2x = tx - corridorHalf
-        const cp2y = endY
-        if (targetFanY === 0) {
-          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
-        } else {
-          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${(tx - 8).toFixed(1)} ${endY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
-        }
+      const hits = getIntersectingObstacles(tryPoints, obstacles, [props.source, props.target])
+      if (hits.length === 0) {
+        rawPoints = tryPoints
       } else {
-        const clusterCards = obstacles.filter(obs => {
-          return blockingObstacles.some(bo => Math.abs(obs.centerX - bo.centerX) < 90)
-        })
-        const obsLeft = Math.min(...clusterCards.map(o => o.left))
-        const obsRight = Math.max(...clusterCards.map(o => o.right))
-        const midX = (obsLeft + obsRight) / 2
-        const ratio = (midX - sx) / dx
-        const expectedY = startY + ratio * (endY - startY)
+        // Detour above or below obstacles
+        const minTop = Math.min(...hits.map(h => h.top))
+        const maxBottom = Math.max(...hits.map(h => h.bottom))
+        const avgY = (pStart.y + pEnd.y) / 2
+        const safeYAbove = minTop - 20 - Math.abs(laneOffset)
+        const safeYBelow = maxBottom + 20 + Math.abs(laneOffset)
 
-        const safeY = findBestPassageY(clusterCards, expectedY, endY, fanOffset)
-
-        const c1x = (sx + obsLeft) / 2
-        const c2x = (obsRight + tx) / 2
-
-        return buildRoundedCorridorPath(sx, startY, tx, ty, c1x, safeY, c2x, 14, targetFanY)
+        const safeY = Math.abs(safeYAbove - avgY) <= Math.abs(safeYBelow - avgY) ? safeYAbove : safeYBelow
+        rawPoints = [
+          pSrc,
+          pStart,
+          { x: pStart.x, y: safeY },
+          { x: pEnd.x, y: safeY },
+          pEnd,
+          pTgt,
+        ]
       }
     } else {
-      // Target is slightly to the left: smooth graceful S-curve
-      const tangent = Math.max(30, Math.min(120, Math.abs(dx) * 0.4))
-      return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${(sx + tangent).toFixed(1)} ${startY.toFixed(1)}, ${(tx - tangent).toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+      // Reversed/overlapping: loop around
+      const minTop = Math.min(pStart.y, pEnd.y) - 30 - Math.abs(laneOffset)
+      rawPoints = [
+        pSrc,
+        pStart,
+        { x: pStart.x, y: minTop },
+        { x: pEnd.x, y: minTop },
+        pEnd,
+        pTgt,
+      ]
     }
   }
+  // Case 2: Source Left -> Target Right (Right-to-left)
+  else if (props.sourcePosition === Position.Left && props.targetPosition === Position.Right) {
+    if (pStart.x > pEnd.x) {
+      const xMid = (pStart.x + pEnd.x) / 2 + laneOffset
+      const tryPoints: Point[] = [
+        pSrc,
+        pStart,
+        { x: xMid, y: pStart.y },
+        { x: xMid, y: pEnd.y },
+        pEnd,
+        pTgt,
+      ]
 
-  // Case 2: Right-to-Left Flow (source on Left, target on Right)
-  if (props.sourcePosition === Position.Left && props.targetPosition === Position.Right) {
-    if (dx < 0) {
-      // Clamped corridor control point distance strictly bounded inside [tx, sx]
-      const corridorHalf = Math.max(16, Math.min(calcTangent(dx, dy), Math.abs(dx) * 0.46))
-
-      // Adjacent columns (gap <= 220px): pure, clean direct S-curve strictly inside corridor
-      if (Math.abs(dx) <= 220) {
-        const cp1x = sx - corridorHalf
-        const cp1y = startY
-        const cp2x = tx + corridorHalf
-        const cp2y = endY
-        if (targetFanY === 0) {
-          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
-        } else {
-          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${(tx + 8).toFixed(1)} ${endY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
-        }
-      }
-
-      const blockingObstacles = obstacles.filter(obs => {
-        if (obs.centerX <= tx + 60 || obs.centerX >= sx - 60) return false
-        const ratio = (obs.centerX - tx) / Math.abs(dx)
-        if (ratio <= 0.08 || ratio >= 0.92) return false
-        const expectedY = endY + ratio * (startY - endY)
-        return expectedY >= obs.top - 10 && expectedY <= obs.bottom + 10
-      })
-
-      if (blockingObstacles.length === 0) {
-        const cp1x = sx - corridorHalf
-        const cp1y = startY
-        const cp2x = tx + corridorHalf
-        const cp2y = endY
-        if (targetFanY === 0) {
-          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
-        } else {
-          return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${(tx + 8).toFixed(1)} ${endY.toFixed(1)} L ${tx.toFixed(1)} ${ty.toFixed(1)}`
-        }
+      const hits = getIntersectingObstacles(tryPoints, obstacles, [props.source, props.target])
+      if (hits.length === 0) {
+        rawPoints = tryPoints
       } else {
-        const clusterCards = obstacles.filter(obs => {
-          return blockingObstacles.some(bo => Math.abs(obs.centerX - bo.centerX) < 90)
-        })
-        const obsLeft = Math.min(...clusterCards.map(o => o.left))
-        const obsRight = Math.max(...clusterCards.map(o => o.right))
-        const midX = (obsLeft + obsRight) / 2
-        const ratio = (sx - midX) / Math.abs(dx)
-        const expectedY = startY + ratio * (endY - startY)
+        const minTop = Math.min(...hits.map(h => h.top))
+        const maxBottom = Math.max(...hits.map(h => h.bottom))
+        const avgY = (pStart.y + pEnd.y) / 2
+        const safeYAbove = minTop - 20 - Math.abs(laneOffset)
+        const safeYBelow = maxBottom + 20 + Math.abs(laneOffset)
 
-        const safeY = findBestPassageY(clusterCards, expectedY, endY, fanOffset)
-
-        const c1x = (obsRight + sx) / 2
-        const c2x = (tx + obsLeft) / 2
-
-        return buildRoundedCorridorPath(sx, startY, tx, ty, c1x, safeY, c2x, 14, targetFanY)
+        const safeY = Math.abs(safeYAbove - avgY) <= Math.abs(safeYBelow - avgY) ? safeYAbove : safeYBelow
+        rawPoints = [
+          pSrc,
+          pStart,
+          { x: pStart.x, y: safeY },
+          { x: pEnd.x, y: safeY },
+          pEnd,
+          pTgt,
+        ]
       }
     } else {
-      const tangent = Math.max(30, Math.min(120, Math.abs(dx) * 0.4))
-      return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${(sx - tangent).toFixed(1)} ${startY.toFixed(1)}, ${(tx + tangent).toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+      const minTop = Math.min(pStart.y, pEnd.y) - 30 - Math.abs(laneOffset)
+      rawPoints = [
+        pSrc,
+        pStart,
+        { x: pStart.x, y: minTop },
+        { x: pEnd.x, y: minTop },
+        pEnd,
+        pTgt,
+      ]
     }
   }
+  // Case 3: Both Right (C-shape outer right corridor)
+  else if (props.sourcePosition === Position.Right && props.targetPosition === Position.Right) {
+    let maxRight = Math.max(pStart.x, pEnd.x)
+    const minY = Math.min(pStart.y, pEnd.y)
+    const maxY = Math.max(pStart.y, pEnd.y)
 
-  // Case 3: Both handles on Right side (Outer right C-curve for same-column tables)
-  if (props.sourcePosition === Position.Right && props.targetPosition === Position.Right) {
-    const tangent = Math.max(45, Math.min(120, Math.abs(dy) * 0.35)) + Math.abs(fanOffset)
-    const cpX = Math.max(sx, tx) + tangent
-    return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cpX.toFixed(1)} ${startY.toFixed(1)}, ${cpX.toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+    for (const obs of obstacles) {
+      if (maxY >= obs.top && minY <= obs.bottom) {
+        if (obs.right > maxRight) {
+          maxRight = obs.right
+        }
+      }
+    }
+    const xCorridor = maxRight + 20 + laneOffset
+    rawPoints = [
+      pSrc,
+      pStart,
+      { x: xCorridor, y: pStart.y },
+      { x: xCorridor, y: pEnd.y },
+      pEnd,
+      pTgt,
+    ]
+  }
+  // Case 4: Both Left (C-shape outer left corridor)
+  else if (props.sourcePosition === Position.Left && props.targetPosition === Position.Left) {
+    let minLeft = Math.min(pStart.x, pEnd.x)
+    const minY = Math.min(pStart.y, pEnd.y)
+    const maxY = Math.max(pStart.y, pEnd.y)
+
+    for (const obs of obstacles) {
+      if (maxY >= obs.top && minY <= obs.bottom) {
+        if (obs.left < minLeft) {
+          minLeft = obs.left
+        }
+      }
+    }
+    const xCorridor = minLeft - 20 - laneOffset
+    rawPoints = [
+      pSrc,
+      pStart,
+      { x: xCorridor, y: pStart.y },
+      { x: xCorridor, y: pEnd.y },
+      pEnd,
+      pTgt,
+    ]
+  }
+  // Fallback: Default orthogonal
+  else {
+    const xMid = (pStart.x + pEnd.x) / 2
+    rawPoints = [
+      pSrc,
+      pStart,
+      { x: xMid, y: pStart.y },
+      { x: xMid, y: pEnd.y },
+      pEnd,
+      pTgt,
+    ]
   }
 
-  // Case 4: Both handles on Left side (Outer left C-curve for same-column tables)
-  if (props.sourcePosition === Position.Left && props.targetPosition === Position.Left) {
-    const tangent = Math.max(45, Math.min(120, Math.abs(dy) * 0.35)) + Math.abs(fanOffset)
-    const cpX = Math.min(sx, tx) - tangent
-    return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${cpX.toFixed(1)} ${startY.toFixed(1)}, ${cpX.toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
-  }
-
-  // Fallback: graceful direct Bézier curve
-  const tangent = Math.max(45, Math.abs(dx) * 0.4)
-  const dir = dx >= 0 ? 1 : -1
-  return `M ${sx.toFixed(1)} ${startY.toFixed(1)} C ${(sx + tangent * dir).toFixed(1)} ${startY.toFixed(1)}, ${(tx - tangent * dir).toFixed(1)} ${endY.toFixed(1)}, ${tx.toFixed(1)} ${ty.toFixed(1)}`
+  return pointsToRoundedSvgPath(rawPoints, 8)
 })
 </script>
 
 <template>
-  <g
-    class="smart-obstacle-edge-group"
-    :class="{
-      'is-active': isLineActive,
-      'is-dimmed': hasGlobalFocus && !isLineActive,
-    }"
-  >
+  <g class="smart-obstacle-edge-group">
     <defs>
-      <!-- Standard / Default Arrow Marker -->
       <marker
-        :id="`collink-arrow-${id}`"
+        id="collink-arrow-marker"
         viewBox="0 0 10 10"
-        refX="7.5"
+        refX="7"
         refY="5"
         markerWidth="6"
         markerHeight="6"
         orient="auto-start-reverse"
       >
-        <path
-          d="M 1 2 L 8 5 L 1 8 z"
-          :fill="isLineActive ? (themeStore.isDark ? '#38bdf8' : '#2563eb') : (themeStore.isDark ? '#60a5fa' : '#3b82f6')"
-        />
+        <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#3B82F6" />
       </marker>
     </defs>
-
-    <!-- Invisible Thick Hit Area for Smooth Hover & Selection -->
+    <!-- Background hit area for easy clicking and hover -->
     <path
       v-if="edgePath"
       :d="edgePath"
       class="vue-flow__edge-interaction"
       fill="none"
       stroke="transparent"
-      stroke-width="18"
+      stroke-width="16"
       stroke-linecap="round"
       stroke-linejoin="round"
     />
-
-    <!-- Active Line Glow Aura Layer (Rendered underneath when active) -->
-    <path
-      v-if="edgePath && isLineActive"
-      :d="edgePath"
-      class="edge-glow-aura"
-      fill="none"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    />
-
-    <!-- Visible Lineage Bézier Path -->
+    <!-- Visible animated path -->
     <path
       v-if="edgePath"
       :id="id"
       :d="edgePath"
-      class="vue-flow__edge-path smart-bezier-edge smart-obstacle-edge"
-      :class="{
-        'is-active': isLineActive,
-        'is-dimmed': hasGlobalFocus && !isLineActive,
-      }"
+      class="vue-flow__edge-path smart-obstacle-edge is-animated"
       :style="style"
-      :marker-end="`url(#collink-arrow-${id})`"
+      marker-end="url(#collink-arrow-marker)"
     />
   </g>
 </template>
@@ -485,7 +395,6 @@ const edgePath = computed(() => {
 <style scoped>
 .smart-obstacle-edge-group {
   pointer-events: visibleStroke;
-  transition: opacity 0.2s ease;
 }
 
 .vue-flow__edge-interaction {
@@ -493,69 +402,30 @@ const edgePath = computed(() => {
   pointer-events: stroke;
 }
 
-/* Beautiful Smooth Bézier Curve */
-.smart-bezier-edge {
+.smart-obstacle-edge {
   fill: none;
-  stroke: #3b82f6;
-  stroke-width: 1.6px;
+  stroke: #2563eb;
+  stroke-width: 2px;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.65;
-  transition: stroke 0.2s ease, stroke-width 0.2s ease, opacity 0.2s ease, filter 0.2s ease;
+  transition: stroke 0.2s, stroke-width 0.2s, filter 0.2s;
   pointer-events: stroke;
 }
 
-/* Active / Focused Lineage State */
-.smart-bezier-edge.is-active,
-.smart-obstacle-edge-group:hover .smart-bezier-edge {
-  stroke: #2563eb;
-  stroke-width: 2.6px;
-  opacity: 1 !important;
-  stroke-dasharray: 6 3;
-  animation: edgeFlowDash 0.75s linear infinite;
+.smart-obstacle-edge.is-animated {
+  stroke-dasharray: 6 4;
+  animation: edgeDashFlow 0.8s linear infinite;
 }
 
-:global(.dark) .smart-bezier-edge {
-  stroke: #38bdf8 !important;
-  stroke-width: 2px !important;
-  opacity: 0.95;
+.smart-obstacle-edge-group:hover .smart-obstacle-edge {
+  stroke: #1d4ed8;
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 5px rgba(29, 78, 216, 0.45));
 }
 
-:global(.dark) .smart-bezier-edge.is-active,
-:global(.dark) .smart-obstacle-edge-group:hover .smart-bezier-edge {
-  stroke: #67e8f9 !important;
-  stroke-width: 3px !important;
-  opacity: 1 !important;
-}
-
-/* Glow Aura underneath active line */
-.edge-glow-aura {
-  stroke: rgba(37, 99, 235, 0.35);
-  stroke-width: 6px;
-  opacity: 0.85;
-  filter: blur(2px);
-  pointer-events: none;
-}
-
-:global(.dark) .edge-glow-aura {
-  stroke: rgba(56, 189, 248, 0.4);
-}
-
-/* Dimmed State when focusing on another field/edge */
-.smart-obstacle-edge-group.is-dimmed .smart-bezier-edge {
-  stroke: #94a3b8;
-  opacity: 0.12 !important;
-  stroke-width: 1.2px;
-}
-
-:global(.dark) .smart-obstacle-edge-group.is-dimmed .smart-bezier-edge {
-  stroke: #52525b;
-  opacity: 0.12 !important;
-}
-
-@keyframes edgeFlowDash {
+@keyframes edgeDashFlow {
   from {
-    stroke-dashoffset: 18;
+    stroke-dashoffset: 20;
   }
   to {
     stroke-dashoffset: 0;

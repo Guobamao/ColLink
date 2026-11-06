@@ -1,14 +1,11 @@
 /**
- * Enhanced DAG Layered Layout Algorithm (Sugiyama-style with Barycenter Vertical Alignment)
+ * Standard DAG Layered Layout Algorithm (Sugiyama-style Left-to-Right Flow)
  *
  * Steps:
  * 1. Cycle Breaking via Depth-First Search (Back-edge elimination).
- * 2. Topological Layer Assignment (Longest-path layering, roots at Layer 0).
- * 3. Crossing Reduction using 3-Pass Alternating Barycenter Heuristic (Forward -> Backward -> Forward).
- * 4. Precise Node Height Estimation matching DOM table card geometries.
- * 5. Barycenter-weighted Vertical Coordinate Alignment (placing target/intermediate cards
- *    adjacent to the vertical centers of their connected partner tables, eliminating steep diagonals).
- * 6. Generous horizontal column corridor (140px gap) providing ample space for smooth Bézier curves.
+ * 2. Topological Layer Assignment (Longest-path layering, pure roots at Layer 0).
+ * 3. Crossing Reduction using 2-Pass Barycenter Heuristic within layers.
+ * 4. Coordinate Assignment with configurable column/row spacing & gentle vertical centering.
  */
 
 export interface DagNode {
@@ -30,32 +27,10 @@ export interface DagLayoutResult {
 }
 
 export interface DagLayoutOptions {
-  columnSpacing?: number // Horizontal gap between column layer origins (default: 460 = 320px node + 140px corridor)
-  rowSpacing?: number    // Vertical gap between cards in the same column (default: 48)
-  startX?: number        // Origin X (default: 80)
-  startY?: number        // Origin Y (default: 80)
-}
-
-/**
- * Accurately calculate the visual height of a table node based on its DOM structure:
- * - Card header: 42px (or 60px if has comment subtitle)
- * - Filter input & actions: 34px
- * - Column items: 27px per item, bounded by max-h-[300px] (~11 visible rows)
- */
-export function getNodeHeight(n: DagNode | undefined): number {
-  if (!n) return 240
-  if (n.height && n.height > 100) return n.height
-  if (n.data?.dimensions?.height && n.data.dimensions.height > 100) {
-    return n.data.dimensions.height
-  }
-
-  const cols = n.columnsCount ?? (n.data?.columns ? n.data.columns.length : 6)
-  const hasComment = Boolean(n.data?.tableComment)
-  const headerH = hasComment ? 58 : 42
-  const searchH = 34
-  const colListH = Math.min(cols * 27 + 6, 300)
-
-  return Math.round(headerH + searchH + colListH)
+  columnSpacing?: number // Horizontal gap between column layers
+  rowSpacing?: number    // Vertical gap between cards in the same column
+  startX?: number        // Origin X
+  startY?: number        // Origin Y
 }
 
 export function computeDagLayeredLayout(
@@ -64,8 +39,8 @@ export function computeDagLayeredLayout(
   options: DagLayoutOptions = {}
 ): DagLayoutResult {
   const {
-    columnSpacing = 460, // 320px node width + 140px breathing corridor for smooth Bézier S-curves
-    rowSpacing = 48,
+    columnSpacing = 360,
+    rowSpacing = 60,
     startX = 80,
     startY = 80,
   } = options
@@ -76,7 +51,7 @@ export function computeDagLayeredLayout(
 
   const nodeIds = new Set(nodes.map(n => n.id))
 
-  // 1. Build Adjacency List & Degrees (deduplicate multiple edges between same tables)
+  // 1. Build Adjacency List & In-degrees (deduplicate multiple edges between same tables)
   const adj = new Map<string, Set<string>>()
   const revAdj = new Map<string, Set<string>>()
   const inDegree = new Map<string, number>()
@@ -100,16 +75,13 @@ export function computeDagLayeredLayout(
     }
   }
 
-  // 2. Cycle Breaking via Depth-First Search
-  const visitState = new Map<string, number>() // 0=unvisited, 1=visiting, 2=visited
+  // 2. Cycle Breaking via DFS
+  // States: 0 = unvisited, 1 = visiting (in stack), 2 = visited
+  const visitState = new Map<string, number>()
   for (const n of nodes) visitState.set(n.id, 0)
 
   const acyclicAdj = new Map<string, Set<string>>()
-  const acyclicRevAdj = new Map<string, Set<string>>()
-  for (const n of nodes) {
-    acyclicAdj.set(n.id, new Set())
-    acyclicRevAdj.set(n.id, new Set())
-  }
+  for (const n of nodes) acyclicAdj.set(n.id, new Set())
 
   function dfsCycleBreak(u: string) {
     visitState.set(u, 1)
@@ -117,11 +89,10 @@ export function computeDagLayeredLayout(
     for (const v of neighbors) {
       const state = visitState.get(v)
       if (state === 1) {
-        // Back-edge detected: break cycle
+        // Back-edge detected (cycle) -> Ignore back-edge for layering
         continue
       } else {
         acyclicAdj.get(u)!.add(v)
-        acyclicRevAdj.get(v)!.add(u)
         if (state === 0) {
           dfsCycleBreak(v)
         }
@@ -149,6 +120,7 @@ export function computeDagLayeredLayout(
   const nodeLayer = new Map<string, number>()
   for (const n of nodes) nodeLayer.set(n.id, 0)
 
+  // Topological sort queue
   const queue: string[] = []
   const tempInDegree = new Map(acyclicInDegree)
 
@@ -158,6 +130,7 @@ export function computeDagLayeredLayout(
     }
   }
 
+  // Handle graph with all nodes in cycles (fallback)
   if (queue.length === 0 && nodes.length > 0) {
     queue.push(nodes[0].id)
   }
@@ -179,6 +152,7 @@ export function computeDagLayeredLayout(
     }
   }
 
+  // Add any unvisited nodes (e.g., disconnected components)
   for (const n of nodes) {
     if (!topoOrder.includes(n.id)) {
       topoOrder.push(n.id)
@@ -186,24 +160,7 @@ export function computeDagLayeredLayout(
     }
   }
 
-  // 3.1 Layer Compression / Span Minimization (ALAP backward sweep)
-  // Pull nodes closer to their dependents to eliminate cross-layer jumps where possible
-  const reversedTopo = [...topoOrder].reverse()
-  for (const u of reversedTopo) {
-    const successors = Array.from(acyclicAdj.get(u) || [])
-    if (successors.length > 0) {
-      const minSuccessorLayer = Math.min(...successors.map(s => nodeLayer.get(s)!))
-      const predecessors = Array.from(acyclicRevAdj.get(u) || [])
-      const maxPredecessorLayer = predecessors.length > 0
-        ? Math.max(...predecessors.map(p => nodeLayer.get(p)!))
-        : -1
-      if (minSuccessorLayer > maxPredecessorLayer + 1) {
-        nodeLayer.set(u, minSuccessorLayer - 1)
-      }
-    }
-  }
-
-  // Separate completely isolated nodes (no relations at all)
+  // Separate completely isolated nodes (no in or out edges) to keep core pipeline clean
   const isolatedNodes = nodes.filter(n => (inDegree.get(n.id) || 0) === 0 && (outDegree.get(n.id) || 0) === 0)
   const connectedNodes = nodes.filter(n => (inDegree.get(n.id) || 0) > 0 || (outDegree.get(n.id) || 0) > 0)
 
@@ -220,181 +177,89 @@ export function computeDagLayeredLayout(
   const sortedLayerIndices = Array.from(layerMap.keys()).sort((a, b) => a - b)
   const layers: string[][] = sortedLayerIndices.map(idx => layerMap.get(idx)!)
 
-  // 4. Crossing Reduction: 3-Pass Alternating Barycenter Heuristic
-  // Pass 1: Forward sweep (Layer 1 -> L-1)
+  // 4. Crossing Reduction: Barycenter Heuristic (2 Passes)
   for (let l = 1; l < layers.length; l++) {
-    sortLayerByBarycenter(layers[l], layers[l - 1], acyclicRevAdj)
-  }
-  // Pass 2: Backward sweep (Layer L-2 -> 0)
-  for (let l = layers.length - 2; l >= 0; l--) {
-    sortLayerByBarycenter(layers[l], layers[l + 1], acyclicAdj)
-  }
-  // Pass 3: Final Forward sweep (Layer 1 -> L-1)
-  for (let l = 1; l < layers.length; l++) {
-    sortLayerByBarycenter(layers[l], layers[l - 1], acyclicRevAdj)
-  }
+    const prevLayer = layers[l - 1]
+    const prevPosMap = new Map<string, number>()
+    prevLayer.forEach((id, idx) => prevPosMap.set(id, idx))
 
-  function sortLayerByBarycenter(
-    currLayer: string[],
-    referenceLayer: string[],
-    adjRelation: Map<string, Set<string>>
-  ) {
-    const refPosMap = new Map<string, number>()
-    referenceLayer.forEach((id, idx) => refPosMap.set(id, idx))
-
+    const currentLayer = layers[l]
     const barycenters = new Map<string, number>()
-    for (const v of currLayer) {
-      const neighbors = Array.from(adjRelation.get(v) || []).filter(p => refPosMap.has(p))
-      if (neighbors.length > 0) {
-        const sum = neighbors.reduce((acc, p) => acc + refPosMap.get(p)!, 0)
-        barycenters.set(v, sum / neighbors.length)
+
+    for (const v of currentLayer) {
+      const parents = Array.from(revAdj.get(v) || []).filter(p => prevPosMap.has(p))
+      if (parents.length > 0) {
+        const sum = parents.reduce((acc, p) => acc + prevPosMap.get(p)!, 0)
+        barycenters.set(v, sum / parents.length)
       } else {
-        barycenters.set(v, 999)
+        barycenters.set(v, 999) // Keep at end if no direct parent in previous layer
       }
     }
 
-    currLayer.sort((a, b) => (barycenters.get(a) || 0) - (barycenters.get(b) || 0))
+    currentLayer.sort((a, b) => (barycenters.get(a) || 0) - (barycenters.get(b) || 0))
   }
 
-  // Append isolated nodes cleanly if any
+  // If there are isolated nodes, append them as a dedicated bottom cluster or last layer
   if (isolatedNodes.length > 0) {
+    // If no connected nodes, place isolated nodes in a neat grid (e.g., max 3 per column)
     if (layers.length === 0) {
       const perCol = 4
+      const isolatedLayers: string[][] = []
       for (let i = 0; i < isolatedNodes.length; i += perCol) {
-        layers.push(isolatedNodes.slice(i, i + perCol).map(n => n.id))
+        isolatedLayers.push(isolatedNodes.slice(i, i + perCol).map(n => n.id))
       }
+      layers.push(...isolatedLayers)
     } else {
+      // Append isolated nodes to Layer 0 at the bottom
       layers[0].push(...isolatedNodes.map(n => n.id))
     }
   }
 
-  // 5. Barycenter-weighted Vertical Coordinate Assignment
+  // 5. Coordinate Assignment
   const nodeMap = new Map(nodes.map(n => [n.id, n]))
   const nodePositions = new Map<string, { x: number; y: number }>()
 
-  // Position Layer 0 (initial column layout)
-  if (layers.length > 0) {
-    const layer0 = layers[0]
-    const x0 = startX
-    let currY = startY
-
-    layer0.forEach(nodeId => {
-      const n = nodeMap.get(nodeId)
-      const h = getNodeHeight(n)
-      nodePositions.set(nodeId, { x: x0, y: Math.round(currY) })
-      currY += h + rowSpacing
-    })
+  // Approximate node heights
+  const getNodeHeight = (n: DagNode | undefined): number => {
+    if (!n) return 240
+    if (n.height && n.height > 100) return n.height
+    const cols = n.columnsCount ?? (n.data?.columns ? n.data.columns.length : 6)
+    // Table header ~90px, search input ~36px, each field ~32px, max 400px
+    return Math.min(Math.max(120 + cols * 32, 180), 400)
   }
 
-  // Position Subsequent Layers with Vertical Barycenter Alignment
-  for (let l = 1; l < layers.length; l++) {
-    const layer = layers[l]
-    const x = startX + l * columnSpacing
-
-    // Calculate ideal Y-center for each node based on its connected parents/neighbors in previous layers
-    const idealCenters = new Map<string, number>()
-
+  // Calculate column heights for vertical centering
+  const colHeights: number[] = layers.map(layer => {
+    let h = 0
     layer.forEach((nodeId, idx) => {
-      const parentIds = Array.from(revAdj.get(nodeId) || []).filter(pid => nodePositions.has(pid))
-      const childIds = Array.from(adj.get(nodeId) || []).filter(cid => nodePositions.has(cid))
-      const connectedPlacedIds = [...parentIds, ...childIds]
-
-      if (connectedPlacedIds.length > 0) {
-        const sumCenterY = connectedPlacedIds.reduce((acc, id) => {
-          const pos = nodePositions.get(id)!
-          const n = nodeMap.get(id)
-          const h = getNodeHeight(n)
-          return acc + (pos.y + h / 2)
-        }, 0)
-        idealCenters.set(nodeId, sumCenterY / connectedPlacedIds.length)
-      } else {
-        // Fallback: estimate from neighbor or layer order
-        idealCenters.set(nodeId, startY + idx * 320 + 150)
-      }
+      const node = nodeMap.get(nodeId)
+      h += getNodeHeight(node)
+      if (idx < layer.length - 1) h += rowSpacing
     })
+    return h
+  })
 
-    // Compute ideal top Y positions
-    const items: Array<{ id: string; height: number; idealTop: number; assignedTop: number }> = layer.map(nodeId => {
-      const n = nodeMap.get(nodeId)
-      const h = getNodeHeight(n)
-      const idealCenter = idealCenters.get(nodeId) || (startY + 200)
-      const idealTop = Math.max(startY, Math.round(idealCenter - h / 2))
-      return { id: nodeId, height: h, idealTop, assignedTop: idealTop }
-    })
+  const maxColHeight = Math.max(...colHeights, 0)
 
-    // Forward relaxation: ensure minimum row spacing between consecutive nodes
-    if (items.length > 0) {
-      items[0].assignedTop = Math.max(startY, items[0].idealTop)
-      for (let i = 1; i < items.length; i++) {
-        const prev = items[i - 1]
-        const curr = items[i]
-        const minTop = prev.assignedTop + prev.height + rowSpacing
-        curr.assignedTop = Math.max(minTop, curr.idealTop)
-      }
-    }
+  // Assign (x, y) coordinates
+  layers.forEach((layer, colIdx) => {
+    const x = startX + colIdx * columnSpacing
+    const colHeight = colHeights[colIdx] || 0
+    // Subtle vertical balance
+    const colOffsetY = Math.max(0, Math.round((maxColHeight - colHeight) * 0.25))
 
-    // Backward relaxation: if the last element was pushed too low or can be pulled up closer to its ideal
-    for (let i = items.length - 2; i >= 0; i--) {
-      const next = items[i + 1]
-      const curr = items[i]
-      const maxTop = next.assignedTop - curr.height - rowSpacing
-      if (curr.assignedTop > maxTop) {
-        curr.assignedTop = maxTop
-      }
-    }
+    let currentY = startY + colOffsetY
 
-    // Ensure all assigned tops are at least startY
-    let shiftDown = 0
-    if (items.length > 0 && items[0].assignedTop < startY) {
-      shiftDown = startY - items[0].assignedTop
-    }
-    items.forEach(it => {
-      it.assignedTop += shiftDown
-      nodePositions.set(it.id, {
+    layer.forEach(nodeId => {
+      const node = nodeMap.get(nodeId)
+      const h = getNodeHeight(node)
+      nodePositions.set(nodeId, {
         x: Math.round(x),
-        y: Math.round(it.assignedTop),
+        y: Math.round(currentY),
       })
+      currentY += h + rowSpacing
     })
-  }
-
-  // 6. Global Vertical Balance Sweep for Layers with very few nodes
-  // If a middle layer has only 1 or 2 nodes compared to a tall 4-node layer,
-  // align the vertical center of the layer with the vertical center of its direct connections
-  for (let l = 1; l < layers.length; l++) {
-    const layer = layers[l]
-    if (layer.length === 0) continue
-
-    const allConnectedParents = layer.flatMap(id => Array.from(revAdj.get(id) || []))
-      .filter(pid => nodePositions.has(pid))
-
-    if (allConnectedParents.length > 0) {
-      const parentCenters = allConnectedParents.map(pid => {
-        const pPos = nodePositions.get(pid)!
-        const pNode = nodeMap.get(pid)
-        return pPos.y + getNodeHeight(pNode) / 2
-      })
-      const avgParentCenter = parentCenters.reduce((a, b) => a + b, 0) / parentCenters.length
-
-      const layerTops = layer.map(id => nodePositions.get(id)!.y)
-      const layerBottoms = layer.map(id => {
-        const pos = nodePositions.get(id)!
-        const n = nodeMap.get(id)
-        return pos.y + getNodeHeight(n)
-      })
-      const layerMinY = Math.min(...layerTops)
-      const layerMaxY = Math.max(...layerBottoms)
-      const currentLayerCenter = (layerMinY + layerMaxY) / 2
-
-      const offset = Math.round(avgParentCenter - currentLayerCenter)
-      // Only gently adjust if offset is significant and doesn't violate startY
-      if (Math.abs(offset) > 20 && layerMinY + offset >= startY) {
-        layer.forEach(id => {
-          const pos = nodePositions.get(id)!
-          nodePositions.set(id, { x: pos.x, y: pos.y + offset })
-        })
-      }
-    }
-  }
+  })
 
   return { nodePositions, layers }
 }

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { ElMessage } from 'element-plus'
+import { toast } from '@/utils/toast'
 
 /**
  * Extract filename from Content-Disposition header
@@ -37,10 +37,7 @@ export async function downloadFileStream(
   url: string,
   fallbackFileName: string = 'download'
 ): Promise<void> {
-  const loading = ElMessage.info({
-    message: '正在准备导出文件，请稍候...',
-    duration: 0,
-  })
+  const toastId = toast.loading('正在准备导出文件，请稍候...')
 
   try {
     const response = await axios.get(url, {
@@ -81,12 +78,10 @@ export async function downloadFileStream(
       window.URL.revokeObjectURL(blobUrl)
     }, 300)
 
-    loading.close()
-    ElMessage.success('文件导出成功')
+    toast.success('文件导出成功', { id: toastId })
   } catch (error: any) {
-    loading.close()
     const errMsg = error.response?.data?.detail || error.message || '导出文件时发生网络异常'
-    ElMessage.error('导出失败: ' + errMsg)
+    toast.error('导出失败: ' + errMsg, { id: toastId })
     throw error
   }
 }
@@ -98,10 +93,7 @@ export async function downloadJsonFile(
   url: string,
   fallbackFileName: string = 'backup.json'
 ): Promise<void> {
-  const loading = ElMessage.info({
-    message: '正在生成 JSON 备份快照...',
-    duration: 0,
-  })
+  const toastId = toast.loading('正在生成 JSON 备份快照...')
 
   try {
     const response = await axios.get(url, {
@@ -126,12 +118,10 @@ export async function downloadJsonFile(
       window.URL.revokeObjectURL(blobUrl)
     }, 300)
 
-    loading.close()
-    ElMessage.success('JSON 备份快照下载成功')
+    toast.success('JSON 备份快照下载成功', { id: toastId })
   } catch (error: any) {
-    loading.close()
     const errMsg = error.response?.data?.detail || error.message || '导出 JSON 备份失败'
-    ElMessage.error('导出失败: ' + errMsg)
+    toast.error('导出失败: ' + errMsg, { id: toastId })
     throw error
   }
 }

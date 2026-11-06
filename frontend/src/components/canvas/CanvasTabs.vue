@@ -47,7 +47,7 @@
       <!-- + New Canvas Button -->
       <button
         type="button"
-        class="w-6 h-6 rounded-md flex items-center justify-center text-muted hover:text-primary-text hover:bg-surface border border-transparent hover:border-border transition-colors ml-0.5 shrink-0"
+        class="w-6 h-6 rounded-md flex items-center justify-center text-muted hover:text-primary-text hover:bg-surface border border-transparent hover:border-border transition-colors ml-0.5 shrink-0 cursor-pointer"
         title="新建业务视图画布"
         @click="handleCreateCanvas"
       >
@@ -62,7 +62,7 @@
       </span>
       <button
         type="button"
-        class="h-6 px-2 rounded-md bg-surface hover:bg-surface-hover border border-border text-primary-text flex items-center gap-1.5 text-[11px] font-medium transition-colors shadow-2xs"
+        class="h-6 px-2 rounded-md bg-surface hover:bg-surface-hover border border-border text-primary-text flex items-center gap-1.5 text-[11px] font-medium transition-colors shadow-2xs cursor-pointer"
         @click="openImportDialog"
       >
         <Layers class="w-3.5 h-3.5 text-primary" />
@@ -71,92 +71,93 @@
     </div>
 
     <!-- Dialog: Import Tables from Project Pool -->
-    <el-dialog
-      v-model="importDialogVisible"
+    <Dialog
+      v-model:open="importDialogVisible"
       title="从项目表库引入数据表"
-      width="680px"
-      destroy-on-close
+      :description="`将当前项目「${projectStore.currentProject?.name}」中尚未加入当前视图的公共表引入画布中参与连线。`"
+      class="max-w-[700px]"
     >
       <div class="flex flex-col gap-3">
-        <p class="text-xs text-muted m-0 leading-relaxed">
-          将当前项目「<strong class="text-primary-text">{{ projectStore.currentProject?.name }}</strong>」中尚未加入当前视图的公共表引入画布中参与连线。
-        </p>
         <div class="flex justify-start">
-          <el-input
+          <Input
             v-model="searchPoolKeyword"
             placeholder="按英文表名或中文注释过滤..."
-            clearable
-            size="small"
             class="w-72"
           >
             <template #prefix>
               <Search class="w-3.5 h-3.5 text-muted" />
             </template>
-          </el-input>
+          </Input>
         </div>
 
-        <el-table
-          ref="tablePoolRef"
-          :data="filteredProjectTables"
-          border
-          size="small"
-          max-height="320"
-          row-key="id"
-          @selection-change="handleSelectionChange"
-        >
-          <el-table-column
-            type="selection"
-            width="42"
-            align="center"
-            :selectable="(row) => !isTableInCurrentCanvas(row.id)"
-          />
-          <el-table-column prop="table_name" label="表英文名" min-width="160">
-            <template #default="{ row }">
-              <span class="font-mono font-medium text-primary-text">{{ row.table_name }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="table_comment" label="中文业务注释" min-width="160">
-            <template #default="{ row }">
-              <span v-if="row.table_comment" class="text-muted">{{ row.table_comment }}</span>
-              <span v-else class="text-muted/60">无注释</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="字段数" width="75" align="center">
-            <template #default="{ row }">
-              <span class="font-mono text-muted">{{ row.columns?.length || 0 }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="视图状态" width="105" align="center">
-            <template #default="{ row }">
-              <el-tag v-if="isTableInCurrentCanvas(row.id)" type="info" size="small" effect="plain">
-                已在视图中
-              </el-tag>
-              <el-tag v-else type="success" size="small" effect="light">
-                可引入
-              </el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
+        <div class="border border-border rounded-md overflow-hidden max-h-[340px] overflow-y-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-surface-subtle sticky top-0 border-b border-border text-muted font-medium select-none z-10">
+              <tr>
+                <th class="w-10 px-3 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    :checked="isAllSelected"
+                    class="rounded border-border text-primary focus:ring-primary cursor-pointer"
+                    @change="toggleSelectAll"
+                  />
+                </th>
+                <th class="px-3 py-2 font-semibold">表英文名</th>
+                <th class="px-3 py-2 font-semibold">中文业务注释</th>
+                <th class="w-20 px-3 py-2 text-center font-semibold">字段数</th>
+                <th class="w-24 px-3 py-2 text-center font-semibold">视图状态</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border/40">
+              <tr
+                v-for="row in filteredProjectTables"
+                :key="row.id"
+                class="hover:bg-surface-hover transition-colors"
+                :class="{ 'opacity-60 bg-surface-subtle/50': isTableInCurrentCanvas(row.id) }"
+              >
+                <td class="px-3 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    :disabled="isTableInCurrentCanvas(row.id)"
+                    :checked="selectedTableIds.includes(row.id)"
+                    class="rounded border-border text-primary focus:ring-primary cursor-pointer disabled:cursor-not-allowed"
+                    @change="toggleRow(row.id)"
+                  />
+                </td>
+                <td class="px-3 py-2 font-mono font-medium text-primary-text">{{ row.table_name }}</td>
+                <td class="px-3 py-2 text-muted truncate max-w-[200px]">{{ row.table_comment || '无注释' }}</td>
+                <td class="px-3 py-2 font-mono text-center text-muted">{{ row.columns?.length || 0 }}</td>
+                <td class="px-3 py-2 text-center">
+                  <Badge v-if="isTableInCurrentCanvas(row.id)" variant="secondary">已在视图中</Badge>
+                  <Badge v-else variant="success">可引入</Badge>
+                </td>
+              </tr>
+              <tr v-if="filteredProjectTables.length === 0">
+                <td colspan="5" class="py-8 text-center text-muted">暂无匹配的数据表</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <template #footer>
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between w-full">
           <span class="text-xs text-muted">
             已勾选 <strong class="text-primary font-mono">{{ selectedTableIds.length }}</strong> 张新数据表
           </span>
           <div class="flex items-center gap-2">
-            <el-button @click="importDialogVisible = false">取消</el-button>
-            <el-button
-              type="primary"
+            <Button variant="ghost" @click="importDialogVisible = false">取消</Button>
+            <Button
+              variant="primary"
               :disabled="selectedTableIds.length === 0"
               @click="confirmImportTables"
             >
               引入所选数据表
-            </el-button>
+            </Button>
           </div>
         </div>
       </template>
-    </el-dialog>
+    </Dialog>
   </div>
 </template>
 
@@ -164,7 +165,8 @@
 import { ref, computed } from 'vue'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useProjectStore } from '@/stores/projectStore'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { toast, confirmDialog, promptDialog } from '@/utils/toast'
+import { Dialog, Input, Button, Badge } from '@/components/ui'
 import {
   LayoutDashboard,
   Plus,
@@ -196,73 +198,87 @@ const filteredProjectTables = computed(() => {
   )
 })
 
-const handleCreateCanvas = () => {
+const availableTables = computed(() => {
+  return filteredProjectTables.value.filter(t => !isTableInCurrentCanvas(t.id))
+})
+
+const isAllSelected = computed(() => {
+  if (availableTables.value.length === 0) return false
+  return availableTables.value.every(t => selectedTableIds.value.includes(t.id))
+})
+
+const toggleSelectAll = () => {
+  if (isAllSelected.value) {
+    selectedTableIds.value = []
+  } else {
+    selectedTableIds.value = availableTables.value.map(t => t.id)
+  }
+}
+
+const toggleRow = (id: string) => {
+  const idx = selectedTableIds.value.indexOf(id)
+  if (idx > -1) {
+    selectedTableIds.value.splice(idx, 1)
+  } else {
+    selectedTableIds.value.push(id)
+  }
+}
+
+const handleCreateCanvas = async () => {
   if (!projectStore.currentProject) {
-    ElMessage.warning('请先选择项目')
+    toast.warning('请先选择项目')
     return
   }
 
-  ElMessageBox.prompt('请输入新业务视图名称（如：专项排查流、核心信贷报送）：', '新建业务视图', {
-    confirmButtonText: '创建',
-    cancelButtonText: '取消',
-    inputPattern: /\S+/,
-    inputErrorMessage: '视图名称不能为空',
-  }).then(async ({ value }) => {
-    if (value && value.trim()) {
-      await canvasStore.createCanvas(projectStore.currentProject!.id, value.trim())
-    }
-  }).catch(() => {})
+  const name = await promptDialog({
+    title: '新建业务视图',
+    message: '请输入新业务视图名称（如：专项排查流、核心信贷报送）：',
+    placeholder: '业务视图名称...',
+  })
+
+  if (name && name.trim()) {
+    await canvasStore.createCanvas(projectStore.currentProject.id, name.trim())
+  }
 }
 
-const handleRename = (canvas: any) => {
-  ElMessageBox.prompt('修改业务视图名称：', '重命名视图', {
-    confirmButtonText: '保存',
-    cancelButtonText: '取消',
-    inputValue: canvas.name,
-    inputPattern: /\S+/,
-    inputErrorMessage: '视图名称不能为空',
-  }).then(async ({ value }) => {
-    if (value && value.trim() && value.trim() !== canvas.name) {
-      await canvasStore.updateCanvasName(canvas.id, value.trim())
-    }
-  }).catch(() => {})
+const handleRename = async (canvas: any) => {
+  const name = await promptDialog({
+    title: '重命名视图',
+    message: '修改业务视图名称：',
+    defaultValue: canvas.name,
+  })
+
+  if (name && name.trim() && name.trim() !== canvas.name) {
+    await canvasStore.updateCanvasName(canvas.id, name.trim())
+  }
 }
 
-const handleDelete = (canvas: any) => {
+const handleDelete = async (canvas: any) => {
   if (canvasStore.canvases.length <= 1) {
-    ElMessage.warning('不能删除项目中最后一个画布')
+    toast.warning('不能删除项目中最后一个画布')
     return
   }
 
-  ElMessageBox.confirm(
-    `确定删除业务视图「${canvas.name}」吗？\n注意：此操作仅删除视图布局，不会删除项目中的底层数据表结构。`,
-    '删除业务视图',
-    {
-      confirmButtonText: '确认删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-    }
-  ).then(async () => {
-    if (projectStore.currentProject) {
-      await canvasStore.deleteCanvas(canvas.id, projectStore.currentProject.id)
-    }
-  }).catch(() => {})
+  const confirmed = await confirmDialog({
+    title: '删除业务视图',
+    message: `确定删除业务视图「${canvas.name}」吗？\n注意：此操作仅删除视图布局，不会删除项目中的底层数据表结构。`,
+    confirmText: '确认删除',
+    variant: 'danger',
+  })
+
+  if (confirmed && projectStore.currentProject) {
+    await canvasStore.deleteCanvas(canvas.id, projectStore.currentProject.id)
+  }
 }
 
 const openImportDialog = () => {
   if (!projectStore.currentProject) {
-    ElMessage.warning('请先选择项目')
+    toast.warning('请先选择项目')
     return
   }
   selectedTableIds.value = []
   searchPoolKeyword.value = ''
   importDialogVisible.value = true
-}
-
-const handleSelectionChange = (selection: TableMeta[]) => {
-  selectedTableIds.value = selection
-    .filter(t => !isTableInCurrentCanvas(t.id))
-    .map(t => t.id)
 }
 
 const confirmImportTables = async () => {

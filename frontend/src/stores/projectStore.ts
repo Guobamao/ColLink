@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { api } from '@/api'
 import type { Project } from '@/types'
-import { ElMessage } from 'element-plus'
+import { toast } from '@/utils/toast'
 
 export const useProjectStore = defineStore('project', () => {
   const projects = ref<Project[]>([])
@@ -18,7 +18,7 @@ export const useProjectStore = defineStore('project', () => {
         await selectProject(list[0].id)
       }
     } catch (err: any) {
-      ElMessage.error('获取项目列表失败: ' + (err.message || '网络错误'))
+      toast.error('获取项目列表失败: ' + (err.message || '网络错误'))
     } finally {
       loading.value = false
     }
@@ -30,7 +30,7 @@ export const useProjectStore = defineStore('project', () => {
       const detail = await api.getProjectDetail(id)
       currentProject.value = detail
     } catch (err: any) {
-      ElMessage.error('加载项目详情失败: ' + (err.message || '网络错误'))
+      toast.error('加载项目详情失败: ' + (err.message || '网络错误'))
     } finally {
       loading.value = false
     }
@@ -39,12 +39,12 @@ export const useProjectStore = defineStore('project', () => {
   const createProject = async (name: string, description?: string) => {
     try {
       const created = await api.createProject({ name, description })
-      ElMessage.success('创建项目成功')
+      toast.success('创建项目成功')
       await fetchProjects()
       await selectProject(created.id)
       return created
     } catch (err: any) {
-      ElMessage.error('创建项目失败: ' + (err.message || '网络错误'))
+      toast.error('创建项目失败: ' + (err.message || '网络错误'))
       throw err
     }
   }
@@ -52,14 +52,14 @@ export const useProjectStore = defineStore('project', () => {
   const updateProject = async (id: string, data: { name?: string; description?: string }) => {
     try {
       const updated = await api.updateProject(id, data)
-      ElMessage.success('更新项目成功')
+      toast.success('更新项目成功')
       if (currentProject.value && currentProject.value.id === id) {
         currentProject.value.name = updated.name
         currentProject.value.description = updated.description
       }
       await fetchProjects()
     } catch (err: any) {
-      ElMessage.error('更新项目失败: ' + (err.message || '网络错误'))
+      toast.error('更新项目失败: ' + (err.message || '网络错误'))
       throw err
     }
   }
@@ -67,11 +67,11 @@ export const useProjectStore = defineStore('project', () => {
   const deleteProject = async (id: string) => {
     try {
       await api.deleteProject(id)
-      ElMessage.success('删除项目成功')
+      toast.success('删除项目成功')
       currentProject.value = null
       await fetchProjects()
     } catch (err: any) {
-      ElMessage.error('删除项目失败: ' + (err.message || '网络错误'))
+      toast.error('删除项目失败: ' + (err.message || '网络错误'))
       throw err
     }
   }

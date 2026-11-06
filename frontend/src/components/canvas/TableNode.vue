@@ -1,8 +1,8 @@
 <template>
   <div
-    class="table-card-node nowheel w-80 rounded-lg bg-surface dark:bg-[#334155] border-2 border-border dark:border-[#64748b] shadow-card select-none flex flex-col font-sans transition-[border-color,box-shadow,opacity] duration-150"
+    class="table-card-node nowheel w-80 rounded-lg bg-surface border border-border shadow-card select-none flex flex-col font-sans transition-[border-color,box-shadow,opacity] duration-150"
     :class="{
-      'opacity-85': isDimmed,
+      'opacity-25 grayscale': isDimmed,
       'border-primary ring-2 ring-primary/30 shadow-card-hover': isHighlighted,
       'is-focused': isFocused,
       'cursor-crosshair border-dashed border-primary ring-2 ring-primary/40': !!canvasStore.pickingTableRole,
@@ -10,20 +10,20 @@
     @click="handleCardClick"
     @wheel.stop
   >
-    <!-- Card Header (High-Luminance Royal Blue in Dark Mode) -->
-    <div class="h-9 px-2.5 bg-surface-subtle dark:bg-[#2563eb] border-b border-border dark:border-[#3b82f6] rounded-t-[7px] flex items-center justify-between gap-2">
+    <!-- Card Header -->
+    <div class="h-9 px-2.5 bg-surface-subtle border-b border-border rounded-t-[7px] flex items-center justify-between gap-2">
       <!-- Left: Table Icon & Title -->
       <div class="flex items-center gap-2 min-w-0 flex-1">
-        <div class="w-5 h-5 rounded flex items-center justify-center bg-primary/10 dark:bg-white/20 text-primary dark:text-white border border-primary/20 dark:border-white/30 shrink-0">
+        <div class="w-5 h-5 rounded flex items-center justify-center bg-primary/10 text-primary border border-primary/20 shrink-0">
           <Table2 class="w-3.5 h-3.5" />
         </div>
         <div class="flex flex-col min-w-0">
           <div class="flex items-center gap-1.5">
-            <span class="font-mono font-bold text-xs text-primary-text dark:text-white truncate" :title="data.tableName">
+            <span class="font-mono font-semibold text-xs text-primary-text truncate" :title="data.tableName">
               {{ data.tableName }}
             </span>
           </div>
-          <span v-if="data.tableComment" class="text-[11px] text-muted dark:text-blue-100 font-medium truncate leading-tight -mt-0.5" :title="data.tableComment">
+          <span v-if="data.tableComment" class="text-[11px] text-muted truncate leading-tight -mt-0.5" :title="data.tableComment">
             {{ data.tableComment }}
           </span>
         </div>
@@ -31,70 +31,59 @@
 
       <!-- Right: Column Count & Dropdown Actions -->
       <div class="flex items-center gap-1 shrink-0">
-        <span class="px-1.5 py-0.2 text-[11px] font-mono rounded bg-surface-hover dark:bg-blue-700 dark:text-white dark:border-blue-400 border border-border text-muted font-bold">
-          {{ data.columns?.length || 0 }} 列
+        <span class="px-1.5 py-0.2 text-[11px] font-mono rounded bg-surface-hover border border-border text-muted">
+          {{ data.columns?.length || 0 }}
         </span>
-        <el-dropdown trigger="click" @command="handleCommand">
-          <button
-            type="button"
-            class="w-5 h-5 flex items-center justify-center rounded text-muted dark:text-white hover:text-primary-text dark:hover:text-white hover:bg-surface dark:hover:bg-blue-700 border border-transparent hover:border-border transition-colors"
-            title="更多操作"
-          >
-            <MoreHorizontal class="w-3.5 h-3.5" />
-          </button>
-          <template #dropdown>
-            <el-dropdown-menu class="table-dropdown-menu">
-              <el-dropdown-item command="highlight">
-                <div class="flex items-center gap-2">
-                  <Search class="w-3.5 h-3.5 text-primary" />
-                  <span class="text-xs">高亮上下游血缘</span>
-                </div>
-              </el-dropdown-item>
-              <el-dropdown-item command="relation-path">
-                <div class="flex items-center gap-2">
-                  <Route class="w-3.5 h-3.5 text-primary" />
-                  <span class="text-xs">探查多跳关联路径</span>
-                </div>
-              </el-dropdown-item>
-              <el-dropdown-item command="edit">
-                <div class="flex items-center gap-2">
-                  <Edit3 class="w-3.5 h-3.5 text-muted" />
-                  <span class="text-xs">编辑表元信息</span>
-                </div>
-              </el-dropdown-item>
-              <el-dropdown-item command="remove-canvas" divided>
-                <div class="flex items-center gap-2">
-                  <MinusCircle class="w-3.5 h-3.5 text-amber-500" />
-                  <span class="text-xs">从当前视图移出</span>
-                </div>
-              </el-dropdown-item>
-              <el-dropdown-item command="delete">
-                <div class="flex items-center gap-2 text-red-500">
-                  <Trash2 class="w-3.5 h-3.5" />
-                  <span class="text-xs">从项目中彻底删除</span>
-                </div>
-              </el-dropdown-item>
-            </el-dropdown-menu>
+        <Dropdown align="end">
+          <template #trigger>
+            <button
+              type="button"
+              class="w-5 h-5 flex items-center justify-center rounded text-muted hover:text-primary-text hover:bg-surface border border-transparent hover:border-border transition-colors cursor-pointer"
+              title="更多操作"
+            >
+              <MoreHorizontal class="w-3.5 h-3.5" />
+            </button>
           </template>
-        </el-dropdown>
+          <DropdownItem @select="handleCommand('highlight')">
+            <Search class="w-3.5 h-3.5 text-primary mr-2" />
+            <span>高亮上下游血缘</span>
+          </DropdownItem>
+          <DropdownItem @select="handleCommand('relation-path')">
+            <Route class="w-3.5 h-3.5 text-primary mr-2" />
+            <span>探查多跳关联路径</span>
+          </DropdownItem>
+          <DropdownItem @select="handleCommand('edit')">
+            <Edit3 class="w-3.5 h-3.5 text-muted mr-2" />
+            <span>编辑表元信息</span>
+          </DropdownItem>
+          <DropdownSeparator />
+          <DropdownItem @select="handleCommand('remove-canvas')">
+            <MinusCircle class="w-3.5 h-3.5 text-amber-500 mr-2" />
+            <span>从当前视图移出</span>
+          </DropdownItem>
+          <DropdownItem class="text-red-500" @select="handleCommand('delete')">
+            <Trash2 class="w-3.5 h-3.5 mr-2" />
+            <span>从项目中彻底删除</span>
+          </DropdownItem>
+        </Dropdown>
       </div>
     </div>
 
     <!-- Search & Filter Bar -->
-    <div class="h-7 px-2 bg-surface dark:bg-[#273244] border-b border-border dark:border-[#475569] flex items-center justify-between gap-1.5">
+    <div class="h-7 px-2 bg-surface border-b border-border flex items-center justify-between gap-1.5">
       <div class="flex items-center gap-1.5 flex-1 min-w-0">
-        <Search class="w-3 h-3 text-muted dark:text-slate-300 shrink-0" />
+        <Search class="w-3 h-3 text-muted shrink-0" />
         <input
           v-model="searchKeyword"
           type="text"
           placeholder="过滤字段..."
-          class="w-full bg-transparent text-[11px] text-primary-text dark:text-white placeholder:text-muted/80 dark:placeholder:text-slate-300 focus:outline-none font-mono"
+          class="w-full bg-transparent text-[11px] text-primary-text placeholder:text-muted/60 focus:outline-none font-mono"
           @mousedown.stop
         />
         <button
           v-if="searchKeyword"
           type="button"
-          class="text-muted dark:text-slate-300 hover:text-primary-text dark:hover:text-white text-[10px] px-1"
+          class="text-muted hover:text-primary-text text-[10px] px-1"
           @click="searchKeyword = ''"
         >
           ×
@@ -105,7 +94,7 @@
       <button
         type="button"
         class="w-5 h-5 flex items-center justify-center rounded text-xs transition-colors shrink-0"
-        :class="onlyMapped ? 'bg-primary-light text-primary font-bold' : 'text-muted dark:text-slate-300 hover:text-primary-text dark:hover:text-white hover:bg-surface-hover dark:hover:bg-slate-600'"
+        :class="onlyMapped ? 'bg-primary-light text-primary font-bold' : 'text-muted hover:text-primary-text hover:bg-surface-hover'"
         :title="onlyMapped ? '当前已折叠无连线字段，点击显示全部' : '仅展示有血缘连线的字段 (折叠其余孤立字段)'"
         @click.stop="onlyMapped = !onlyMapped"
       >
@@ -121,7 +110,7 @@
     <!-- Column List (nowheel prevents outer canvas zooming) -->
     <div
       ref="columnListRef"
-      class="column-list nowheel max-h-[300px] overflow-y-auto overflow-x-hidden divide-y divide-border/60 dark:divide-slate-600 py-0.5 rounded-b-[7px]"
+      class="column-list nowheel max-h-[300px] overflow-y-auto overflow-x-hidden divide-y divide-border/20 py-0.5 rounded-b-[7px]"
       @wheel.stop
       @scroll="handleColumnListScroll"
     >
@@ -129,10 +118,10 @@
         v-for="col in filteredColumns"
         :id="`col_item_${col.id}`"
         :key="col.id"
-        class="column-item group relative flex items-center justify-between h-[27px] px-4 hover:bg-surface-hover dark:hover:bg-slate-600/80 cursor-pointer transition-colors text-xs"
+        class="column-item group relative flex items-center justify-between h-[27px] px-4 hover:bg-surface-hover cursor-pointer transition-colors text-xs"
         :class="{
           'is-breathing bg-primary-light/40': isColumnActive(col.id),
-          'border-l-2 border-l-primary bg-primary/10 dark:border-l-sky-400 dark:bg-sky-400/15': hasMapping(col.id) && !isColumnActive(col.id),
+          'border-l-2 border-l-primary bg-primary/5': hasMapping(col.id) && !isColumnActive(col.id),
         }"
         :title="col.column_comment ? `${col.column_name} (${col.column_comment})` : col.column_name"
         @click.stop="handleFieldClick(col.id)"
@@ -155,13 +144,13 @@
 
         <!-- Column Left: Name, PK Badge, Comment -->
         <div class="flex items-center gap-1.5 min-w-0 pr-2 flex-1">
-          <span v-if="isPrimaryKey(col)" class="px-1.5 py-0.2 text-[10px] font-mono font-bold rounded bg-amber-500/20 text-amber-700 dark:bg-amber-400 dark:text-slate-900 border border-amber-500/40 dark:border-amber-300 shrink-0 leading-none shadow-2xs">
+          <span v-if="isPrimaryKey(col)" class="px-1 py-0.2 text-[10px] font-mono font-bold rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0 leading-none">
             PK
           </span>
-          <span class="font-mono text-xs text-primary-text dark:text-white truncate font-bold">
+          <span class="font-mono text-xs text-primary-text truncate font-medium">
             {{ col.column_name }}
           </span>
-          <span v-if="col.column_comment" class="text-[11px] text-muted dark:text-slate-100 font-normal truncate max-w-[110px]">
+          <span v-if="col.column_comment" class="text-[11px] text-muted truncate max-w-[100px]">
             {{ col.column_comment }}
           </span>
         </div>
@@ -205,28 +194,27 @@
     </div>
 
     <!-- Edit Dialog -->
-    <el-dialog
-      v-if="editDialogVisible"
-      v-model="editDialogVisible"
+    <Dialog
+      v-model:open="editDialogVisible"
       title="修改表元信息"
-      width="400px"
-      append-to-body
-      destroy-on-close
-      @mousedown.stop
+      description="编辑当前数据表的英文逻辑名称与业务注释"
+      class="max-w-[420px]"
     >
-      <el-form :model="editForm" label-width="80px">
-        <el-form-item label="表英文名">
-          <el-input v-model="editForm.tableName" />
-        </el-form-item>
-        <el-form-item label="中文注释">
-          <el-input v-model="editForm.tableComment" />
-        </el-form-item>
-      </el-form>
+      <div class="space-y-3.5 py-1" @mousedown.stop>
+        <div class="space-y-1.5">
+          <label class="text-xs font-medium text-primary-text">表英文名</label>
+          <Input v-model="editForm.tableName" placeholder="请输入表英文名称..." />
+        </div>
+        <div class="space-y-1.5">
+          <label class="text-xs font-medium text-primary-text">中文注释</label>
+          <Input v-model="editForm.tableComment" placeholder="请输入中文业务描述..." />
+        </div>
+      </div>
       <template #footer>
-        <el-button @click="editDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="saving" @click="saveTableInfo">保存</el-button>
+        <Button variant="ghost" @click="editDialogVisible = false">取消</Button>
+        <Button variant="primary" :loading="saving" @click="saveTableInfo">保存</Button>
       </template>
-    </el-dialog>
+    </Dialog>
   </div>
 </template>
 
@@ -236,7 +224,8 @@ import { Handle, Position, useVueFlow } from '@vue-flow/core'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useProjectStore } from '@/stores/projectStore'
 import { api } from '@/api'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { toast, confirmDialog } from '@/utils/toast'
+import { Dialog, Button, Input, Dropdown, DropdownItem, DropdownSeparator } from '@/components/ui'
 import {
   Table2,
   MoreHorizontal,
@@ -348,9 +337,6 @@ watch(filteredColumns, () => {
 onMounted(() => {
   nextTick(() => {
     updateNodeInternals(props.id)
-    setTimeout(() => {
-      updateNodeInternals(props.id)
-    }, 100)
   })
 })
 
@@ -361,15 +347,15 @@ const formatDataType = (typeStr: string = '') => {
 const getTypeBadgeClass = (typeStr: string = '') => {
   const upper = typeStr.toUpperCase()
   if (upper.includes('INT') || upper.includes('NUMBER') || upper.includes('FLOAT') || upper.includes('DECIMAL')) {
-    return 'bg-amber-500/10 text-amber-700 dark:bg-amber-400/35 dark:text-amber-100 dark:border-amber-400/70 border-amber-500/20 font-bold'
+    return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
   }
   if (upper.includes('CHAR') || upper.includes('TEXT') || upper.includes('CLOB') || upper.includes('STRING')) {
-    return 'bg-blue-500/10 text-blue-700 dark:bg-sky-400/35 dark:text-sky-100 dark:border-sky-400/70 border-blue-500/20 font-bold'
+    return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
   }
   if (upper.includes('DATE') || upper.includes('TIME') || upper.includes('TIMESTAMP')) {
-    return 'bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/35 dark:text-emerald-100 dark:border-emerald-400/70 border-emerald-500/20 font-bold'
+    return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
   }
-  return 'bg-zinc-500/10 text-zinc-700 dark:bg-slate-600/70 dark:text-white dark:border-slate-500/70 border-zinc-500/20 font-bold'
+  return 'bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20'
 }
 
 const isPrimaryKey = (col: any) => {
@@ -408,7 +394,7 @@ const handleCommand = (cmd: string) => {
 
 const saveTableInfo = async () => {
   if (!editForm.value.tableName.trim()) {
-    ElMessage.warning('表英文名不能为空')
+    toast.warning('表英文名不能为空')
     return
   }
   saving.value = true
@@ -419,39 +405,38 @@ const saveTableInfo = async () => {
     })
     props.data.tableName = editForm.value.tableName.trim()
     props.data.tableComment = editForm.value.tableComment.trim()
-    ElMessage.success('表信息更新成功')
+    toast.success('表信息更新成功')
     editDialogVisible.value = false
   } catch (e: any) {
-    ElMessage.error('更新失败: ' + (e.message || '网络错误'))
+    toast.error('更新失败: ' + (e.message || '网络错误'))
   } finally {
     saving.value = false
   }
 }
 
-const confirmDelete = () => {
-  ElMessageBox.confirm(
-    `确定要删除表「${props.data.tableName}」吗？关联的所有字段映射都将被清除。`,
-    '删除确认',
-    {
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
-      type: 'warning',
+const confirmDelete = async () => {
+  const confirmed = await confirmDialog({
+    title: '删除确认',
+    message: `确定要删除表「${props.data.tableName}」吗？关联的所有字段映射都将被清除。`,
+    confirmText: '删除',
+    variant: 'danger',
+  })
+
+  if (!confirmed) return
+
+  try {
+    await api.deleteTable(props.data.tableId)
+    toast.success('表已删除')
+    if (projectStore.currentProject) {
+      await projectStore.selectProject(projectStore.currentProject.id)
+      canvasStore.syncFromProject(
+        projectStore.currentProject.tables,
+        projectStore.currentProject.mappings
+      )
     }
-  ).then(async () => {
-    try {
-      await api.deleteTable(props.data.tableId)
-      ElMessage.success('表已删除')
-      if (projectStore.currentProject) {
-        await projectStore.selectProject(projectStore.currentProject.id)
-        canvasStore.syncFromProject(
-          projectStore.currentProject.tables,
-          projectStore.currentProject.mappings
-        )
-      }
-    } catch (e: any) {
-      ElMessage.error('删除失败: ' + (e.message || '网络错误'))
-    }
-  }).catch(() => {})
+  } catch (e: any) {
+    toast.error('删除失败: ' + (e.message || '网络错误'))
+  }
 }
 </script>
 
@@ -544,16 +529,6 @@ const confirmDelete = () => {
   background-color: var(--cl-primary) !important;
   box-shadow: 0 0 0 3px var(--cl-primary-border) !important;
   transform: translateY(-50%) scale(1.35) !important;
-}
-
-:global(.dark) .field-handle {
-  border-color: #38bdf8 !important;
-  background-color: #0f172a !important;
-}
-
-:global(.dark) .field-handle:hover {
-  background-color: #38bdf8 !important;
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.4) !important;
 }
 
 .left-source,

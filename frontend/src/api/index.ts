@@ -9,7 +9,7 @@ import type {
   CanvasDetail,
   RelationPathResult,
 } from '@/types'
-import { ElMessage } from 'element-plus'
+import { toast } from '@/utils/toast'
 
 export const api = {
   // Projects
@@ -140,10 +140,7 @@ export const api = {
 
   // Export / Backup
   exportExcel: async (projectId: string, projectName: string = '项目'): Promise<void> => {
-    const loading = ElMessage.info({
-      message: '正在准备导出 Excel 文件...',
-      duration: 0,
-    })
+    const toastId = toast.loading('正在准备导出 Excel 文件...')
     try {
       const dataUrl = await invoke<string>('export_excel', {
         projectId,
@@ -163,20 +160,15 @@ export const api = {
         document.body.removeChild(link)
       }, 300)
 
-      loading.close()
-      ElMessage.success('Excel 导出成功')
+      toast.success('Excel 导出成功', { id: toastId })
     } catch (err: any) {
-      loading.close()
-      ElMessage.error('导出失败: ' + (err || '未知异常'))
+      toast.error('导出失败: ' + (err || '未知异常'), { id: toastId })
       throw err
     }
   },
 
   exportProjectJson: async (projectId: string, projectName: string = '项目'): Promise<void> => {
-    const loading = ElMessage.info({
-      message: '正在生成 JSON 备份快照...',
-      duration: 0,
-    })
+    const toastId = toast.loading('正在生成 JSON 备份快照...')
     try {
       const jsonStr = await invoke<string>('export_project_json', { projectId })
       const dateStr = new Date().toISOString().slice(0, 10)
@@ -197,11 +189,9 @@ export const api = {
         window.URL.revokeObjectURL(blobUrl)
       }, 300)
 
-      loading.close()
-      ElMessage.success('JSON 备份快照导出成功')
+      toast.success('JSON 备份快照导出成功', { id: toastId })
     } catch (err: any) {
-      loading.close()
-      ElMessage.error('导出失败: ' + (err || '未知异常'))
+      toast.error('导出失败: ' + (err || '未知异常'), { id: toastId })
       throw err
     }
   },

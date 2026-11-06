@@ -4,7 +4,7 @@ import type { Node, Edge, Connection } from '@vue-flow/core'
 import { computeDagLayeredLayout } from '@/utils/dagLayout'
 import { api } from '@/api'
 import type { TableMeta, FieldMapping, CanvasView, CanvasTableMeta, RelationPath } from '@/types'
-import { ElMessage } from 'element-plus'
+import { toast } from '@/utils/toast'
 
 export type HistoryAction =
   | {
@@ -137,27 +137,30 @@ export const useCanvasStore = defineStore('canvas', () => {
         const srcW = (srcNode as any).dimensions?.width || sw
         const tgtW = (tgtNode as any).dimensions?.width || tw
 
-        const srcCenterX = sx + srcW / 2
-        const tgtCenterX = tx + tgtW / 2
-        const dx = tgtCenterX - srcCenterX
-
         let newSrcSide: 'left' | 'right' = 'right'
         let newTgtSide: 'left' | 'right' = 'left'
 
-        // If target node is clearly to the right of source node
-        if (dx > 30) {
+        // Case A: Target node is strictly to the right of source node
+        if (tx > sx + srcW + 20) {
           newSrcSide = 'right'
           newTgtSide = 'left'
         }
-        // If target node is clearly to the left of source node
-        else if (dx < -30) {
+        // Case B: Target node is strictly to the left of source node
+        else if (tx + tgtW + 20 < sx) {
           newSrcSide = 'left'
           newTgtSide = 'right'
         }
-        // Vertically stacked in the same column (clean right-side C-curve)
+        // Case C: Horizontally overlapping or vertically aligned (C-shape outer detour)
         else {
-          newSrcSide = 'right'
-          newTgtSide = 'right'
+          const srcCenterX = sx + srcW / 2
+          const tgtCenterX = tx + tgtW / 2
+          if (srcCenterX <= tgtCenterX) {
+            newSrcSide = 'right'
+            newTgtSide = 'right'
+          } else {
+            newSrcSide = 'left'
+            newTgtSide = 'left'
+          }
         }
 
         const newSrcHandle = `source_${srcColId}_${newSrcSide}`
@@ -237,7 +240,6 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     // Compute initial shortest path handles
     updateEdgeHandles()
-    triggerUpdateNodeInternals()
     setTimeout(() => {
       triggerUpdateNodeInternals()
     }, 100)
@@ -256,7 +258,6 @@ export const useCanvasStore = defineStore('canvas', () => {
     if (nodeDragRafId !== null) return
     nodeDragRafId = requestAnimationFrame(() => {
       updateEdgeHandles()
-    triggerUpdateNodeInternals()
       nodeDragRafId = null
     })
   }
@@ -268,7 +269,6 @@ export const useCanvasStore = defineStore('canvas', () => {
       nodeDragRafId = null
     }
     updateEdgeHandles()
-    triggerUpdateNodeInternals()
 
     if (e?.node) {
       const startPos = dragStartPosMap.get(e.node.id)
@@ -356,7 +356,6 @@ export const useCanvasStore = defineStore('canvas', () => {
 
     associatedColumnIds.value = matchedCols
     updateEdgeHandles()
-    triggerUpdateNodeInternals()
 
     // Auto-scroll associated table cards so the matched column is smoothly brought into view
     setTimeout(() => {
@@ -374,7 +373,6 @@ export const useCanvasStore = defineStore('canvas', () => {
     // Re-sync edge positions once smooth scroll settles
     setTimeout(() => {
       updateEdgeHandles()
-    triggerUpdateNodeInternals()
       triggerUpdateNodeInternals()
     }, 350)
   }
@@ -391,12 +389,12 @@ export const useCanvasStore = defineStore('canvas', () => {
     const targetColumnId = parseColId(params.targetHandle)
 
     if (!sourceColumnId || !targetColumnId) {
-      ElMessage.warning('未能识别字段端点')
+      toast.warning('未能识别字段端点')
       return
     }
 
     if (sourceTableId === targetTableId && sourceColumnId === targetColumnId) {
-      ElMessage.warning('不能将字段映射到其自身')
+      toast.warning('不能将字段映射到其自身')
       return
     }
 
@@ -411,7 +409,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       // Check if edge already displayed
       const edgeId = `edge_${created.id}`
       if (edges.value.some(e => e.id === edgeId)) {
-        ElMessage.info('该映射已存在')
+        toast.info('该映射已存在')
         return
       }
 
@@ -446,7 +444,6 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       edges.value.push(newEdge)
       updateEdgeHandles()
-    triggerUpdateNodeInternals()
       triggerUpdateNodeInternals([params.source, params.target])
       selectColumn(sourceColumnId)
 
@@ -463,9 +460,9 @@ export const useCanvasStore = defineStore('canvas', () => {
         }],
       })
 
-      ElMessage.success('建立字段映射成功')
+      toast.success('建立字段映射成功')
     } catch (err: any) {
-      ElMessage.error('创建映射失败: ' + (err.message || '网络错误'))
+      toast.error('创建映射失败: ' + (err.message || '网络错误'))
     }
   }
 
@@ -522,7 +519,6 @@ export const useCanvasStore = defineStore('canvas', () => {
       }
 
       updateEdgeHandles()
-    triggerUpdateNodeInternals()
 
       if (historyMappings.length > 0) {
         pushHistory({
@@ -534,7 +530,7 @@ export const useCanvasStore = defineStore('canvas', () => {
 
       return created.length
     } catch (e: any) {
-      ElMessage.error('批量创建映射失败: ' + (e.message || '网络错误'))
+      toast.error('批量创建映射失败: ' + (e.message || '网络错误'))
       return 0
     }
   }
@@ -568,9 +564,9 @@ export const useCanvasStore = defineStore('canvas', () => {
       if (activeColumnId.value) {
         selectColumn(activeColumnId.value)
       }
-      ElMessage.success('删除映射成功')
+      toast.success('删除映射成功')
     } catch (err: any) {
-      ElMessage.error('删除映射失败: ' + (err.message || '网络错误'))
+      toast.error('删除映射失败: ' + (err.message || '网络错误'))
     }
   }
 
@@ -616,7 +612,6 @@ export const useCanvasStore = defineStore('canvas', () => {
         })
 
         updateEdgeHandles()
-    triggerUpdateNodeInternals()
 
         if (progress < 1.0) {
           requestAnimationFrame(tick)
@@ -640,90 +635,22 @@ export const useCanvasStore = defineStore('canvas', () => {
       pos: { ...n.position },
     }))
 
-    // 2. Prepare nodes and intelligently orient DAG edges from Master (PK / Root Entity) -> Detail (FK / Dependent)
-    // In database ER modeling, Master/Dimension entities are roots (Left, Layer 0), and dependent entities follow
+    // 2. Prepare nodes and edges for DAG computation
     const dagNodes = nodes.value.map(n => ({
       id: n.id,
       columnsCount: n.data.columns ? n.data.columns.length : 0,
       data: n.data,
     }))
 
-    const isColPk = (col: any, tableName?: string) => {
-      if (!col) return false
-      if (col.is_primary_key) return true
-      const name = (col.column_name || '').toUpperCase()
-      const comment = col.column_comment || ''
-      if (name === 'ID') return true
-      if (tableName && name === `${tableName.toUpperCase()}_ID`) return true
-      if (comment.includes('主键') || comment.includes('唯一标识')) return true
-      return false
-    }
-
-    const nodeMap = new Map(nodes.value.map(n => [n.id, n]))
-    const masterScore = new Map<string, number>()
-
-    nodes.value.forEach(n => {
-      let score = 0
-      const cols = n.data?.columns || []
-      cols.forEach((c: any) => {
-        if (isColPk(c, n.data?.tableName)) score += 5
-      })
-      masterScore.set(n.id, score)
-    })
-
-    // Accumulate scores for tables whose columns are referenced by other tables
-    edges.value.forEach(e => {
-      const tgtNode = nodeMap.get(e.target)
-      const tgtCol = tgtNode?.data?.columns?.find((c: any) => c.id === e.data?.targetColumnId)
-      if (tgtCol && isColPk(tgtCol, tgtNode?.data?.tableName)) {
-        masterScore.set(e.target, (masterScore.get(e.target) || 0) + 4)
-      }
-      const srcNode = nodeMap.get(e.source)
-      const srcCol = srcNode?.data?.columns?.find((c: any) => c.id === e.data?.sourceColumnId)
-      if (srcCol && isColPk(srcCol, srcNode?.data?.tableName)) {
-        masterScore.set(e.source, (masterScore.get(e.source) || 0) + 4)
-      }
-    })
-
-    const dagEdges: Array<{ source: string; target: string }> = []
-    edges.value.forEach(e => {
-      const srcNode = nodeMap.get(e.source)
-      const tgtNode = nodeMap.get(e.target)
-      const srcCol = srcNode?.data?.columns?.find((c: any) => c.id === e.data?.sourceColumnId)
-      const tgtCol = tgtNode?.data?.columns?.find((c: any) => c.id === e.data?.targetColumnId)
-
-      const isSrcPk = isColPk(srcCol, srcNode?.data?.tableName)
-      const isTgtPk = isColPk(tgtCol, tgtNode?.data?.tableName)
-
-      let dagSrc = e.source
-      let dagTgt = e.target
-
-      if (isTgtPk && !isSrcPk) {
-        // Target is Master/PK (e.g. TEMPLATE), Source is Detail/FK (e.g. INSTANCE) -> Orient TEMPLATE -> INSTANCE
-        dagSrc = e.target
-        dagTgt = e.source
-      } else if (isSrcPk && !isTgtPk) {
-        dagSrc = e.source
-        dagTgt = e.target
-      } else {
-        const scoreSrc = masterScore.get(e.source) || 0
-        const scoreTgt = masterScore.get(e.target) || 0
-        if (scoreTgt > scoreSrc) {
-          dagSrc = e.target
-          dagTgt = e.source
-        } else {
-          dagSrc = e.source
-          dagTgt = e.target
-        }
-      }
-
-      dagEdges.push({ source: dagSrc, target: dagTgt })
-    })
+    const dagEdges = edges.value.map(e => ({
+      source: e.source,
+      target: e.target,
+    }))
 
     // 3. Compute Left-to-Right Layered Layout
     const { nodePositions } = computeDagLayeredLayout(dagNodes, dagEdges, {
-      columnSpacing: 460, // 320px card + 140px corridor for smooth S-curves
-      rowSpacing: 48,
+      columnSpacing: 380, // 280px card + 100px corridor
+      rowSpacing: 60,
       startX: 80,
       startY: 80,
     })
@@ -764,12 +691,11 @@ export const useCanvasStore = defineStore('canvas', () => {
     })
 
     updateEdgeHandles()
-    triggerUpdateNodeInternals()
 
     // 6. Batch persist to backend
     try {
       await persistPositions(updates)
-      ElMessage.success('DAG 有向拓扑分层排版完成')
+      toast.success('DAG 有向拓扑分层排版完成')
     } catch (e) {
       console.error('保存自动排版坐标失败', e)
     }
@@ -786,9 +712,8 @@ export const useCanvasStore = defineStore('canvas', () => {
         await api.batchDeleteMappings(ids)
         edges.value = edges.value.filter(e => !ids.includes(e.data?.mappingId))
         updateEdgeHandles()
-    triggerUpdateNodeInternals()
         redoStack.value.push(action)
-        ElMessage.info('已撤销新建连线')
+        toast.info('已撤销新建连线')
       } else if (action.type === 'REMOVE_MAPPINGS') {
         const created = await api.batchCreateMappings(
           action.projectId,
@@ -813,19 +738,17 @@ export const useCanvasStore = defineStore('canvas', () => {
           })
         }
         updateEdgeHandles()
-    triggerUpdateNodeInternals()
         redoStack.value.push(action)
-        ElMessage.info('已撤销删除连线')
+        toast.info('已撤销删除连线')
       } else if (action.type === 'MOVE_NODE') {
         const node = nodes.value.find(n => n.id === action.nodeId)
         if (node) {
           node.position = { ...action.prevPos }
           await persistPositions([{ id: action.tableId, pos_x: action.prevPos.x, pos_y: action.prevPos.y }])
           updateEdgeHandles()
-    triggerUpdateNodeInternals()
         }
         redoStack.value.push(action)
-        ElMessage.info('已撤销卡片移动')
+        toast.info('已撤销卡片移动')
       } else if (action.type === 'LAYOUT_NODES') {
         const targets = action.prevPositions.map(p => ({
           nodeId: p.nodeId,
@@ -835,12 +758,11 @@ export const useCanvasStore = defineStore('canvas', () => {
         await animateNodePositions(targets, 350)
         await persistPositions(action.prevPositions.map(p => ({ id: p.id, pos_x: p.pos.x, pos_y: p.pos.y })))
         updateEdgeHandles()
-    triggerUpdateNodeInternals()
         redoStack.value.push(action)
-        ElMessage.info('已撤销自动排版')
+        toast.info('已撤销自动排版')
       }
     } catch (e: any) {
-      ElMessage.error('撤销失败: ' + (e.message || '网络错误'))
+      toast.error('撤销失败: ' + (e.message || '网络错误'))
     }
   }
 
@@ -873,27 +795,24 @@ export const useCanvasStore = defineStore('canvas', () => {
           })
         }
         updateEdgeHandles()
-    triggerUpdateNodeInternals()
         historyStack.value.push(action)
-        ElMessage.info('已重做新建连线')
+        toast.info('已重做新建连线')
       } else if (action.type === 'REMOVE_MAPPINGS') {
         const ids = action.mappings.map(m => m.id)
         await api.batchDeleteMappings(ids)
         edges.value = edges.value.filter(e => !ids.includes(e.data?.mappingId))
         updateEdgeHandles()
-    triggerUpdateNodeInternals()
         historyStack.value.push(action)
-        ElMessage.info('已重做删除连线')
+        toast.info('已重做删除连线')
       } else if (action.type === 'MOVE_NODE') {
         const node = nodes.value.find(n => n.id === action.nodeId)
         if (node) {
           node.position = { ...action.newPos }
           await persistPositions([{ id: action.tableId, pos_x: action.newPos.x, pos_y: action.newPos.y }])
           updateEdgeHandles()
-    triggerUpdateNodeInternals()
         }
         historyStack.value.push(action)
-        ElMessage.info('已重做卡片移动')
+        toast.info('已重做卡片移动')
       } else if (action.type === 'LAYOUT_NODES') {
         const targets = action.newPositions.map(p => ({
           nodeId: p.nodeId,
@@ -903,12 +822,11 @@ export const useCanvasStore = defineStore('canvas', () => {
         await animateNodePositions(targets, 350)
         await persistPositions(action.newPositions.map(p => ({ id: p.id, pos_x: p.pos.x, pos_y: p.pos.y })))
         updateEdgeHandles()
-    triggerUpdateNodeInternals()
         historyStack.value.push(action)
-        ElMessage.info('已重做自动排版')
+        toast.info('已重做自动排版')
       }
     } catch (e: any) {
-      ElMessage.error('重做失败: ' + (e.message || '网络错误'))
+      toast.error('重做失败: ' + (e.message || '网络错误'))
     }
   }
 
@@ -1071,12 +989,12 @@ export const useCanvasStore = defineStore('canvas', () => {
   const createCanvas = async (projectId: string, name: string) => {
     try {
       const created = await api.createCanvas(projectId, { name })
-      ElMessage.success('新建业务视图成功')
+      toast.success('新建业务视图成功')
       await fetchCanvases(projectId, false)
       await switchCanvas(created.id)
       return created
     } catch (e: any) {
-      ElMessage.error('新建画布失败: ' + (e.message || '网络错误'))
+      toast.error('新建画布失败: ' + (e.message || '网络错误'))
       throw e
     }
   }
@@ -1086,20 +1004,20 @@ export const useCanvasStore = defineStore('canvas', () => {
       const updated = await api.updateCanvas(canvasId, { name })
       const item = canvases.value.find(c => c.id === canvasId)
       if (item) item.name = updated.name
-      ElMessage.success('画布已重命名')
+      toast.success('画布已重命名')
     } catch (e: any) {
-      ElMessage.error('重命名画布失败: ' + (e.message || '网络错误'))
+      toast.error('重命名画布失败: ' + (e.message || '网络错误'))
     }
   }
 
   const deleteCanvas = async (canvasId: string, projectId: string) => {
     try {
       await api.deleteCanvas(canvasId)
-      ElMessage.success('画布已删除')
+      toast.success('画布已删除')
       currentCanvasId.value = null
       await fetchCanvases(projectId, true)
     } catch (e: any) {
-      ElMessage.error('删除画布失败: ' + (e.message || '网络错误'))
+      toast.error('删除画布失败: ' + (e.message || '网络错误'))
     }
   }
 
@@ -1108,9 +1026,9 @@ export const useCanvasStore = defineStore('canvas', () => {
     try {
       await api.addTablesToCanvas(currentCanvasId.value, tableIds)
       await switchCanvas(currentCanvasId.value)
-      ElMessage.success(`成功引入 ${tableIds.length} 张表到当前画布`)
+      toast.success(`成功引入 ${tableIds.length} 张表到当前画布`)
     } catch (e: any) {
-      ElMessage.error('引入表失败: ' + (e.message || '网络错误'))
+      toast.error('引入表失败: ' + (e.message || '网络错误'))
     }
   }
 
@@ -1121,10 +1039,9 @@ export const useCanvasStore = defineStore('canvas', () => {
       nodes.value = nodes.value.filter(n => n.data.tableId !== tableId)
       edges.value = edges.value.filter(e => e.data.sourceTableId !== tableId && e.data.targetTableId !== tableId)
       updateEdgeHandles()
-    triggerUpdateNodeInternals()
-      ElMessage.success('已从当前画布移出')
+      toast.success('已从当前画布移出')
     } catch (e: any) {
-      ElMessage.error('移出表失败: ' + (e.message || '网络错误'))
+      toast.error('移出表失败: ' + (e.message || '网络错误'))
     }
   }
 

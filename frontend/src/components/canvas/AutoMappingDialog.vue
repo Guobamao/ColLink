@@ -1,201 +1,187 @@
 <template>
-  <el-dialog
-    v-model="visible"
+  <Dialog
+    v-model:open="visible"
     title="智能同名/同义字段自动连线向导"
-    width="860px"
-    destroy-on-close
-    :close-on-click-modal="false"
-    class="auto-mapping-dialog"
+    description="自动分析源表与目标表的字段同名规则与中文业务同义词，一键批量建立血缘映射"
+    class="max-w-[860px]"
   >
-    <template #header>
-      <div class="dialog-header-title">
-        <el-icon class="header-icon" color="#3B82F6"><MagicStick /></el-icon>
-        <span>智能同名/同义字段自动连线向导</span>
-      </div>
-    </template>
-
-    <div class="dialog-body">
+    <div class="flex flex-col gap-4 py-1">
       <!-- Strategy Settings -->
-      <div class="config-panel">
-        <div class="tables-selector-row">
-          <div class="selector-card source-card">
-            <div class="card-badge-row">
-              <span class="card-badge source-badge">源数据表 (Source)</span>
+      <div class="rounded-xl border border-border bg-surface-subtle p-4 space-y-3.5">
+        <div class="grid grid-cols-[1fr,auto,1fr] gap-3 items-center">
+          <!-- Source Card -->
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-1.5 text-xs font-semibold text-primary-text">
+              <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+              <span>源数据表 (Source)</span>
             </div>
-            <el-select
+            <Select
               v-model="sourceTableId"
               placeholder="选择源数据表"
-              filterable
-              style="width: 100%"
-              size="default"
+              :options="sourceTableOptions"
               @change="onTableSelectionChange"
-            >
-              <el-option
-                v-for="table in availableTables"
-                :key="table.id"
-                :label="`${table.table_name}${table.table_comment ? ` (${table.table_comment})` : ''}`"
-                :value="table.id"
-                :disabled="table.id === targetTableId"
-              />
-            </el-select>
+            />
           </div>
 
-          <div class="arrow-indicator">
-            <div class="arrow-circle">
-              <el-icon><Right /></el-icon>
-            </div>
+          <!-- Arrow -->
+          <div class="pt-4 text-muted">
+            <ArrowRight class="w-4 h-4 mx-auto" />
           </div>
 
-          <div class="selector-card target-card">
-            <div class="card-badge-row">
-              <span class="card-badge target-badge">目标数据表 (Target)</span>
+          <!-- Target Card -->
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-1.5 text-xs font-semibold text-primary-text">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>目标数据表 (Target)</span>
             </div>
-            <el-select
+            <Select
               v-model="targetTableId"
               placeholder="选择目标数据表"
-              filterable
-              style="width: 100%"
-              size="default"
+              :options="targetTableOptions"
               @change="onTableSelectionChange"
-            >
-              <el-option
-                v-for="table in availableTables"
-                :key="table.id"
-                :label="`${table.table_name}${table.table_comment ? ` (${table.table_comment})` : ''}`"
-                :value="table.id"
-                :disabled="table.id === sourceTableId"
-              />
-            </el-select>
+            />
           </div>
         </div>
 
-        <div class="strategies-row">
-          <span class="strategy-label">匹配策略：</span>
-          <el-checkbox v-model="matchExactName">
-            同名字段精确匹配 <span class="strategy-hint">(忽略大小写及下划线风格)</span>
-          </el-checkbox>
-          <el-checkbox v-model="matchCommentSynonym">
-            中文注释同义匹配 <span class="strategy-hint">(忽略主键/ID/编号后缀)</span>
-          </el-checkbox>
-          <el-checkbox v-model="skipExisting">
-            排除已连线字段
-          </el-checkbox>
+        <div class="flex items-center flex-wrap gap-4 pt-1 border-t border-border">
+          <span class="text-xs font-medium text-secondary-text">匹配策略：</span>
+          <Checkbox
+            v-model="matchExactName"
+            label="同名字段精确匹配 (忽略大小写及下划线风格)"
+          />
+          <Checkbox
+            v-model="matchCommentSynonym"
+            label="中文注释同义匹配 (忽略主键/ID/编号后缀)"
+          />
+          <Checkbox
+            v-model="skipExisting"
+            label="排除已连线字段"
+          />
         </div>
 
-        <div class="action-btn-row">
-          <el-button
-            type="primary"
-            :icon="Search"
-            :disabled="!sourceTableId || !targetTableId"
+        <div class="flex justify-end pt-1">
+          <Button
+            variant="primary"
+            :disabled="!sourceTableId || !targetTableId || sourceTableId === targetTableId"
             @click="runMatch"
           >
+            <Search class="w-3.5 h-3.5 mr-1.5" />
             开始智能匹配
-          </el-button>
+          </Button>
         </div>
       </div>
 
       <!-- Match Results Preview -->
-      <div v-if="hasRunMatch" class="results-panel">
-        <div class="results-header">
-          <div class="results-title">
-            匹配候选结果 (共发现 <strong>{{ candidates.length }}</strong> 对可用映射)
+      <div v-if="hasRunMatch" class="space-y-2.5">
+        <div class="flex items-center justify-between text-xs">
+          <div class="text-primary-text font-medium">
+            匹配候选结果 (共发现 <strong class="text-primary font-mono">{{ candidates.length }}</strong> 对可用映射)
           </div>
-          <div class="results-actions">
-            <el-button size="small" @click="toggleSelectAll(true)">全选</el-button>
-            <el-button size="small" @click="toggleSelectAll(false)">全不选</el-button>
+          <div class="flex items-center gap-1.5">
+            <Button size="xs" variant="outline" @click="toggleSelectAll(true)">全选</Button>
+            <Button size="xs" variant="outline" @click="toggleSelectAll(false)">全不选</Button>
           </div>
         </div>
 
-        <div v-if="candidates.length === 0" class="empty-candidate">
-          <el-empty description="未匹配到符合规则的候选字段对，请尝试更换匹配策略或选择其他数据表" :image-size="64" />
+        <div v-if="candidates.length === 0" class="py-10 text-center text-xs text-muted border border-border rounded-lg bg-surface-subtle">
+          未匹配到符合规则的候选字段对，请尝试更换匹配策略或选择其他数据表
         </div>
 
-        <el-table
-          v-else
-          ref="tableRef"
-          :data="candidates"
-          size="small"
-          border
-          max-height="300"
-          row-key="id"
-          @selection-change="handleSelectionChange"
-        >
-          <el-table-column type="selection" width="45" align="center" />
-
-          <el-table-column label="源字段 (Source)" min-width="190">
-            <template #default="{ row }">
-              <div class="col-preview">
-                <span class="col-name">{{ row.sourceCol.column_name }}</span>
-                <span v-if="row.sourceCol.column_comment" class="col-comment">
-                  {{ row.sourceCol.column_comment }}
-                </span>
-                <span class="col-type">{{ row.sourceCol.data_type }}</span>
-              </div>
-            </template>
-          </el-table-column>
-
-          <el-table-column width="40" align="center">
-            <template #default>
-              <el-icon color="#94A3B8"><Right /></el-icon>
-            </template>
-          </el-table-column>
-
-          <el-table-column label="目标字段 (Target)" min-width="190">
-            <template #default="{ row }">
-              <div class="col-preview">
-                <span class="col-name">{{ row.targetCol.column_name }}</span>
-                <span v-if="row.targetCol.column_comment" class="col-comment">
-                  {{ row.targetCol.column_comment }}
-                </span>
-                <span class="col-type">{{ row.targetCol.data_type }}</span>
-              </div>
-            </template>
-          </el-table-column>
-
-          <el-table-column label="匹配依据" width="160" align="center">
-            <template #default="{ row }">
-              <el-tag
-                :type="row.matchType === 'name' ? 'success' : 'warning'"
-                size="small"
-                effect="light"
+        <div v-else class="border border-border rounded-lg overflow-hidden max-h-[300px] overflow-y-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-surface-subtle sticky top-0 border-b border-border text-muted font-medium select-none z-10">
+              <tr>
+                <th class="w-10 px-3 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    :checked="isAllSelected"
+                    class="rounded border-border text-primary focus:ring-primary cursor-pointer"
+                    @change="toggleSelectAll(!isAllSelected)"
+                  />
+                </th>
+                <th class="px-3 py-2 font-semibold">源字段 (Source)</th>
+                <th class="w-8 px-1 py-2 text-center"></th>
+                <th class="px-3 py-2 font-semibold">目标字段 (Target)</th>
+                <th class="w-32 px-3 py-2 text-center font-semibold">匹配依据</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border/40">
+              <tr
+                v-for="row in candidates"
+                :key="row.id"
+                class="hover:bg-surface-hover transition-colors"
               >
-                {{ row.reason }}
-              </el-tag>
-            </template>
-          </el-table-column>
-        </el-table>
+                <td class="px-3 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    :checked="selectedCandidates.some(c => c.id === row.id)"
+                    class="rounded border-border text-primary focus:ring-primary cursor-pointer"
+                    @change="toggleRow(row)"
+                  />
+                </td>
+                <td class="px-3 py-2">
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-mono font-medium text-primary-text">{{ row.sourceCol.column_name }}</span>
+                    <span v-if="row.sourceCol.column_comment" class="text-muted text-[11px] truncate max-w-[120px]">
+                      ({{ row.sourceCol.column_comment }})
+                    </span>
+                    <span class="font-mono text-[10px] text-muted">{{ row.sourceCol.data_type }}</span>
+                  </div>
+                </td>
+                <td class="px-1 py-2 text-center text-muted">
+                  <ArrowRight class="w-3.5 h-3.5 mx-auto" />
+                </td>
+                <td class="px-3 py-2">
+                  <div class="flex items-center gap-1.5">
+                    <span class="font-mono font-medium text-primary-text">{{ row.targetCol.column_name }}</span>
+                    <span v-if="row.targetCol.column_comment" class="text-muted text-[11px] truncate max-w-[120px]">
+                      ({{ row.targetCol.column_comment }})
+                    </span>
+                    <span class="font-mono text-[10px] text-muted">{{ row.targetCol.data_type }}</span>
+                  </div>
+                </td>
+                <td class="px-3 py-2 text-center">
+                  <Badge :variant="row.matchType === 'name' ? 'success' : 'warning'">
+                    {{ row.reason }}
+                  </Badge>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     <template #footer>
-      <div class="dialog-footer">
-        <div class="footer-left">
+      <div class="flex items-center justify-between w-full">
+        <span class="text-xs text-muted">
           <span v-if="hasRunMatch && candidates.length > 0">
-            已勾选 <strong style="color: #3b82f6;">{{ selectedCandidates.length }}</strong> / {{ candidates.length }} 对映射
+            已勾选 <strong class="text-primary font-mono">{{ selectedCandidates.length }}</strong> / {{ candidates.length }} 对映射
           </span>
-        </div>
-        <div class="footer-right">
-          <el-button @click="visible = false">取消</el-button>
-          <el-button
-            type="primary"
+        </span>
+        <div class="flex items-center gap-2">
+          <Button variant="ghost" @click="visible = false">取消</Button>
+          <Button
+            variant="primary"
             :disabled="selectedCandidates.length === 0"
             :loading="submitting"
             @click="handleSubmit"
           >
             确认创建所选映射 ({{ selectedCandidates.length }})
-          </el-button>
+          </Button>
         </div>
       </div>
     </template>
-  </el-dialog>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
-import { MagicStick, Right, Search } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ref, computed } from 'vue'
+import { toast } from '@/utils/toast'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
+import { Dialog, Select, Checkbox, Button, Badge } from '@/components/ui'
+import { Search, ArrowRight } from 'lucide-vue-next'
 import type { TableMeta, ColumnMeta } from '@/types'
 
 const visible = ref(false)
@@ -223,12 +209,44 @@ interface MatchCandidate {
 
 const candidates = ref<MatchCandidate[]>([])
 const selectedCandidates = ref<MatchCandidate[]>([])
-const tableRef = ref<any>(null)
 
-// Available tables from current canvas/project
 const availableTables = computed<TableMeta[]>(() => {
   return projectStore.currentProject?.tables || []
 })
+
+const sourceTableOptions = computed(() => {
+  return availableTables.value.map(t => ({
+    label: `${t.table_name}${t.table_comment ? ` (${t.table_comment})` : ''}`,
+    value: t.id,
+    disabled: t.id === targetTableId.value,
+  }))
+})
+
+const targetTableOptions = computed(() => {
+  return availableTables.value.map(t => ({
+    label: `${t.table_name}${t.table_comment ? ` (${t.table_comment})` : ''}`,
+    value: t.id,
+    disabled: t.id === sourceTableId.value,
+  }))
+})
+
+const isAllSelected = computed(() => {
+  if (candidates.value.length === 0) return false
+  return candidates.value.every(c => selectedCandidates.value.some(s => s.id === c.id))
+})
+
+const toggleSelectAll = (select: boolean) => {
+  selectedCandidates.value = select ? [...candidates.value] : []
+}
+
+const toggleRow = (row: MatchCandidate) => {
+  const idx = selectedCandidates.value.findIndex(c => c.id === row.id)
+  if (idx > -1) {
+    selectedCandidates.value.splice(idx, 1)
+  } else {
+    selectedCandidates.value.push(row)
+  }
+}
 
 const open = (preSelectSourceId?: string, preSelectTargetId?: string) => {
   visible.value = true
@@ -255,12 +273,10 @@ const onTableSelectionChange = () => {
   selectedCandidates.value = []
 }
 
-// Name normalization: ignore case, underscore, hyphen
 const normalizeName = (name: string): string => {
   return (name || '').toLowerCase().replace(/[-_]/g, '')
 }
 
-// Clean comment for synonym comparison
 const cleanComment = (comm: string): string => {
   if (!comm) return ''
   return comm
@@ -270,7 +286,6 @@ const cleanComment = (comm: string): string => {
     .trim()
 }
 
-// Check if edge already exists on canvas
 const isAlreadyMapped = (srcColId: string, tgtColId: string): boolean => {
   return canvasStore.edges.some(
     e =>
@@ -281,7 +296,7 @@ const isAlreadyMapped = (srcColId: string, tgtColId: string): boolean => {
 
 const runMatch = () => {
   if (!sourceTableId.value || !targetTableId.value) {
-    ElMessage.warning('请选择源数据表与目标数据表')
+    toast.warning('请选择源数据表与目标数据表')
     return
   }
 
@@ -289,7 +304,7 @@ const runMatch = () => {
   const tgtTable = availableTables.value.find(t => t.id === targetTableId.value)
 
   if (!srcTable || !tgtTable) {
-    ElMessage.warning('所选表不存在')
+    toast.warning('所选表不存在')
     return
   }
 
@@ -308,7 +323,6 @@ const runMatch = () => {
       let reason = ''
       let confidence = 0
 
-      // Rule 1: Exact Name (case & separator insensitive)
       if (matchExactName.value) {
         if (normalizeName(sCol.column_name) === normalizeName(tCol.column_name)) {
           matched = true
@@ -318,7 +332,6 @@ const runMatch = () => {
         }
       }
 
-      // Rule 2: Chinese comment synonym
       if (!matched && matchCommentSynonym.value) {
         if (sCol.column_comment && tCol.column_comment) {
           const sComm = sCol.column_comment.trim()
@@ -368,34 +381,16 @@ const runMatch = () => {
 
   candidates.value = results
   hasRunMatch.value = true
-
-  // Select all matched candidates by default
-  nextTick(() => {
-    candidates.value.forEach(row => {
-      tableRef.value?.toggleRowSelection(row, true)
-    })
-    selectedCandidates.value = [...candidates.value]
-  })
-}
-
-const handleSelectionChange = (selection: MatchCandidate[]) => {
-  selectedCandidates.value = selection
-}
-
-const toggleSelectAll = (select: boolean) => {
-  candidates.value.forEach(row => {
-    tableRef.value?.toggleRowSelection(row, select)
-  })
-  selectedCandidates.value = select ? [...candidates.value] : []
+  selectedCandidates.value = [...candidates.value]
 }
 
 const handleSubmit = async () => {
   if (selectedCandidates.value.length === 0) {
-    ElMessage.warning('请勾选至少一条映射连线')
+    toast.warning('请勾选至少一条映射连线')
     return
   }
   if (!projectStore.currentProject) {
-    ElMessage.warning('当前无可用项目')
+    toast.warning('当前无可用项目')
     return
   }
 
@@ -409,10 +404,10 @@ const handleSubmit = async () => {
     }))
 
     const count = await canvasStore.createBatchMappings(projectStore.currentProject.id, pairs)
-    ElMessage.success(`成功智能创建 ${count} 条字段映射连线！`)
+    toast.success(`成功智能创建 ${count} 条字段映射连线！`)
     visible.value = false
   } catch (e: any) {
-    ElMessage.error('创建映射失败: ' + (e.message || '网络错误'))
+    toast.error('创建映射失败: ' + (e.message || '网络错误'))
   } finally {
     submitting.value = false
   }
@@ -422,201 +417,3 @@ defineExpose({
   open,
 })
 </script>
-
-<style scoped>
-.dialog-header-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--cl-text-primary);
-}
-
-.header-icon {
-  font-size: 18px;
-}
-
-.dialog-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.config-panel {
-  background: var(--cl-surface-subtle);
-  border: 1px solid var(--cl-border);
-  border-radius: 8px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.tables-selector-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.selector-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  border-radius: 8px;
-  transition: all 0.15s ease;
-}
-
-.source-card {
-  background: var(--cl-primary-light);
-  border: 1px solid var(--cl-primary-border);
-}
-
-.target-card {
-  background: rgba(168, 85, 247, 0.08);
-  border: 1px solid rgba(168, 85, 247, 0.25);
-}
-
-.card-badge-row {
-  display: flex;
-  align-items: center;
-}
-
-.card-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 4px;
-  line-height: 1.3;
-}
-
-.source-badge {
-  color: var(--cl-primary);
-  background: var(--cl-primary-light);
-  border: 1px solid var(--cl-primary-border);
-}
-
-.target-badge {
-  color: #a855f7;
-  background: rgba(168, 85, 247, 0.15);
-  border: 1px solid rgba(168, 85, 247, 0.3);
-}
-
-.arrow-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.arrow-circle {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--cl-surface);
-  border: 1px solid var(--cl-border);
-  box-shadow: var(--cl-shadow-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--cl-primary);
-  font-size: 16px;
-}
-
-.strategies-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
-  font-size: 13px;
-  padding-top: 4px;
-}
-
-.strategy-label {
-  font-weight: 600;
-  color: var(--cl-text-primary);
-  font-size: 12px;
-}
-
-.strategy-hint {
-  font-size: 11px;
-  color: var(--cl-text-muted);
-  margin-left: 2px;
-}
-
-.action-btn-row {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 4px;
-}
-
-.results-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.results-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.results-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--cl-text-primary);
-}
-
-.col-preview {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.col-name {
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--cl-text-primary);
-}
-
-.col-comment {
-  font-size: 11px;
-  color: var(--cl-text-secondary);
-  background: var(--cl-surface-subtle);
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-
-.col-type {
-  font-size: 10px;
-  color: var(--cl-text-muted);
-  font-family: monospace;
-}
-
-.empty-candidate {
-  padding: 20px 0;
-  background: var(--cl-surface-subtle);
-  border-radius: 8px;
-  border: 1px dashed var(--cl-border);
-}
-
-.dialog-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.footer-left {
-  font-size: 12px;
-  color: var(--cl-text-muted);
-}
-
-.footer-right {
-  display: flex;
-  gap: 8px;
-}
-</style>

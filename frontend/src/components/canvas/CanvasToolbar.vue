@@ -22,23 +22,18 @@
 
       <!-- Project Switcher & Manager -->
       <div class="flex items-center gap-1">
-        <el-select
+        <Select
           :model-value="projectStore.currentProject?.id"
           placeholder="选择项目空间..."
-          class="project-select-compact"
-          size="small"
+          size="sm"
+          wrapper-class="w-36"
+          :options="projectStore.projects.map(p => ({ label: p.name, value: p.id }))"
           @change="onProjectChange"
         >
           <template #prefix>
             <FolderGit2 class="w-3.5 h-3.5 text-muted shrink-0" />
           </template>
-          <el-option
-            v-for="p in projectStore.projects"
-            :key="p.id"
-            :label="p.name"
-            :value="p.id"
-          />
-        </el-select>
+        </Select>
         <button
           type="button"
           class="w-7 h-7 flex items-center justify-center rounded-md text-muted hover:text-primary-text hover:bg-surface-hover border border-transparent hover:border-border transition-colors duration-100"
@@ -71,32 +66,26 @@
       <div class="w-px h-3.5 bg-border mx-1"></div>
 
       <!-- Import Structure Dropdown -->
-      <el-dropdown trigger="click" @command="handleImportCommand">
-        <button
-          type="button"
-          class="h-7 px-2.5 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-medium flex items-center gap-1.5 shadow-2xs transition-colors"
-        >
-          <Plus class="w-3.5 h-3.5 shrink-0" />
-          <span>导入表结构</span>
-          <ChevronDown class="w-3 h-3 opacity-80 shrink-0" />
-        </button>
-        <template #dropdown>
-          <el-dropdown-menu class="toolbar-dropdown-menu">
-            <el-dropdown-item command="ddl">
-              <div class="flex items-center gap-2">
-                <FileCode class="w-4 h-4 text-primary" />
-                <span class="text-xs">DDL 脚本解析导入</span>
-              </div>
-            </el-dropdown-item>
-            <el-dropdown-item command="db">
-              <div class="flex items-center gap-2">
-                <Database class="w-4 h-4 text-primary" />
-                <span class="text-xs">连接数据库在线探查</span>
-              </div>
-            </el-dropdown-item>
-          </el-dropdown-menu>
+      <Dropdown align="start">
+        <template #trigger>
+          <button
+            type="button"
+            class="h-7 px-2.5 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-medium flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+          >
+            <Plus class="w-3.5 h-3.5 shrink-0" />
+            <span>导入表结构</span>
+            <ChevronDown class="w-3 h-3 opacity-80 shrink-0" />
+          </button>
         </template>
-      </el-dropdown>
+        <DropdownItem @select="handleImportCommand('ddl')">
+          <FileCode class="w-4 h-4 text-primary mr-2" />
+          <span class="text-xs">DDL 脚本解析导入</span>
+        </DropdownItem>
+        <DropdownItem @select="handleImportCommand('db')">
+          <Database class="w-4 h-4 text-primary mr-2" />
+          <span class="text-xs">连接数据库在线探查</span>
+        </DropdownItem>
+      </Dropdown>
 
       <!-- Layout & View Fit Segmented Control -->
       <div class="flex items-center p-0.5 rounded-md border border-border bg-surface-subtle">
@@ -174,47 +163,36 @@
       <div class="w-px h-3.5 bg-border mx-1"></div>
 
       <!-- Export Deliverables Dropdown -->
-      <el-dropdown trigger="click" @command="handleExportCommand">
-        <button
-          type="button"
-          class="h-7 px-2.5 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors shadow-2xs"
-        >
-          <Download class="w-3.5 h-3.5 text-muted shrink-0" />
-          <span>导出</span>
-          <ChevronDown class="w-3 h-3 text-muted shrink-0" />
-        </button>
-        <template #dropdown>
-          <el-dropdown-menu class="toolbar-dropdown-menu">
-            <el-dropdown-item command="excel">
-              <div class="flex items-center gap-2">
-                <FileSpreadsheet class="w-4 h-4 text-emerald-500" />
-                <span class="text-xs">导出 Excel 映射清单 (.xlsx)</span>
-              </div>
-            </el-dropdown-item>
-            <el-dropdown-item command="image">
-              <div class="flex items-center gap-2">
-                <Image class="w-4 h-4 text-blue-500" />
-                <span class="text-xs">导出 2x 高清拓扑长图 (.png)</span>
-              </div>
-            </el-dropdown-item>
-            <el-dropdown-item command="backup" divided>
-              <div class="flex items-center gap-2">
-                <Archive class="w-4 h-4 text-muted" />
-                <span class="text-xs">项目快照备份 / 迁移 (.json)</span>
-              </div>
-            </el-dropdown-item>
-          </el-dropdown-menu>
+      <Dropdown align="end">
+        <template #trigger>
+          <button
+            type="button"
+            class="h-7 px-2.5 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors shadow-2xs cursor-pointer"
+          >
+            <Download class="w-3.5 h-3.5 text-muted shrink-0" />
+            <span>导出</span>
+            <ChevronDown class="w-3 h-3 text-muted shrink-0" />
+          </button>
         </template>
-      </el-dropdown>
+        <DropdownItem @select="handleExportCommand('excel')">
+          <FileSpreadsheet class="w-4 h-4 text-emerald-500 mr-2" />
+          <span class="text-xs">导出 Excel 映射清单 (.xlsx)</span>
+        </DropdownItem>
+        <DropdownItem @select="handleExportCommand('image')">
+          <Image class="w-4 h-4 text-blue-500 mr-2" />
+          <span class="text-xs">导出 2x 高清拓扑长图 (.png)</span>
+        </DropdownItem>
+        <DropdownSeparator />
+        <DropdownItem @select="handleExportCommand('backup')">
+          <Archive class="w-4 h-4 text-muted mr-2" />
+          <span class="text-xs">项目快照备份 / 迁移 (.json)</span>
+        </DropdownItem>
+      </Dropdown>
 
       <div class="w-px h-3.5 bg-border mx-1"></div>
 
       <!-- Theme Switcher (Cycle: Light -> Dark -> Auto) with Wave Transition -->
-      <el-tooltip
-        :content="themeTooltipText"
-        placement="bottom"
-        :show-after="200"
-      >
+      <Tooltip :content="themeTooltipText" side="bottom">
         <button
           type="button"
           class="w-7 h-7 flex items-center justify-center rounded-md border border-border bg-surface hover:bg-surface-hover text-muted hover:text-primary-text transition-colors relative cursor-pointer"
@@ -230,7 +208,7 @@
             ></span>
           </div>
         </button>
-      </el-tooltip>
+      </Tooltip>
 
       <!-- Window Controls (Tauri Custom Titlebar) -->
       <div v-if="isTauri" class="flex items-center h-10 ml-1 select-none">
@@ -276,7 +254,8 @@ import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useThemeStore } from '@/stores/themeStore'
 import { api } from '@/api'
-import { ElMessage } from 'element-plus'
+import { toast } from '@/utils/toast'
+import { Select, Dropdown, DropdownItem, DropdownSeparator, Tooltip } from '@/components/ui'
 import {
   Search,
   Plus,
@@ -413,7 +392,7 @@ const handleAutoLayout = async () => {
 
 const handleOpenDdl = () => {
   if (!projectStore.currentProject?.id) {
-    ElMessage.error('请先选择或新建一个项目！')
+    toast.error('请先选择或新建一个项目！')
     return
   }
   emit('open-ddl-dialog')
@@ -421,7 +400,7 @@ const handleOpenDdl = () => {
 
 const handleOpenDb = () => {
   if (!projectStore.currentProject?.id) {
-    ElMessage.error('请先选择或新建一个项目！')
+    toast.error('请先选择或新建一个项目！')
     return
   }
   emit('open-db-dialog')
@@ -429,7 +408,7 @@ const handleOpenDb = () => {
 
 const handleExportExcel = async () => {
   if (!projectStore.currentProject) {
-    ElMessage.warning('当前无可用项目')
+    toast.warning('当前无可用项目')
     return
   }
   await api.exportExcel(projectStore.currentProject.id, projectStore.currentProject.name)
@@ -450,7 +429,7 @@ const handleExportCommand = (cmd: string) => {
     emit('export-image')
   } else if (cmd === 'backup') {
     if (!projectStore.currentProject?.id) {
-      ElMessage.error('请先选择或新建一个项目！')
+      toast.error('请先选择或新建一个项目！')
       return
     }
     emit('open-backup-dialog')
@@ -461,24 +440,5 @@ const handleExportCommand = (cmd: string) => {
 <style scoped>
 .text-primary-text {
   color: var(--cl-text-primary);
-}
-
-:deep(.project-select-compact) {
-  width: 140px !important;
-}
-
-:deep(.project-select-compact .el-input__wrapper) {
-  height: 28px !important;
-  line-height: 28px !important;
-  padding: 0 8px !important;
-  font-size: 11px !important;
-  border-radius: 6px !important;
-  background-color: var(--cl-surface-subtle) !important;
-  box-shadow: 0 0 0 1px var(--cl-border) inset !important;
-}
-
-:deep(.project-select-compact .el-input__inner) {
-  font-size: 11px !important;
-  font-weight: 500 !important;
 }
 </style>

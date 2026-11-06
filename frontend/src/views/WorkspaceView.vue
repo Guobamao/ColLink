@@ -32,16 +32,16 @@
         :default-edge-options="{ type: 'smartObstacle' }"
         :connection-mode="ConnectionMode.Loose"
         :connection-line-style="{ stroke: '#3b82f6', strokeWidth: 2 }"
-        :connection-line-type="'bezier'"
+        :connection-line-type="'smoothstep'"
         @node-drag-start="canvasStore.onNodeDragStart"
         @node-drag="canvasStore.onNodeDrag"
         @node-drag-stop="canvasStore.onNodeDragStop"
-        @pane-click="handlePaneClick"
+        @pane-click="canvasStore.selectColumn(null)"
         @connect="handleConnect"
         @edge-click="handleEdgeClick"
       >
         <!-- Background Grid Pattern -->
-        <Background :gap="20" :color="themeStore.isDark ? '#475569' : '#cbd5e1'" />
+        <Background :gap="20" :color="themeStore.isDark ? '#333333' : '#cbd5e1'" />
 
         <!-- Controls: Zoom In/Out, Fit View, Lock -->
         <Controls position="bottom-right" />
@@ -49,10 +49,10 @@
         <!-- MiniMap Component -->
         <MiniMap
           v-if="showMiniMap"
-          :node-stroke-color="themeStore.isDark ? '#38bdf8' : '#3b82f6'"
-          :node-color="themeStore.isDark ? '#334155' : '#dbeafe'"
+          :node-stroke-color="themeStore.isDark ? '#007acc' : '#3b82f6'"
+          :node-color="themeStore.isDark ? '#2d2d30' : '#dbeafe'"
           :node-border-radius="3"
-          :mask-color="themeStore.isDark ? 'rgba(30, 41, 59, 0.75)' : 'rgba(241, 245, 249, 0.6)'"
+          :mask-color="themeStore.isDark ? 'rgba(30, 30, 30, 0.75)' : 'rgba(241, 245, 249, 0.6)'"
           class="canvas-minimap"
         />
 
@@ -63,13 +63,14 @@
           :title="showMiniMap ? '收起鹰眼缩略图' : '展开鹰眼缩略图'"
           @click="showMiniMap = !showMiniMap"
         >
-          <el-icon><View v-if="showMiniMap" /><Hide v-else /></el-icon>
+          <Eye v-if="showMiniMap" class="w-3.5 h-3.5" />
+          <EyeOff v-else class="w-3.5 h-3.5" />
           <span>{{ showMiniMap ? '收起鹰眼' : '展开鹰眼' }}</span>
         </div>
 
         <!-- Floating Operational Tip Pill -->
         <div class="canvas-floating-tip">
-          <el-icon class="tip-icon"><InfoFilled /></el-icon>
+          <Info class="tip-icon w-3.5 h-3.5" />
           <span class="tip-text">{{ statusTipText }}</span>
         </div>
 
@@ -88,8 +89,12 @@
             <h3>当前业务视图暂无数据表</h3>
             <p>通过 DDL 建表脚本解析或直连数据库，一键载入数据表模型并开启可视化字段映射。</p>
             <div class="empty-actions">
-              <el-button type="primary" :icon="DocumentAdd" @click="openDdlDialog">DDL 解析导入</el-button>
-              <el-button plain :icon="Connection" @click="openDbDialog">连接数据库导入</el-button>
+              <Button variant="primary" @click="openDdlDialog">
+                <FileCode class="w-4 h-4 mr-1.5" /> DDL 解析导入
+              </Button>
+              <Button variant="outline" @click="openDbDialog">
+                <Database class="w-4 h-4 mr-1.5" /> 连接数据库导入
+              </Button>
             </div>
           </div>
         </div>
@@ -131,8 +136,9 @@ import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
 import { exportCanvasAsImage } from '@/utils/exportImage'
-import { ElMessageBox, ElMessage } from 'element-plus'
-import { InfoFilled, DataAnalysis, DocumentAdd, Connection, View, Hide } from '@element-plus/icons-vue'
+import { toast, confirmDialog } from '@/utils/toast'
+import { Eye, EyeOff, Info, FileCode, Database } from 'lucide-vue-next'
+import { Button } from '@/components/ui'
 
 // Styles for Vue Flow
 import '@vue-flow/core/dist/style.css'
@@ -217,7 +223,7 @@ const handleAutoLayout = async () => {
 
 const handleExportExcel = async () => {
   if (!projectStore.currentProject) {
-    ElMessage.warning('当前无可用项目')
+    toast.warning('当前无可用项目')
     return
   }
   await api.exportExcel(projectStore.currentProject.id, projectStore.currentProject.name)
@@ -247,27 +253,26 @@ const handleConnect = (params: any) => {
   }
 }
 
-const handleEdgeClick = (event: any) => {
+const handleEdgeClick = async (event: any) => {
   const edge = event.edge
   const label = edge.data?.label || '选中的字段映射'
 
-  ElMessageBox.confirm(
-    `当前选中的血缘关系：\n${label}\n\n是否删除此字段映射连线？`,
-    '字段映射操作',
-    {
-      confirmButtonText: '删除映射',
-      cancelButtonText: '取消',
-      type: 'warning',
-    }
-  ).then(async () => {
+  const confirmed = await confirmDialog({
+    title: '字段映射操作',
+    message: `当前选中的血缘关系：\n${label}\n\n是否删除此字段映射连线？`,
+    confirmText: '删除映射',
+    variant: 'danger',
+  })
+
+  if (confirmed) {
     await canvasStore.removeEdge(edge.id, projectStore.currentProject?.id)
-  }).catch(() => {})
+  }
 }
 
 // Project selection validator
 const checkProjectSelected = (): boolean => {
   if (!projectStore.currentProject?.id) {
-    ElMessage.error('请先选择或新建一个项目！')
+    toast.error('请先选择或新建一个项目！')
     return false
   }
   return true
@@ -277,11 +282,6 @@ const handleImported = () => {
   setTimeout(() => {
     handleFitView()
   }, 200)
-}
-
-const handlePaneClick = () => {
-  canvasStore.selectColumn(null)
-  canvasStore.clearHighlight()
 }
 
 // Dialog openers
@@ -318,11 +318,11 @@ const openRelationPathDrawer = (srcId?: string, tgtId?: string) => {
 const handleExportImage = async () => {
   if (!canvasWrapperRef.value) return
   if (canvasStore.nodes.length === 0) {
-    ElMessage.warning('画布中暂无数据表，无法导出')
+    toast.warning('画布中暂无数据表，无法导出')
     return
   }
 
-  ElMessage.info('正在生成全画布 2x 超清架构图，请稍候...')
+  toast.info('正在生成全画布 2x 超清架构图，请稍候...')
 
   // Temporarily make all edges visible for full architecture overview
   const prevEdgesState = canvasStore.edges.map(e => ({
@@ -357,12 +357,12 @@ const handleExportImage = async () => {
       filename,
       padding: 70,
       scale: 2,
-      backgroundColor: '#F8FAFC',
+      backgroundColor: themeStore.isDark ? '#1e1e1e' : '#fafafa',
     })
 
-    ElMessage.success('全画布 2x 超清架构图导出成功')
+    toast.success('全画布 2x 超清架构图导出成功')
   } catch (err: any) {
-    ElMessage.error('导出图片失败: ' + (err.message || '未知错误'))
+    toast.error('导出图片失败: ' + (err.message || '未知错误'))
   } finally {
     // Restore original edge visibility and animations
     prevEdgesState.forEach(st => {

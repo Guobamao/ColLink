@@ -1,150 +1,180 @@
 <template>
-  <el-dialog
-    v-model="visible"
-    width="840px"
-    destroy-on-close
-    :close-on-click-modal="false"
+  <Dialog
+    v-model:open="visible"
+    title="DDL 脚本解析导入"
+    description="支持达梦、MySQL、PostgreSQL 等建表 DDL 语法的高精度智能解析与增量同步"
+    class="max-w-[860px]"
   >
-    <template #header>
-      <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; color: var(--cl-text-primary);">
-        <el-icon color="#3b82f6"><DocumentAdd /></el-icon>
-        <span>DDL 脚本解析导入</span>
-      </div>
-    </template>
-    <div class="dialog-body">
+    <div class="flex flex-col gap-3.5 py-1">
       <!-- Dialect & Input Mode Selector -->
-      <div class="config-bar">
-        <div class="config-item">
-          <span class="label">数据库方言：</span>
-          <el-select v-model="dialect" style="width: 180px">
-            <el-option label="达梦数据库 (DM8/DM7)" value="dm" />
-            <el-option label="MySQL 5.7 / 8.0" value="mysql" />
-            <el-option label="PostgreSQL" value="postgres" />
-            <el-option label="Oracle" value="oracle" />
-          </el-select>
+      <div class="flex items-center justify-between p-2.5 rounded-lg border border-border bg-surface-subtle">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-medium text-secondary-text">数据库方言：</span>
+          <Select
+            v-model="dialect"
+            size="sm"
+            wrapper-class="w-48"
+            :options="dialectOptions"
+          />
         </div>
 
-        <el-radio-group v-model="inputMode" size="small">
-          <el-radio-button label="text">粘贴 SQL 文本</el-radio-button>
-          <el-radio-button label="file">上传 .sql 文件</el-radio-button>
-        </el-radio-group>
+        <div class="flex items-center p-0.5 rounded-md border border-border bg-surface">
+          <button
+            type="button"
+            class="h-6 px-3 rounded text-xs font-medium transition-colors cursor-pointer"
+            :class="inputMode === 'text' ? 'bg-primary text-white shadow-2xs' : 'text-muted hover:text-primary-text'"
+            @click="inputMode = 'text'"
+          >
+            粘贴 SQL 文本
+          </button>
+          <button
+            type="button"
+            class="h-6 px-3 rounded text-xs font-medium transition-colors cursor-pointer"
+            :class="inputMode === 'file' ? 'bg-primary text-white shadow-2xs' : 'text-muted hover:text-primary-text'"
+            @click="inputMode = 'file'"
+          >
+            上传 .sql 文件
+          </button>
+        </div>
       </div>
 
       <!-- Text Mode -->
-      <div v-if="inputMode === 'text'" class="input-area">
-        <el-input
+      <div v-if="inputMode === 'text'" class="flex flex-col gap-2">
+        <textarea
           v-model="sqlText"
-          type="textarea"
-          :rows="8"
-          placeholder="在此粘贴 CREATE TABLE 及 COMMENT 语句...
-例如 (达梦 DM8)：
-CREATE TABLE &quot;SYS_USER&quot; (
-    &quot;USER_ID&quot; NUMBER(10, 0) NOT NULL,
-    &quot;USER_NAME&quot; VARCHAR2(50) NOT NULL,
-    &quot;CREATE_TIME&quot; DATETIME
-);
-COMMENT ON TABLE &quot;SYS_USER&quot; IS '系统用户表';
-COMMENT ON COLUMN &quot;SYS_USER&quot;.&quot;USER_ID&quot; IS '用户ID';"
-          class="sql-textarea"
-        />
-        <div class="textarea-actions">
-          <el-button type="default" size="small" @click="loadSampleSql">加载达梦示例 SQL</el-button>
-          <el-button type="primary" size="small" :loading="parsing" @click="handleParseText">
+          rows="7"
+          placeholder="在此粘贴 CREATE TABLE 及 COMMENT 语句..."
+          class="w-full p-2.5 rounded-md bg-surface-subtle border border-border text-primary-text placeholder:text-muted/50 font-mono text-xs leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary resize-y"
+        ></textarea>
+        <div class="flex items-center justify-between">
+          <Button variant="outline" size="sm" @click="loadSampleSql">
+            加载达梦示例 SQL
+          </Button>
+          <Button variant="primary" size="sm" :loading="parsing" @click="handleParseText">
             解析 DDL
-          </el-button>
+          </Button>
         </div>
       </div>
 
       <!-- File Mode -->
-      <div v-else class="upload-area">
-        <el-upload
-          drag
-          action="#"
-          :auto-upload="false"
-          :show-file-list="false"
-          accept=".sql,.txt"
-          :on-change="handleFileChange"
+      <div v-else class="flex flex-col gap-2">
+        <div
+          class="border-2 border-dashed border-border hover:border-primary/60 rounded-xl p-8 flex flex-col items-center justify-center gap-2.5 bg-surface-subtle/50 hover:bg-surface-subtle transition-colors cursor-pointer text-center"
+          @click="triggerFileInput"
+          @dragover.prevent
+          @drop.prevent="handleFileDrop"
         >
-          <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-          <div class="el-upload__text">
-            将 <em>.sql 文件</em> 拖到此处，或 <em>点击上传</em>
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept=".sql,.txt"
+            class="hidden"
+            @change="handleFileInputChange"
+          />
+          <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <Upload class="w-5 h-5" />
           </div>
-          <template #tip>
-            <div class="el-upload__tip">
-              支持达梦、MySQL、PostgreSQL 导出的建表 DDL 文件 (UTF-8 编码)
-            </div>
-          </template>
-        </el-upload>
+          <div>
+            <span class="text-xs font-medium text-primary-text">点击选择文件</span>
+            <span class="text-xs text-muted"> 或将 .sql 文件拖拽至此处</span>
+          </div>
+          <span class="text-[11px] text-muted">
+            支持达梦、MySQL、PostgreSQL 导出的建表 DDL 文件 (UTF-8 编码)
+          </span>
+        </div>
       </div>
 
       <!-- Parsed Preview -->
-      <div v-if="parsedTables.length > 0" class="preview-section">
-        <div class="preview-header">
-          <div class="preview-title-box">
-            <span class="preview-title">解析结果预览 (共 {{ parsedTables.length }} 张表)</span>
-            <span class="preview-sub-tip">已在画布中的表已默认勾选，取消勾选将同步删除画布表及关联映射</span>
+      <div v-if="parsedTables.length > 0" class="flex flex-col gap-2.5 mt-1">
+        <div class="flex items-center justify-between">
+          <div class="flex flex-col gap-0.5">
+            <span class="text-xs font-semibold text-primary-text">
+              解析结果预览 (共 {{ parsedTables.length }} 张表)
+            </span>
+            <span class="text-[11px] text-muted">
+              已在画布中的表已默认勾选，取消勾选将同步删除画布表及关联映射
+            </span>
           </div>
-          <el-button
-            type="primary"
-            size="small"
+          <Button
+            variant="primary"
+            size="sm"
             :loading="importing"
             @click="handleImportSelected"
           >
             {{ newTablesCount > 0 ? `确认导入新表 (${newTablesCount})` : `确认增量同步 (${selectedTables.length})` }}
-          </el-button>
+          </Button>
         </div>
 
-        <el-table
-          ref="tableRef"
-          :data="parsedTables"
-          border
-          size="small"
-          max-height="260"
-          row-key="table_name"
-          @select="handleRowSelect"
-          @select-all="handleSelectAll"
-        >
-          <el-table-column type="selection" width="45" align="center" />
-          <el-table-column prop="table_name" label="表英文名" min-width="140" />
-          <el-table-column prop="table_comment" label="表中文注释" min-width="150">
-            <template #default="{ row }">
-              <span v-if="row.table_comment">{{ row.table_comment }}</span>
-              <span v-else class="text-gray">无注释</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="包含字段数" width="90" align="center">
-            <template #default="{ row }">
-              <el-tag size="small" type="success">{{ row.columns?.length || 0 }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="当前画布状态" width="110" align="center">
-            <template #default="{ row }">
-              <el-tag v-if="isTableInCanvas(row.table_name)" type="success" size="small" effect="light">
-                已在画布
-              </el-tag>
-              <el-tag v-else type="info" size="small" effect="plain">
-                未添加
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="字段概览" min-width="180" show-overflow-tooltip>
-            <template #default="{ row }">
-              {{ row.columns?.map((c: any) => c.column_name).join(', ') }}
-            </template>
-          </el-table-column>
-        </el-table>
+        <div class="border border-border rounded-lg overflow-hidden max-h-[260px] overflow-y-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-surface-subtle sticky top-0 border-b border-border text-muted font-medium select-none z-10">
+              <tr>
+                <th class="w-10 px-3 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    :checked="isAllSelected"
+                    class="rounded border-border text-primary focus:ring-primary cursor-pointer"
+                    @change="toggleSelectAll"
+                  />
+                </th>
+                <th class="px-3 py-2 font-semibold">表英文名</th>
+                <th class="px-3 py-2 font-semibold">表中文注释</th>
+                <th class="w-24 px-3 py-2 text-center font-semibold">包含字段数</th>
+                <th class="w-24 px-3 py-2 text-center font-semibold">当前画布状态</th>
+                <th class="px-3 py-2 font-semibold">字段概览</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border/40">
+              <tr
+                v-for="row in parsedTables"
+                :key="row.table_name"
+                class="hover:bg-surface-hover transition-colors"
+              >
+                <td class="px-3 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    :checked="isRowSelected(row.table_name)"
+                    class="rounded border-border text-primary focus:ring-primary cursor-pointer"
+                    @change="toggleRowSelection(row)"
+                  />
+                </td>
+                <td class="px-3 py-2 font-mono font-medium text-primary-text">
+                  {{ row.table_name }}
+                </td>
+                <td class="px-3 py-2 text-muted truncate max-w-[140px]">
+                  {{ row.table_comment || '无注释' }}
+                </td>
+                <td class="px-3 py-2 text-center">
+                  <Badge variant="success">{{ row.columns?.length || 0 }}</Badge>
+                </td>
+                <td class="px-3 py-2 text-center">
+                  <Badge v-if="isTableInCanvas(row.table_name)" variant="primary">已在画布</Badge>
+                  <Badge v-else variant="secondary">未添加</Badge>
+                </td>
+                <td class="px-3 py-2 text-muted font-mono text-[11px] truncate max-w-[180px]">
+                  {{ row.columns?.map((c: any) => c.column_name).join(', ') }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
-  </el-dialog>
+
+    <template #footer>
+      <Button variant="ghost" @click="visible = false">关闭</Button>
+    </template>
+  </Dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed } from 'vue'
 import { api } from '@/api'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
-import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
-import { DocumentAdd, UploadFilled } from '@element-plus/icons-vue'
+import { toast, confirmDialog } from '@/utils/toast'
+import { Dialog, Select, Button, Badge } from '@/components/ui'
+import { Upload } from 'lucide-vue-next'
 import type { ParsedTable } from '@/types'
 
 const visible = ref(false)
@@ -156,12 +186,18 @@ const parsing = ref(false)
 const importing = ref(false)
 const parsedTables = ref<ParsedTable[]>([])
 const selectedTables = ref<ParsedTable[]>([])
-const tableRef = ref<any>(null)
+const fileInputRef = ref<HTMLInputElement | null>(null)
 
 const projectStore = useProjectStore()
 const canvasStore = useCanvasStore()
 
-// Check if table is currently on canvas
+const dialectOptions = [
+  { label: '达梦数据库 (DM8/DM7)', value: 'dm' },
+  { label: 'MySQL 5.7 / 8.0', value: 'mysql' },
+  { label: 'PostgreSQL', value: 'postgres' },
+  { label: 'Oracle', value: 'oracle' },
+]
+
 const isTableInCanvas = (tableName: string): boolean => {
   if (!projectStore.currentProject?.tables) return false
   return projectStore.currentProject.tables.some(
@@ -169,14 +205,137 @@ const isTableInCanvas = (tableName: string): boolean => {
   )
 }
 
+const isRowSelected = (tableName: string): boolean => {
+  return selectedTables.value.some(t => t.table_name.toUpperCase() === tableName.toUpperCase())
+}
+
 const newTablesCount = computed(() => {
   return selectedTables.value.filter(t => !isTableInCanvas(t.table_name)).length
 })
+
+const isAllSelected = computed(() => {
+  if (parsedTables.value.length === 0) return false
+  return parsedTables.value.every(t => isRowSelected(t.table_name))
+})
+
+const toggleSelectAll = async () => {
+  if (isAllSelected.value) {
+    // Uncheck all with confirmation if existing tables in canvas
+    const existingTablesInList = parsedTables.value.filter(row => isTableInCanvas(row.table_name))
+    if (existingTablesInList.length > 0) {
+      const confirmed = await confirmDialog({
+        title: '批量同步删除确认',
+        message: `取消全选包含 ${existingTablesInList.length} 张已存在于画布中的数据表。\n\n取消全选将从画布中同步删除这些表及其关联连线，确定要全部删除吗？`,
+        confirmText: '确定全部删除',
+        variant: 'danger',
+      })
+
+      if (!confirmed) return
+
+      for (const row of existingTablesInList) {
+        const t = projectStore.currentProject?.tables?.find(
+          et => et.table_name.toUpperCase() === row.table_name.toUpperCase()
+        )
+        if (t) {
+          await api.deleteTable(t.id)
+        }
+      }
+      toast.success(`已从画布批量删除 ${existingTablesInList.length} 张表`)
+
+      if (projectStore.currentProject) {
+        await projectStore.selectProject(projectStore.currentProject.id)
+        canvasStore.syncFromProject(
+          projectStore.currentProject.tables,
+          projectStore.currentProject.mappings
+        )
+      }
+    }
+    selectedTables.value = []
+  } else {
+    selectedTables.value = [...parsedTables.value]
+  }
+}
+
+const toggleRowSelection = async (row: ParsedTable) => {
+  const isChecked = isRowSelected(row.table_name)
+  if (isChecked) {
+    // User unchecking
+    const existingTable = projectStore.currentProject?.tables?.find(
+      t => t.table_name.toUpperCase() === row.table_name.toUpperCase()
+    )
+
+    if (existingTable) {
+      const confirmed = await confirmDialog({
+        title: '同步删除确认',
+        message: `数据表「${row.table_name}」已存在于当前项目画布中。\n\n取消勾选将从画布中同步删除该表及其所有的字段映射连线清单，确定要删除吗？`,
+        confirmText: '确定删除',
+        variant: 'danger',
+      })
+
+      if (!confirmed) return
+
+      await api.deleteTable(existingTable.id)
+      toast.success(`已从画布同步删除表「${row.table_name}」及关联映射`)
+
+      if (projectStore.currentProject) {
+        await projectStore.selectProject(projectStore.currentProject.id)
+        canvasStore.syncFromProject(
+          projectStore.currentProject.tables,
+          projectStore.currentProject.mappings
+        )
+      }
+    }
+
+    selectedTables.value = selectedTables.value.filter(
+      t => t.table_name.toUpperCase() !== row.table_name.toUpperCase()
+    )
+  } else {
+    selectedTables.value.push(row)
+  }
+}
 
 const open = () => {
   visible.value = true
   if (!sqlText.value) {
     loadSampleSql()
+  }
+}
+
+const triggerFileInput = () => {
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+    fileInputRef.value.click()
+  }
+}
+
+const handleFileInputChange = (e: Event) => {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) parseFile(file)
+}
+
+const handleFileDrop = (e: DragEvent) => {
+  const file = e.dataTransfer?.files?.[0]
+  if (file) parseFile(file)
+}
+
+const parseFile = async (file: File) => {
+  parsing.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('dialect', dialect.value)
+    const list = await api.parseDdlFile(formData)
+    if (list.length === 0) {
+      toast.warning('未能识别出 CREATE TABLE 语句')
+    } else {
+      syncTableSelections(list)
+      toast.success(`成功解析出 ${list.length} 张表`)
+    }
+  } catch (err: any) {
+    toast.error('文件解析失败: ' + (err.message || '网络错误'))
+  } finally {
+    parsing.value = false
   }
 }
 
@@ -219,31 +378,22 @@ COMMENT ON COLUMN "DWD_DIM_USER"."CREATED_AT" IS '维度同步时间';`
 
 const syncTableSelections = (list: ParsedTable[]) => {
   parsedTables.value = list
-  nextTick(() => {
-    tableRef.value?.clearSelection()
-    const preselected: ParsedTable[] = []
-    list.forEach(row => {
-      // If table is on canvas, pre-check it
-      if (isTableInCanvas(row.table_name)) {
-        tableRef.value?.toggleRowSelection(row, true)
-        preselected.push(row)
-      }
-    })
-    // If none are on canvas yet, select all by default
-    if (preselected.length === 0) {
-      list.forEach(row => {
-        tableRef.value?.toggleRowSelection(row, true)
-      })
-      selectedTables.value = [...list]
-    } else {
-      selectedTables.value = preselected
+  const preselected: ParsedTable[] = []
+  list.forEach(row => {
+    if (isTableInCanvas(row.table_name)) {
+      preselected.push(row)
     }
   })
+  if (preselected.length === 0) {
+    selectedTables.value = [...list]
+  } else {
+    selectedTables.value = preselected
+  }
 }
 
 const handleParseText = async () => {
   if (!sqlText.value.trim()) {
-    ElMessage.warning('请输入 SQL 语句')
+    toast.warning('请输入 SQL 语句')
     return
   }
   parsing.value = true
@@ -253,145 +403,25 @@ const handleParseText = async () => {
       dialect: dialect.value,
     })
     if (list.length === 0) {
-      ElMessage.warning('未能识别出 CREATE TABLE 语句，请检查 SQL 语法')
+      toast.warning('未能识别出 CREATE TABLE 语句，请检查 SQL 语法')
     } else {
       syncTableSelections(list)
-      ElMessage.success(`成功解析出 ${list.length} 张表`)
+      toast.success(`成功解析出 ${list.length} 张表`)
     }
   } catch (err: any) {
-    ElMessage.error('解析失败: ' + (err.message || '网络错误'))
+    toast.error('解析失败: ' + (err.message || '网络错误'))
   } finally {
     parsing.value = false
   }
-}
-
-const handleFileChange = async (file: any) => {
-  if (!file.raw) return
-  parsing.value = true
-  try {
-    const formData = new FormData()
-    formData.append('file', file.raw)
-    formData.append('dialect', dialect.value)
-    const list = await api.parseDdlFile(formData)
-    if (list.length === 0) {
-      ElMessage.warning('未能识别出 CREATE TABLE 语句')
-    } else {
-      syncTableSelections(list)
-      ElMessage.success(`成功解析出 ${list.length} 张表`)
-    }
-  } catch (err: any) {
-    ElMessage.error('文件解析失败: ' + (err.message || '网络错误'))
-  } finally {
-    parsing.value = false
-  }
-}
-
-// Handle unchecking an individual row with confirmation
-const handleRowSelect = async (selection: ParsedTable[], row: ParsedTable) => {
-  const isChecked = selection.some(item => item.table_name.toUpperCase() === row.table_name.toUpperCase())
-
-  if (!isChecked) {
-    // User UNCHECKED row: Check if table is currently on canvas
-    const existingTable = projectStore.currentProject?.tables?.find(
-      t => t.table_name.toUpperCase() === row.table_name.toUpperCase()
-    )
-
-    if (existingTable) {
-      try {
-        await ElMessageBox.confirm(
-          `数据表「${row.table_name}」已存在于当前项目画布中。\n\n取消勾选将从画布中同步删除该表及其所有的字段映射连线清单，确定要删除吗？`,
-          '同步删除确认',
-          {
-            confirmButtonText: '确定删除',
-            cancelButtonText: '取消',
-            type: 'warning',
-            distinguishCancelAndClose: true,
-          }
-        )
-
-        // Confirmed deletion
-        await api.deleteTable(existingTable.id)
-        ElMessage.success(`已从画布同步删除表「${row.table_name}」及关联映射`)
-
-        if (projectStore.currentProject) {
-          await projectStore.selectProject(projectStore.currentProject.id)
-          canvasStore.syncFromProject(
-            projectStore.currentProject.tables,
-            projectStore.currentProject.mappings
-          )
-        }
-        selectedTables.value = selection
-      } catch (action) {
-        // Cancelled: Revert checkbox selection!
-        tableRef.value?.toggleRowSelection(row, true)
-        if (!selectedTables.value.some(item => item.table_name.toUpperCase() === row.table_name.toUpperCase())) {
-          selectedTables.value.push(row)
-        }
-      }
-      return
-    }
-  }
-
-  selectedTables.value = selection
-}
-
-// Handle unchecking all with confirmation
-const handleSelectAll = async (selection: ParsedTable[]) => {
-  const isAllChecked = selection.length > 0
-  if (!isAllChecked) {
-    const existingTablesInList = parsedTables.value.filter(row => isTableInCanvas(row.table_name))
-    if (existingTablesInList.length > 0) {
-      try {
-        await ElMessageBox.confirm(
-          `取消全选包含 ${existingTablesInList.length} 张已存在于画布中的数据表。\n\n取消全选将从画布中同步删除这些表及其关联连线，确定要全部删除吗？`,
-          '批量同步删除确认',
-          {
-            confirmButtonText: '确定全部删除',
-            cancelButtonText: '取消',
-            type: 'warning',
-          }
-        )
-
-        for (const row of existingTablesInList) {
-          const t = projectStore.currentProject?.tables?.find(
-            et => et.table_name.toUpperCase() === row.table_name.toUpperCase()
-          )
-          if (t) {
-            await api.deleteTable(t.id)
-          }
-        }
-        ElMessage.success(`已从画布批量删除 ${existingTablesInList.length} 张表`)
-
-        if (projectStore.currentProject) {
-          await projectStore.selectProject(projectStore.currentProject.id)
-          canvasStore.syncFromProject(
-            projectStore.currentProject.tables,
-            projectStore.currentProject.mappings
-          )
-        }
-        selectedTables.value = []
-      } catch {
-        // Cancelled: revert
-        nextTick(() => {
-          existingTablesInList.forEach(row => {
-            tableRef.value?.toggleRowSelection(row, true)
-          })
-          selectedTables.value = existingTablesInList
-        })
-      }
-      return
-    }
-  }
-  selectedTables.value = selection
 }
 
 const handleImportSelected = async () => {
   if (selectedTables.value.length === 0) {
-    ElMessage.warning('请勾选至少一张表')
+    toast.warning('请勾选至少一张表')
     return
   }
   if (!projectStore.currentProject) {
-    ElMessage.warning('请先选择或创建一个项目')
+    toast.warning('请先选择或创建一个项目')
     return
   }
 
@@ -404,17 +434,12 @@ const handleImportSelected = async () => {
     )
 
     if (res.summary?.message) {
-      ElNotification.success({
-        title: '表结构同步完成',
-        message: res.summary.message,
-        duration: 6000,
-      })
+      toast.success('表结构同步完成', { description: res.summary.message })
     } else {
-      ElMessage.success('导入完成')
+      toast.success('导入完成')
     }
     visible.value = false
 
-    // Refresh project details & canvas
     await projectStore.selectProject(projectStore.currentProject.id)
     if (projectStore.currentProject) {
       if (canvasStore.currentCanvasId) {
@@ -426,7 +451,7 @@ const handleImportSelected = async () => {
     }
     emit('imported')
   } catch (err: any) {
-    ElMessage.error('导入失败: ' + (err.message || '网络错误'))
+    toast.error('导入失败: ' + (err.message || '网络错误'))
   } finally {
     importing.value = false
   }
@@ -434,89 +459,3 @@ const handleImportSelected = async () => {
 
 defineExpose({ open })
 </script>
-
-<style scoped>
-.dialog-body {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.config-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: var(--cl-surface-subtle);
-  border-radius: 6px;
-  border: 1px solid var(--cl-border);
-}
-
-.config-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.label {
-  font-size: 13px;
-  color: var(--cl-text-secondary);
-  font-weight: 500;
-}
-
-.input-area {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sql-textarea :deep(textarea) {
-  font-family: var(--cl-font-mono) !important;
-  font-size: 12px;
-  background: var(--cl-surface-subtle);
-  color: var(--cl-text-primary);
-  line-height: 1.5;
-  border-radius: 6px;
-  border: 1px solid var(--cl-border);
-}
-
-.textarea-actions {
-  display: flex;
-  justify-content: space-between;
-}
-
-.preview-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.preview-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.preview-title-box {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.preview-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--cl-text-primary);
-}
-
-.preview-sub-tip {
-  font-size: 11px;
-  color: var(--cl-text-muted);
-}
-
-.text-gray {
-  color: var(--cl-text-faint);
-  font-size: 12px;
-}
-</style>
