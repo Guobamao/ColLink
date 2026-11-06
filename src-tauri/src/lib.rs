@@ -64,6 +64,11 @@ pub fn run() {
             commands::exporter::export_excel,
             commands::exporter::export_project_json,
             commands::exporter::restore_project_json,
+            // Window Controls
+            commands::window::window_minimize,
+            commands::window::window_toggle_maximize,
+            commands::window::window_close,
+            commands::window::window_is_maximized,
         ])
         .run(tauri::generate_context!())
         .expect("error while building tauri application");

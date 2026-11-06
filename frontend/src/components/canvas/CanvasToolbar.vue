@@ -291,6 +291,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
 import { useProjectStore } from '@/stores/projectStore'
 import { useCanvasStore } from '@/stores/canvasStore'
 import { useThemeStore } from '@/stores/themeStore'
@@ -345,39 +346,51 @@ const themeStore = useThemeStore()
 // Tauri Frameless Window Controls
 const isTauri = typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
 const isMaximized = ref(false)
-let appWindow: any = null
 
 onMounted(async () => {
   if (isTauri) {
     try {
+      isMaximized.value = await invoke<boolean>('window_is_maximized')
+      window.addEventListener('resize', async () => {
+        try {
+          isMaximized.value = await invoke<boolean>('window_is_maximized')
+        } catch (_) {}
+      })
       const { getCurrentWindow } = await import('@tauri-apps/api/window')
-      appWindow = getCurrentWindow()
-      isMaximized.value = await appWindow.isMaximized()
+      const appWindow = getCurrentWindow()
       await appWindow.onResized(async () => {
-        isMaximized.value = await appWindow.isMaximized()
+        try {
+          isMaximized.value = await invoke<boolean>('window_is_maximized')
+        } catch (_) {}
       })
     } catch (e) {
-      console.warn('Tauri window API not available:', e)
+      console.warn('Tauri window API init:', e)
     }
   }
 })
 
 const handleMinimize = async () => {
-  if (appWindow) {
-    await appWindow.minimize()
+  try {
+    await invoke('window_minimize')
+  } catch (e) {
+    console.error('Failed to minimize window:', e)
   }
 }
 
 const handleToggleMaximize = async () => {
-  if (appWindow) {
-    await appWindow.toggleMaximize()
-    isMaximized.value = await appWindow.isMaximized()
+  try {
+    const res = await invoke<boolean>('window_toggle_maximize')
+    isMaximized.value = res
+  } catch (e) {
+    console.error('Failed to toggle maximize window:', e)
   }
 }
 
 const handleClose = async () => {
-  if (appWindow) {
-    await appWindow.close()
+  try {
+    await invoke('window_close')
+  } catch (e) {
+    console.error('Failed to close window:', e)
   }
 }
 
