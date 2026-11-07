@@ -18,11 +18,9 @@ export const useProjectStore = defineStore('project', () => {
       projects.value = list
       if (!currentProject.value && list.length > 0) {
         const savedProjectId = localStorage.getItem(LAST_PROJECT_STORAGE_KEY)
-        const targetProject = savedProjectId && list.find(p => p.id === savedProjectId)
+        const targetProject = (savedProjectId && list.find(p => p.id === savedProjectId)) || list[0]
         if (targetProject) {
           await selectProject(targetProject.id)
-        } else {
-          await selectProject(list[0].id)
         }
       }
     } catch (err: any) {
