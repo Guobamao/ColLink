@@ -687,17 +687,17 @@ const handleExportImage = async () => {
   border-color: var(--cl-border-active) !important;
 }
 
-/* Canvas Grab & Grabbing Cursors (Classic White Glove with Sharp Black Border) */
+/* Canvas Grab & Grabbing Cursors */
 :deep(.vue-flow__pane),
 :deep(.canvas-minimap .vue-flow__minimap-mask) {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23ffffff' stroke='%23000000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15'/%3E%3C/svg%3E") 8 8, grab !important;
+  cursor: grab !important;
 }
 
 :deep(.vue-flow__pane.dragging),
 :deep(.vue-flow__pane:active),
 :deep(.canvas-minimap.dragging .vue-flow__minimap-mask),
 :deep(.canvas-minimap .vue-flow__minimap-mask:active) {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='%23ffffff' stroke='%23000000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 12V5a2 2 0 0 0-4 0v7M14 12V3a2 2 0 0 0-4 0v9M10 12V4a2 2 0 0 0-4 0v8M6 12v1a6 6 0 0 0 6 6h2a6 6 0 0 0 6-6v-3a2 2 0 0 0-4 0v3'/%3E%3C/svg%3E") 8 8, grabbing !important;
+  cursor: grabbing !important;
 }
 
 :deep(.canvas-minimap .vue-flow__minimap-node) {
