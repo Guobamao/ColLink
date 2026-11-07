@@ -26,11 +26,11 @@
           <template #trigger>
             <button
               type="button"
-              class="group flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text transition-all duration-150 cursor-pointer shadow-2xs max-w-[200px]"
+              class="group flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text transition-all duration-150 cursor-pointer shadow-2xs max-w-[200px] shrink-0"
               title="切换或管理项目空间"
             >
               <FolderGit2 class="w-3.5 h-3.5 text-primary shrink-0" />
-              <span class="truncate text-xs font-medium font-sans flex-1 text-left">
+              <span class="truncate text-xs font-medium font-sans flex-1 text-left whitespace-nowrap">
                 {{ projectStore.currentProject?.name || '选择项目空间...' }}
               </span>
               <ChevronDown class="w-3 h-3 text-muted group-hover:text-primary-text transition-transform duration-200 shrink-0" />
@@ -109,11 +109,11 @@
     </div>
 
     <!-- Center: Global Quick Command Search & Canvas Layout Operations -->
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 shrink-0">
       <!-- Quick Command Palette Trigger (Ctrl+K) -->
       <button
         type="button"
-        class="group flex items-center justify-between w-60 h-7 px-2 rounded-md border border-border bg-surface-subtle hover:bg-surface-hover text-muted hover:text-primary-text transition-all duration-100 cursor-pointer shadow-2xs text-[11px]"
+        class="group flex items-center justify-between w-48 sm:w-56 md:w-60 h-7 px-2 rounded-md border border-border bg-surface-subtle hover:bg-surface-hover text-muted hover:text-primary-text transition-all duration-100 cursor-pointer shadow-2xs text-[11px] whitespace-nowrap shrink-0"
         title="唤起全局命令中心 (快捷键: Ctrl+K)"
         @click="emit('open-command-palette')"
       >
@@ -128,129 +128,144 @@
 
       <div class="w-px h-3.5 bg-border mx-1"></div>
 
-      <!-- Import Structure Dropdown -->
-      <Dropdown align="start">
-        <template #trigger>
+      <!-- Import Structure Dropdown (Compact Icon-Only with Tooltip) -->
+      <Tooltip content="导入表结构 (DDL 脚本解析 / 数据库在线探查)" side="bottom">
+        <div>
+          <Dropdown align="start">
+            <template #trigger>
+              <button
+                type="button"
+                class="h-7 px-2 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-medium flex items-center gap-1 shadow-2xs transition-colors cursor-pointer shrink-0"
+                aria-label="导入表结构"
+              >
+                <Plus class="w-3.5 h-3.5 shrink-0" />
+                <ChevronDown class="w-2.5 h-2.5 opacity-80 shrink-0" />
+              </button>
+            </template>
+            <DropdownItem @select="handleImportCommand('ddl')">
+              <FileCode class="w-4 h-4 text-primary mr-2" />
+              <span class="text-xs">DDL 脚本解析导入</span>
+            </DropdownItem>
+            <DropdownItem @select="handleImportCommand('db')">
+              <Database class="w-4 h-4 text-primary mr-2" />
+              <span class="text-xs">连接数据库在线探查</span>
+            </DropdownItem>
+          </Dropdown>
+        </div>
+      </Tooltip>
+
+      <!-- Layout & View Fit Segmented Control (Compact Icon-Only with Tooltips) -->
+      <div class="flex items-center p-0.5 rounded-md border border-border bg-surface-subtle shrink-0">
+        <Tooltip content="DAG 有向分层拓扑智能排版 (从左至右)" side="bottom">
           <button
             type="button"
-            class="h-7 px-2.5 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-medium flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+            class="w-7 h-6 flex items-center justify-center rounded text-muted hover:text-primary-text hover:bg-surface transition-colors cursor-pointer"
+            aria-label="自动排版"
+            @click="handleAutoLayout"
           >
-            <Plus class="w-3.5 h-3.5 shrink-0" />
-            <span>导入表结构</span>
-            <ChevronDown class="w-3 h-3 opacity-80 shrink-0" />
+            <LayoutDashboard class="w-3.5 h-3.5 shrink-0" />
           </button>
-        </template>
-        <DropdownItem @select="handleImportCommand('ddl')">
-          <FileCode class="w-4 h-4 text-primary mr-2" />
-          <span class="text-xs">DDL 脚本解析导入</span>
-        </DropdownItem>
-        <DropdownItem @select="handleImportCommand('db')">
-          <Database class="w-4 h-4 text-primary mr-2" />
-          <span class="text-xs">连接数据库在线探查</span>
-        </DropdownItem>
-      </Dropdown>
-
-      <!-- Layout & View Fit Segmented Control -->
-      <div class="flex items-center p-0.5 rounded-md border border-border bg-surface-subtle">
-        <button
-          type="button"
-          class="h-6 px-2 rounded flex items-center gap-1 text-[11px] text-muted hover:text-primary-text hover:bg-surface transition-colors"
-          title="DAG 有向分层拓扑智能排版 (从左至右)"
-          @click="handleAutoLayout"
-        >
-          <LayoutDashboard class="w-3.5 h-3.5 shrink-0" />
-          <span>自动排版</span>
-        </button>
+        </Tooltip>
         <div class="w-px h-3 bg-border my-auto"></div>
-        <button
-          type="button"
-          class="h-6 px-2 rounded flex items-center gap-1 text-[11px] text-muted hover:text-primary-text hover:bg-surface transition-colors"
-          title="自动缩放平移以完整容纳所有节点"
-          @click="emit('fit-view')"
-        >
-          <Maximize2 class="w-3.5 h-3.5 shrink-0" />
-          <span>适应画布</span>
-        </button>
+        <Tooltip content="自动缩放平移以完整容纳所有节点 (Fit View)" side="bottom">
+          <button
+            type="button"
+            class="w-7 h-6 flex items-center justify-center rounded text-muted hover:text-primary-text hover:bg-surface transition-colors cursor-pointer"
+            aria-label="适应画布"
+            @click="emit('fit-view')"
+          >
+            <Maximize2 class="w-3.5 h-3.5 shrink-0" />
+          </button>
+        </Tooltip>
       </div>
     </div>
 
     <!-- Right: Automation, Deliverables & Theme -->
     <div class="flex items-center gap-1.5 shrink-0">
       <!-- 智能自动连线 -->
-      <button
-        type="button"
-        class="h-7 px-2 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors"
-        title="基于字段同名与中文语义自动匹配连线"
-        @click="emit('open-auto-mapping')"
-      >
-        <Sparkles class="w-3.5 h-3.5 text-primary shrink-0" />
-        <span>智能连线</span>
-      </button>
+      <Tooltip content="智能自动连线 (基于字段同名与语义)" side="bottom">
+        <button
+          type="button"
+          class="w-7 h-7 flex items-center justify-center rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text transition-colors cursor-pointer shrink-0"
+          aria-label="智能连线"
+          @click="emit('open-auto-mapping')"
+        >
+          <Sparkles class="w-3.5 h-3.5 text-primary shrink-0" />
+        </button>
+      </Tooltip>
 
       <!-- 关联路径探查 -->
-      <button
-        type="button"
-        class="h-7 px-2 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors"
-        title="计算两表间多跳关联路径与生成 SQL JOIN"
-        @click="emit('open-relation-path')"
-      >
-        <Route class="w-3.5 h-3.5 text-primary shrink-0" />
-        <span>路径探查</span>
-      </button>
+      <Tooltip content="两表多跳关联路径探查与 SQL JOIN 推导" side="bottom">
+        <button
+          type="button"
+          class="w-7 h-7 flex items-center justify-center rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text transition-colors cursor-pointer shrink-0"
+          aria-label="路径探查"
+          @click="emit('open-relation-path')"
+        >
+          <Route class="w-3.5 h-3.5 text-primary shrink-0" />
+        </button>
+      </Tooltip>
 
       <!-- Clear Lineage Highlight Filter (if active) -->
-      <button
-        v-if="canvasStore.highlightedNodeIds.size > 0"
-        type="button"
-        class="h-7 px-2 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center gap-1 text-xs font-medium transition-colors"
-        @click="canvasStore.clearHighlight()"
-      >
-        <XCircle class="w-3.5 h-3.5 shrink-0" />
-        <span>清除高亮</span>
-      </button>
+      <Tooltip content="清除血缘高亮聚焦" side="bottom">
+        <button
+          v-if="canvasStore.highlightedNodeIds.size > 0"
+          type="button"
+          class="h-7 px-2 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center gap-1 text-xs font-medium transition-colors cursor-pointer shrink-0"
+          @click="canvasStore.clearHighlight()"
+        >
+          <XCircle class="w-3.5 h-3.5 shrink-0" />
+          <span class="text-[11px] whitespace-nowrap">清除高亮</span>
+        </button>
+      </Tooltip>
 
       <!-- Mapping Review Drawer Button with Count Badge -->
-      <button
-        type="button"
-        class="h-7 px-2 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors"
-        title="查看当前项目所有已建立的字段映射连线"
-        @click="emit('open-mapping-drawer')"
-      >
-        <Link2 class="w-3.5 h-3.5 text-muted shrink-0" />
-        <span>映射</span>
-        <span class="px-1.5 py-0.2 text-[10px] font-mono rounded bg-primary-light text-primary font-semibold">
-          {{ canvasStore.edges.length }}
-        </span>
-      </button>
+      <Tooltip :content="`查看字段映射清单 (共 ${canvasStore.edges.length} 个映射)`" side="bottom">
+        <button
+          type="button"
+          class="h-7 px-2 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+          aria-label="字段映射清单"
+          @click="emit('open-mapping-drawer')"
+        >
+          <Link2 class="w-3.5 h-3.5 text-muted shrink-0" />
+          <span class="px-1.5 py-0.2 text-[10px] font-mono rounded bg-primary-light text-primary font-semibold">
+            {{ canvasStore.edges.length }}
+          </span>
+        </button>
+      </Tooltip>
 
       <div class="w-px h-3.5 bg-border mx-1"></div>
 
       <!-- Export Deliverables Dropdown -->
-      <Dropdown align="end">
-        <template #trigger>
-          <button
-            type="button"
-            class="h-7 px-2.5 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text flex items-center gap-1.5 text-xs font-medium transition-colors shadow-2xs cursor-pointer"
-          >
-            <Download class="w-3.5 h-3.5 text-muted shrink-0" />
-            <span>导出</span>
-            <ChevronDown class="w-3 h-3 text-muted shrink-0" />
-          </button>
-        </template>
-        <DropdownItem @select="handleExportCommand('excel')">
-          <FileSpreadsheet class="w-4 h-4 text-emerald-500 mr-2" />
-          <span class="text-xs">导出 Excel 映射清单 (.xlsx)</span>
-        </DropdownItem>
-        <DropdownItem @select="handleExportCommand('image')">
-          <Image class="w-4 h-4 text-blue-500 mr-2" />
-          <span class="text-xs">导出 2x 高清拓扑长图 (.png)</span>
-        </DropdownItem>
-        <DropdownSeparator />
-        <DropdownItem @select="handleExportCommand('backup')">
-          <Archive class="w-4 h-4 text-muted mr-2" />
-          <span class="text-xs">项目快照备份 / 迁移 (.json)</span>
-        </DropdownItem>
-      </Dropdown>
+      <Tooltip content="导出交付物 (Excel / 2x 高清图 / 项目快照)" side="bottom">
+        <div>
+          <Dropdown align="end">
+            <template #trigger>
+              <button
+                type="button"
+                class="h-7 px-2 rounded-md border border-border bg-surface hover:bg-surface-hover text-primary-text flex items-center gap-1 transition-colors shadow-2xs cursor-pointer shrink-0"
+                aria-label="导出交付物"
+              >
+                <Download class="w-3.5 h-3.5 text-muted shrink-0" />
+                <ChevronDown class="w-2.5 h-2.5 text-muted shrink-0" />
+              </button>
+            </template>
+            <DropdownItem @select="handleExportCommand('excel')">
+              <FileSpreadsheet class="w-4 h-4 text-emerald-500 mr-2" />
+              <span class="text-xs">导出 Excel 映射清单 (.xlsx)</span>
+            </DropdownItem>
+            <DropdownItem @select="handleExportCommand('image')">
+              <Image class="w-4 h-4 text-blue-500 mr-2" />
+              <span class="text-xs">导出 2x 高清拓扑长图 (.png)</span>
+            </DropdownItem>
+            <DropdownSeparator />
+            <DropdownItem @select="handleExportCommand('backup')">
+              <Archive class="w-4 h-4 text-muted mr-2" />
+              <span class="text-xs">项目快照备份 / 迁移 (.json)</span>
+            </DropdownItem>
+          </Dropdown>
+        </div>
+      </Tooltip>
 
       <div class="w-px h-3.5 bg-border mx-1"></div>
 

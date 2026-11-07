@@ -352,6 +352,14 @@ const edgePath = computed(() => {
 
   return pointsToRoundedSvgPath(rawPoints, 8)
 })
+
+const computedEdgeStyle = computed(() => {
+  const s = { ...(props.style || {}) }
+  if (!s.stroke || s.stroke === '#3b82f6' || s.stroke === '#2563eb') {
+    s.stroke = 'var(--cl-primary)'
+  }
+  return s
+})
 </script>
 
 <template>
@@ -366,7 +374,7 @@ const edgePath = computed(() => {
         markerHeight="6"
         orient="auto-start-reverse"
       >
-        <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#3B82F6" />
+        <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--cl-primary, #3B82F6)" />
       </marker>
     </defs>
     <!-- Background hit area for easy clicking and hover -->
@@ -386,7 +394,7 @@ const edgePath = computed(() => {
       :id="id"
       :d="edgePath"
       class="vue-flow__edge-path smart-obstacle-edge is-animated"
-      :style="style"
+      :style="computedEdgeStyle"
       marker-end="url(#collink-arrow-marker)"
     />
   </g>
@@ -421,6 +429,10 @@ const edgePath = computed(() => {
   stroke: var(--cl-primary-hover);
   stroke-width: 3px;
   filter: drop-shadow(0 0 6px var(--cl-accent-glow));
+}
+
+.smart-obstacle-edge-group:hover #collink-arrow-marker path {
+  fill: var(--cl-primary-hover);
 }
 
 @keyframes edgeDashFlow {

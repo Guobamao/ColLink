@@ -4,6 +4,8 @@ import { api } from '@/api'
 import type { Project } from '@/types'
 import { toast } from '@/utils/toast'
 
+const LAST_PROJECT_STORAGE_KEY = 'collink_last_project_id'
+
 export const useProjectStore = defineStore('project', () => {
   const projects = ref<Project[]>([])
   const currentProject = ref<Project | null>(null)
@@ -15,7 +17,13 @@ export const useProjectStore = defineStore('project', () => {
       const list = await api.getProjects()
       projects.value = list
       if (!currentProject.value && list.length > 0) {
-        await selectProject(list[0].id)
+        const savedProjectId = localStorage.getItem(LAST_PROJECT_STORAGE_KEY)
+        const targetProject = savedProjectId && list.find(p => p.id === savedProjectId)
+        if (targetProject) {
+          await selectProject(targetProject.id)
+        } else {
+          await selectProject(list[0].id)
+        }
       }
     } catch (err: any) {
       toast.error('获取项目列表失败: ' + (err.message || '网络错误'))
@@ -29,6 +37,7 @@ export const useProjectStore = defineStore('project', () => {
     try {
       const detail = await api.getProjectDetail(id)
       currentProject.value = detail
+      localStorage.setItem(LAST_PROJECT_STORAGE_KEY, id)
     } catch (err: any) {
       toast.error('加载项目详情失败: ' + (err.message || '网络错误'))
     } finally {
@@ -68,6 +77,9 @@ export const useProjectStore = defineStore('project', () => {
     try {
       await api.deleteProject(id)
       toast.success('删除项目成功')
+      if (localStorage.getItem(LAST_PROJECT_STORAGE_KEY) === id) {
+        localStorage.removeItem(LAST_PROJECT_STORAGE_KEY)
+      }
       currentProject.value = null
       await fetchProjects()
     } catch (err: any) {

@@ -147,6 +147,7 @@ export async function exportCanvasAsImage(options: ExportImageOptions): Promise<
 
   // 2. Clone visible lineage edge paths
   const edgePaths = Array.from(canvasWrapper.querySelectorAll('.smart-obstacle-edge, .vue-flow__edge-path'))
+  const primaryColor = (typeof window !== 'undefined' ? getComputedStyle(document.documentElement).getPropertyValue('--cl-primary').trim() : '') || '#2563EB'
   let edgesSvg = ''
   const seenPaths = new Set<string>()
 
@@ -154,7 +155,7 @@ export async function exportCanvasAsImage(options: ExportImageOptions): Promise<
     const d = p.getAttribute('d')
     if (d && d.length > 5 && !seenPaths.has(d)) {
       seenPaths.add(d)
-      edgesSvg += `<path d="${d}" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#collink-arrow)" />\n`
+      edgesSvg += `<path d="${d}" fill="none" stroke="${primaryColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#collink-arrow)" />\n`
     }
   })
 
@@ -239,7 +240,7 @@ export async function exportCanvasAsImage(options: ExportImageOptions): Promise<
     <svg xmlns="http://www.w3.org/2000/svg" width="${exportWidth}" height="${exportHeight}" viewBox="0 0 ${exportWidth} ${exportHeight}">
       <defs>
         <marker id="collink-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#2563EB" />
+          <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="${primaryColor}" />
         </marker>
       </defs>
       

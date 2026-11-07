@@ -427,7 +427,7 @@ const handleExportImage = async () => {
     e.hidden = false
     e.animated = false
     e.style = {
-      stroke: '#3b82f6',
+      stroke: 'var(--cl-primary, #3b82f6)',
       strokeWidth: 2,
     }
   })

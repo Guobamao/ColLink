@@ -232,7 +232,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           label,
         },
         style: {
-          stroke: '#3b82f6',
+          stroke: 'var(--cl-primary, #3b82f6)',
           strokeWidth: 2,
         },
       }
@@ -343,7 +343,7 @@ export const useCanvasStore = defineStore('canvas', () => {
         e.animated = true
         e.type = 'smartObstacle'
         e.style = {
-          stroke: '#3b82f6',
+          stroke: 'var(--cl-primary, #3b82f6)',
           strokeWidth: 2,
         }
         if (e.data?.sourceColumnId) matchedCols.add(e.data.sourceColumnId)
@@ -437,7 +437,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           label,
         },
         style: {
-          stroke: '#3b82f6',
+          stroke: 'var(--cl-primary, #3b82f6)',
           strokeWidth: 2,
         },
       }
@@ -503,7 +503,7 @@ export const useCanvasStore = defineStore('canvas', () => {
             targetColumnId: m.target_column_id,
           },
           style: {
-            stroke: '#3b82f6',
+            stroke: 'var(--cl-primary, #3b82f6)',
             strokeWidth: 2,
           },
         }
@@ -908,7 +908,7 @@ export const useCanvasStore = defineStore('canvas', () => {
           e.hidden = false
           e.animated = true
           e.style = {
-            stroke: '#2563eb',
+            stroke: 'var(--cl-primary, #2563eb)',
             strokeWidth: 3,
           }
         }
@@ -965,17 +965,33 @@ export const useCanvasStore = defineStore('canvas', () => {
     try {
       const list = await api.getCanvases(projectId)
       canvases.value = list
-      if (list.length > 0 && (autoSelectFirst || !currentCanvasId.value || !list.some(c => c.id === currentCanvasId.value))) {
-        await switchCanvas(list[0].id)
+      if (list.length > 0) {
+        const savedCanvasKey = `collink_last_canvas_id_${projectId}`
+        const savedCanvasId = localStorage.getItem(savedCanvasKey)
+        const targetCanvas = savedCanvasId && list.find(c => c.id === savedCanvasId)
+
+        if (targetCanvas) {
+          await switchCanvas(targetCanvas.id, projectId)
+        } else if (autoSelectFirst || !currentCanvasId.value || !list.some(c => c.id === currentCanvasId.value)) {
+          await switchCanvas(list[0].id, projectId)
+        }
       }
     } catch (e) {
       console.error('加载画布列表失败', e)
     }
   }
 
-  const switchCanvas = async (canvasId: string) => {
+  const switchCanvas = async (canvasId: string, projectId?: string) => {
     loadingCanvas.value = true
     currentCanvasId.value = canvasId
+    if (projectId) {
+      localStorage.setItem(`collink_last_canvas_id_${projectId}`, canvasId)
+    } else {
+      const cur = canvases.value.find(c => c.id === canvasId)
+      if (cur?.project_id) {
+        localStorage.setItem(`collink_last_canvas_id_${cur.project_id}`, canvasId)
+      }
+    }
     try {
       const detail = await api.getCanvasDetail(canvasId)
       syncFromProject(detail.tables, detail.mappings)
@@ -991,7 +1007,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       const created = await api.createCanvas(projectId, { name })
       toast.success('新建业务视图成功')
       await fetchCanvases(projectId, false)
-      await switchCanvas(created.id)
+      await switchCanvas(created.id, projectId)
       return created
     } catch (e: any) {
       toast.error('新建画布失败: ' + (e.message || '网络错误'))
@@ -1014,6 +1030,10 @@ export const useCanvasStore = defineStore('canvas', () => {
     try {
       await api.deleteCanvas(canvasId)
       toast.success('画布已删除')
+      const savedCanvasKey = `collink_last_canvas_id_${projectId}`
+      if (localStorage.getItem(savedCanvasKey) === canvasId) {
+        localStorage.removeItem(savedCanvasKey)
+      }
       currentCanvasId.value = null
       await fetchCanvases(projectId, true)
     } catch (e: any) {
